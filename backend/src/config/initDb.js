@@ -65,7 +65,7 @@ const initDb = async () => {
       ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
       ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;
     `);
-    
+
     await client.query(`
       ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('Admin','Fleet Manager','Driver','Service Center', 'Manager', 'User'));
       ALTER TABLE users ADD CONSTRAINT users_status_check CHECK (status IN ('Active','Inactive'));
@@ -82,7 +82,13 @@ const initDb = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-
+    await client.query(`
+      ALTER TABLE vehicles
+      DROP CONSTRAINT IF EXISTS check_vehicle_mileage;
+      ALTER TABLE vehicles
+      ADD CONSTRAINT check_vehicle_mileage
+      CHECK (current_mileage >= 0);
+     `);
     // 3. Create vehicles table (with NOT NULL branch_id and all constraints)
     await client.query(`
       CREATE TABLE IF NOT EXISTS vehicles (
