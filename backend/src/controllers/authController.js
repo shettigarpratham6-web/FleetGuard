@@ -1,105 +1,96 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 
-exports.register = async (req, res, next) => {
+/**
+ * POST /api/auth/sync
+ * Syncs authenticated Firebase user with Supabase PostgreSQL users table.
+ * Creates a new user record if one does not exist, or updates existing profile details.
+ */
+exports.syncUser = async (req, res, next) => {
   try {
-    const { username, email, password, role, full_name } = req.body;
+    const firebaseUser = req.firebaseUser;
 
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: 'Username, email and password are required.' });
+    if (!firebaseUser || !firebaseUser.uid) {
+      return res.status(401).json({ error: 'Invalid or missing Firebase user token.' });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-    
-    // Validate role, default is Driver
-    const finalRole = ['Admin', 'Fleet Manager', 'Driver', 'Service Center'].includes(role) ? role : 'Driver';
-    const finalFullName = full_name || username;
+    const { full_name, profile_picture, role, branch_id } = req.body;
 
-    const queryText = `
-      INSERT INTO users (username, email, password_hash, role, full_name)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, username, email, role, full_name, created_at
-    `;
-    const result = await db.query(queryText, [username, email, passwordHash, finalRole, finalFullName]);
-    const user = result.rows[0];
+    const firebaseUid = firebaseUser.uid;
+    const email = firebaseUser.email || req.body.email;
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET || 'supersecretkeyreplaceinproduction',
-      { expiresIn: '24h' }
-    );
-
-    res.status(201).json({
-      message: 'User registered successfully',
-      user,
-      token
-    });
-  } catch (error) {
-    if (error.code === '23505') {
-      return res.status(400).json({ error: 'Username or email already exists.' });
-    }
-    next(error);
-  }
-};
-
-exports.login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
+    if (!email) {
+      return res.status(400).json({ error: 'User email is required for sync.' });
     }
 
-    const queryText = 'SELECT * FROM users WHERE email = $1';
-    const result = await db.query(queryText, [email]);
+    // Valid roles check
+    const validRoles = ['Admin', 'Fleet Manager', 'Driver', 'Service Center', 'Manager', 'User'];
+    const finalRole = role && validRoles.includes(role) ? role : null;
+    const finalFullName = full_name || firebaseUser.name || email.split('@')[0] || 'User';
+    const finalProfilePicture = profile_picture || firebaseUser.picture || null;
+    const finalBranchId = branch_id || null;
 
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
+    // Check if user exists by firebase_uid or email
+    const existingUserQuery = 'SELECT * FROM users WHERE firebase_uid = $1 OR email = $2 LIMIT 1';
+    const existingResult = await db.query(existingUserQuery, [firebaseUid, email]);
+
+    let user;
+
+    if (existingResult.rows.length > 0) {
+      // User exists -> Update profile
+      const existingUser = existingResult.rows[0];
+      const updateQuery = `
+        UPDATE users
+        SET 
+          firebase_uid = $1,
+          email = $2,
+          full_name = COALESCE($3, full_name),
+          profile_picture = COALESCE($4, profile_picture),
+          role = COALESCE($5, role),
+          branch_id = COALESCE($6, branch_id),
+          updated_at = NOW()
+        WHERE id = $7
+        RETURNING id, firebase_uid, email, full_name, profile_picture, role, branch_id, created_at, updated_at
+      `;
+      const updateResult = await db.query(updateQuery, [
+        firebaseUid,
+        email,
+        full_name || null,
+        finalProfilePicture,
+        finalRole,
+        finalBranchId,
+        existingUser.id
+      ]);
+      user = updateResult.rows[0];
+    } else {
+      // New user -> Insert record
+      const insertQuery = `
+        INSERT INTO users (firebase_uid, email, full_name, profile_picture, role, branch_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        RETURNING id, firebase_uid, email, full_name, profile_picture, role, branch_id, created_at, updated_at
+      `;
+      const insertResult = await db.query(insertQuery, [
+        firebaseUid,
+        email,
+        finalFullName,
+        finalProfilePicture,
+        finalRole || 'Driver',
+        finalBranchId
+      ]);
+      user = insertResult.rows[0];
     }
-
-    const user = result.rows[0];
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
-    }
-
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET || 'supersecretkeyreplaceinproduction',
-      { expiresIn: '24h' }
-    );
 
     res.status(200).json({
-      message: 'Login successful',
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        created_at: user.created_at
-      },
-      token
+      message: 'User profile synced successfully',
+      user
     });
   } catch (error) {
+    console.error('Error syncing user profile:', error);
     next(error);
   }
 };
 
-exports.getMe = async (req, res, next) => {
-  try {
-    const queryText = 'SELECT id, username, email, role, created_at FROM users WHERE id = $1';
-    const result = await db.query(queryText, [req.user.id]);
+/**
+ * GET /api/auth/me
+ * Returns the authenticated user's profile from PostgreSQL database.
+ */
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    res.status(200).json({ user: result.rows[0] });
-  } catch (error) {
-    next(error);
-  }
-};
