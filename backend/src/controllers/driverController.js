@@ -45,7 +45,7 @@ exports.updateProfile = async (req, res, next) => {
 
 
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Driver prodfile not found.' });
+            return res.status(404).json({ error: 'Driver profile not found.' });
         }
 
         res.status(200).json({
