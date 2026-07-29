@@ -93,31 +93,4 @@ exports.syncUser = async (req, res, next) => {
  * GET /api/auth/me
  * Returns the authenticated user's profile from PostgreSQL database.
  */
-exports.getMe = async (req, res, next) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'User not authenticated.' });
-    }
 
-    const firebaseUid = req.user.firebase_uid || req.firebaseUser?.uid;
-    const userId = req.user.id;
-    const email = req.user.email || req.firebaseUser?.email;
-
-    const queryText = `
-      SELECT id, firebase_uid, email, full_name, profile_picture, role, branch_id, status, created_at, updated_at
-      FROM users
-      WHERE firebase_uid = $1 OR id = $2 OR email = $3
-      LIMIT 1
-    `;
-    const result = await db.query(queryText, [firebaseUid || null, userId || null, email || null]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User profile not found.' });
-    }
-
-    res.status(200).json({ user: result.rows[0] });
-  } catch (error) {
-    console.error('Error fetching user profile:', error);
-    next(error);
-  }
-};
