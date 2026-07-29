@@ -12,6 +12,7 @@ const assignmentRoutes = require('./routes/assignmentRoutes');
 const overrideLogRoutes = require('./routes/overrideLogRoutes');
 const checklistRoutes = require('./routes/checklistRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const maintenanceRoutes = require('./routes/maintenanceRoutes');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/override-logs', overrideLogRoutes);
 app.use('/api/checklists', checklistRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
 
 // Base route status check
 app.get('/', (req, res) => {
