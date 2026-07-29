@@ -59,7 +59,6 @@ router.get(
 router.put(
     '/:id',
     auth,
-    authorize(['Admin', 'Fleet Manager', 'Service Center']),
     upload.single('file'),
     serviceRecordController.updateServiceRecord
 );

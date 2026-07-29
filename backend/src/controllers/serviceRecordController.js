@@ -258,6 +258,95 @@ exports.updateServiceRecord = async (req, res, next) => {
     // Recalculate Maintenance Risk
     await recalculateMaintenanceRisk(vehicle_id);
 
+    // Check if the updated next_service_date is exactly 2 days from now
+    try {
+      if (updatedRecord.next_service_date) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const nextDate = new Date(updatedRecord.next_service_date);
+        nextDate.setHours(0, 0, 0, 0);
+        const diffTime = nextDate - today;
+        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (daysRemaining === 2) {
+          const { sendEmail } = require('../services/notificationService');
+          const title = `Scheduled Maintenance in 2 Days`;
+          const message = `Vehicle is due for ${updatedRecord.service_type || 'Routine Maintenance'} on ${nextDate.toLocaleDateString()} (2 days remaining). Please prepare the vehicle for maintenance.`;
+
+          // 1. Fetch mechanic details
+          const mechanicRes = await db.query('SELECT id, email, full_name FROM users WHERE id = $1', [updatedRecord.mechanic_id || req.user.id]);
+          const mechanic = mechanicRes.rows[0];
+
+          // 2. Fetch active driver for the vehicle
+          const driverRes = await db.query(`
+            SELECT u.id, u.email, u.full_name 
+            FROM assignments a 
+            JOIN users u ON a.driver_id = u.id 
+            WHERE a.vehicle_id = $1 AND a.assignment_status = 'Active'
+            LIMIT 1
+          `, [updatedRecord.vehicle_id]);
+          const driver = driverRes.rows[0];
+
+          // 3. Fetch Admin/Manager emails
+          const adminRes = await db.query("SELECT id, email, full_name FROM users WHERE role = 'Admin' OR role = 'Fleet Manager'");
+          const admins = adminRes.rows;
+
+          // Collect all distinct recipients to notify
+          const recipients = new Map(); // email -> full_name
+          admins.forEach(a => recipients.set(a.email, a.full_name));
+          if (mechanic) recipients.set(mechanic.email, mechanic.full_name);
+          if (driver) recipients.set(driver.email, driver.full_name);
+
+          const emailHtmlTemplate = (name) => `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px; margin: auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+              <div style="text-align: center; margin-bottom: 25px;">
+                <h1 style="color: #0f172a; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: -0.025em;">FleetGuard 🚛</h1>
+                <p style="color: #64748b; font-size: 14px; margin: 5px 0 0 0;">Unified Fleet Compliance & Management</p>
+              </div>
+              <div style="border-top: 1px solid #f1f5f9; padding-top: 25px;">
+                <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">Hello <strong>${name}</strong>,</p>
+                <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">This is a maintenance reminder for vehicle service scheduling:</p>
+                
+                <div style="background-color: #eff6ff; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 25px;">
+                  <h3 style="margin: 0 0 10px 0; color: #1e3a8a; font-size: 16px; font-weight: 600;">Upcoming Service in 2 Days</h3>
+                  <p style="margin: 0 0 5px 0; color: #475569; font-size: 14px;"><strong>Service Type:</strong> ${updatedRecord.service_type || 'Routine Maintenance'}</p>
+                  <p style="margin: 0 0 5px 0; color: #475569; font-size: 14px;"><strong>Scheduled Date:</strong> ${nextDate.toLocaleDateString()}</p>
+                  <p style="margin: 0; color: #2563eb; font-size: 14px; font-weight: 600;">Time Remaining: 2 days</p>
+                </div>
+
+                <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0;">Please ensure that the vehicle is routed to the designated service center on time.</p>
+              </div>
+              <div style="border-top: 1px solid #f1f5f9; margin-top: 30px; padding-top: 20px; text-align: center;">
+                <p style="font-size: 11px; color: #94a3b8; margin: 0;">This is an automated system alert from FleetGuard. Please do not reply directly to this message.</p>
+              </div>
+            </div>
+          `;
+
+          // Send emails
+          for (const [email, name] of recipients.entries()) {
+            sendEmail(email, `[FleetGuard Alert] ${title}`, message, emailHtmlTemplate(name)).catch(err => {
+              console.error(`Failed to send service alert to ${email}:`, err);
+            });
+          }
+
+          // Insert in-app notifications
+          const userIds = new Set();
+          admins.forEach(a => userIds.add(a.id));
+          if (mechanic) userIds.add(mechanic.id);
+          if (driver) userIds.add(driver.id);
+
+          for (const userId of userIds) {
+            await db.query(`
+              INSERT INTO notifications (user_id, vehicle_id, title, message, notification_type)
+              VALUES ($1, $2, $3, $4, $5)
+            `, [userId, updatedRecord.vehicle_id, title, message, 'Maintenance Alert']);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('⚠️ Could not process instant 2-day alert on service record update:', err.message);
+    }
+
     res.status(200).json({
       message: 'Service record updated successfully',
       record: updatedRecord

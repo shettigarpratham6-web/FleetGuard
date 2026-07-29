@@ -35,7 +35,7 @@ const checkExpiringDocuments = async () => {
     console.log('[CRON] Checking for compliance documents expiring in 5 days...');
 
     try {
-        // Query documents expiring exactly 5 days from today
+        // Query documents expiring exactly 5 or 2 days from today
         const queryText = `
       SELECT 
         cd.id AS document_id,
@@ -49,12 +49,13 @@ const checkExpiringDocuments = async () => {
       JOIN vehicles v ON cd.vehicle_id = v.id
       JOIN users u ON cd.uploaded_by = u.id
       WHERE cd.expiry_date = CURRENT_DATE + INTERVAL '5 days'
+         OR cd.expiry_date = CURRENT_DATE + INTERVAL '2 days'
     `;
 
         const { rows: expiringDocs } = await db.query(queryText);
 
         if (expiringDocs.length === 0) {
-            console.log('[CRON] No documents expiring in 5 days.');
+            console.log('[CRON] No documents expiring in 2 or 5 days.');
             return;
         }
 
@@ -62,14 +63,21 @@ const checkExpiringDocuments = async () => {
 
         // Send emails for each expiring document
         for (const doc of expiringDocs) {
+            const expDate = new Date(doc.expiry_date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            expDate.setHours(0, 0, 0, 0);
+            const diffTime = expDate - today;
+            const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
             if (transporter) {
                 const mailOptions = {
                     from: `"Fleet Management" <${process.env.EMAIL_USER}>`,
                     to: doc.user_email,
-                    subject: `⚠️ Action Required: Document Expiring in 5 Days (${doc.document_type})`,
+                    subject: `⚠️ Action Required: Document Expiring in ${days} Days (${doc.document_type})`,
                     html: `
               <h3>Hello ${doc.username},</h3>
-              <p>This is an automated reminder that a compliance document for vehicle <strong>${doc.vehicle_number}</strong> (${doc.registration_number}) is set to expire in <strong>5 days</strong>.</p>
+              <p>This is an automated reminder that a compliance document for vehicle <strong>${doc.vehicle_number}</strong> (${doc.registration_number}) is set to expire in <strong>${days} days</strong>.</p>
               <ul>
                 <li><strong>Document Type:</strong> ${doc.document_type}</li>
                 <li><strong>Expiry Date:</strong> ${new Date(doc.expiry_date).toDateString()}</li>
@@ -78,9 +86,9 @@ const checkExpiringDocuments = async () => {
             `
                 };
                 await transporter.sendMail(mailOptions);
-                console.log(`[CRON] Expiry email sent to ${doc.user_email} for vehicle ${doc.vehicle_number}`);
+                console.log(`[CRON] Expiry email sent to ${doc.user_email} for vehicle ${doc.vehicle_number} (${days} days remaining)`);
             } else {
-                console.log(`[CRON Simulation] Expiry alert: Document ${doc.document_type} for vehicle ${doc.vehicle_number} expires on ${new Date(doc.expiry_date).toDateString()}. Email to: ${doc.user_email}`);
+                console.log(`[CRON Simulation] Expiry alert: Document ${doc.document_type} for vehicle ${doc.vehicle_number} expires on ${new Date(doc.expiry_date).toDateString()}. Email to: ${doc.user_email} (${days} days remaining)`);
             }
         }
     } catch (error) {
