@@ -269,6 +269,69 @@ exports.updateServiceRecord = async (req, res, next) => {
   }
 };
 
+exports.getVehicleServiceHistory = async (req, res, next) => {
+  try {
+    const { vehicleId } = req.params;
+
+    // Verify vehicle exists
+    const vehicleResult = await db.query(
+      `SELECT id, vehicle_number, registration_number, manufacturer, model
+       FROM vehicles
+       WHERE id = $1`,
+      [vehicleId]
+    );
+
+    if (vehicleResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Vehicle not found.'
+      });
+    }
+
+    // Fetch complete service history
+    const historyQuery = `
+      SELECT
+        sr.id,
+        sr.service_date,
+        sr.current_mileage,
+        sr.service_type,
+        sr.description,
+        sr.parts_changed,
+        sr.labour_cost,
+        sr.parts_cost,
+        sr.total_cost,
+        sr.invoice_url,
+        sr.next_service_mileage,
+        sr.next_service_date,
+        sr.created_at,
+        sr.updated_at,
+
+        u.username AS mechanic_name
+
+      FROM service_records sr
+
+      LEFT JOIN users u
+        ON sr.mechanic_id = u.id
+
+      WHERE sr.vehicle_id = $1
+
+      ORDER BY
+        sr.service_date DESC,
+        sr.created_at DESC;
+    `;
+
+    const historyResult = await db.query(historyQuery, [vehicleId]);
+
+    res.status(200).json({
+      vehicle: vehicleResult.rows[0],
+      total_records: historyResult.rows.length,
+      history: historyResult.rows
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.deleteServiceRecord = async (req, res, next) => {
   try {
     const { id } = req.params;
