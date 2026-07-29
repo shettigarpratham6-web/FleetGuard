@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const supabase = require('../config/supabaseClient'); // Updated Supabase client import
 const env = require('../config/env');
 
 let nodemailer;
@@ -18,8 +18,7 @@ try {
 // Nodemailer Transporter Setup
 const getTransporter = () => {
   if (!nodemailer) return null;
-  
-  // Use Gmail SMTP configuration
+
   const host = process.env.EMAIL_HOST || 'smtp.gmail.com';
   const port = parseInt(process.env.EMAIL_PORT || '587', 10);
   const user = process.env.EMAIL_USER;
@@ -33,18 +32,15 @@ const getTransporter = () => {
   return nodemailer.createTransport({
     host,
     port,
-    secure: port === 465, // true for 465, false for other ports
-    auth: {
-      user,
-      pass
-    }
+    secure: port === 465,
+    auth: { user, pass }
   });
 };
 
 // Twilio Client Setup
 const getTwilioClient = () => {
   if (!twilio) return null;
-  
+
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const fromNumber = process.env.TWILIO_PHONE_NUMBER;
@@ -123,48 +119,96 @@ const sendSMS = async (to, body) => {
  */
 const checkAndSendExpiryAlerts = async () => {
   console.log('⏳ Running scheduled compliance and service expiry alert scan...');
-  
-  // Connect to db
-  const client = await db.pool.connect();
+
   try {
-    await client.query('BEGIN');
-
     // 1. Fetch compliance documents expiring in 10, 5, or 2 days
-    const documentQuery = `
-      SELECT cd.id as document_id, cd.document_type, cd.document_number, cd.expiry_date,
-             cd.expiry_date - CURRENT_DATE as days_remaining,
-             v.id as vehicle_id, v.vehicle_number, v.registration_number,
-             a.driver_id,
-             u.email as driver_email, u.phone_number as driver_phone, u.full_name as driver_name,
-             owner.email as owner_email, owner.phone_number as owner_phone, owner.full_name as owner_name
-      FROM compliance_documents cd
-      JOIN vehicles v ON cd.vehicle_id = v.id
-      LEFT JOIN assignments a ON v.id = a.vehicle_id AND a.assignment_status = 'Active'
-      LEFT JOIN users u ON a.driver_id = u.id
-      LEFT JOIN users owner ON cd.uploaded_by = owner.id
-      WHERE cd.status = 'Valid'
-        AND (cd.expiry_date - CURRENT_DATE IN (10, 5, 2))
-    `;
-    const docResult = await client.query(documentQuery);
-    console.log(`Found ${docResult.rows.length} expiring compliance documents.`);
+    const { data: docRows, error: docError } = await supabase
+      .from('compliance_documents')
+      .select(`
+        id,
+        document_type,
+        document_number,
+        expiry_date,
+        uploaded_by,
+        vehicles!inner (
+          id,
+          vehicle_number,
+          registration_number,
+          assignments (
+            driver_id,
+            assignment_status,
+            users:users!assignments_driver_id_fkey (
+              email,
+              phone_number,
+              full_name
+            )
+          )
+        ),
+        users (
+          email,
+          phone_number,
+          full_name
+        )
+      `)
+      .eq('status', 'Valid');
 
-    for (const doc of docResult.rows) {
+    if (docError) throw docError;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const filteredDocs = (docRows || []).map((doc) => {
+      const expDate = new Date(doc.expiry_date);
+      expDate.setHours(0, 0, 0, 0);
+      const diffTime = expDate - today;
+      const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Active assignment search
+      const activeAssignment = doc.vehicles?.assignments?.find(
+        (a) => a.assignment_status === 'Active'
+      );
+
+      return {
+        document_id: doc.id,
+        document_type: doc.document_type,
+        document_number: doc.document_number,
+        expiry_date: doc.expiry_date,
+        days_remaining: daysRemaining,
+        vehicle_id: doc.vehicles?.id,
+        vehicle_number: doc.vehicles?.vehicle_number,
+        registration_number: doc.vehicles?.registration_number,
+        driver_id: activeAssignment?.driver_id,
+        driver_email: activeAssignment?.users?.email,
+        driver_phone: activeAssignment?.users?.phone_number,
+        driver_name: activeAssignment?.users?.full_name,
+        owner_id: doc.uploaded_by,
+        owner_email: doc.users?.email,
+        owner_phone: doc.users?.phone_number,
+        owner_name: doc.users?.full_name
+      };
+    }).filter((doc) => [10, 5, 2].includes(doc.days_remaining));
+
+    console.log(`Found ${filteredDocs.length} expiring compliance documents.`);
+
+    for (const doc of filteredDocs) {
       const days = doc.days_remaining;
       const title = `${doc.document_type} Expiring in ${days} Days`;
       const message = `The ${doc.document_type} (No: ${doc.document_number || 'N/A'}) for vehicle ${doc.vehicle_number} (${doc.registration_number}) is expiring on ${new Date(doc.expiry_date).toLocaleDateString()} (${days} days remaining). Please renew it immediately.`;
 
-      // Determine who to notify. Notify the assigned driver if present, and fallback/cc the document uploader/manager
       const targetEmail = doc.driver_email || doc.owner_email || process.env.EMAIL_USER;
       const targetPhone = doc.driver_phone || doc.owner_phone;
       const targetName = doc.driver_name || doc.owner_name || 'Fleet Manager';
-      const targetUserId = doc.driver_id || doc.owner_id; // Store in-app notification for the user
+      const targetUserId = doc.driver_id || doc.owner_id;
 
-      // Send In-App Notification
+      // Send In-App Notification using Supabase insert
       if (targetUserId) {
-        await client.query(`
-          INSERT INTO notifications (user_id, vehicle_id, title, message, notification_type)
-          VALUES ($1, $2, $3, $4, 'Compliance Alert')
-        `, [targetUserId, doc.vehicle_id, title, message]);
+        await supabase.from('notifications').insert([{
+          user_id: targetUserId,
+          vehicle_id: doc.vehicle_id,
+          title,
+          message,
+          notification_type: 'Compliance Alert'
+        }]);
       }
 
       // Send Email
@@ -194,25 +238,69 @@ const checkAndSendExpiryAlerts = async () => {
     }
 
     // 2. Fetch service records where next_service_date is in 10, 5, or 2 days
-    const serviceQuery = `
-      SELECT sr.id as service_id, sr.service_type, sr.next_service_date,
-             sr.next_service_date - CURRENT_DATE as days_remaining,
-             v.id as vehicle_id, v.vehicle_number, v.registration_number,
-             a.driver_id,
-             u.email as driver_email, u.phone_number as driver_phone, u.full_name as driver_name,
-             mech.email as mech_email, mech.phone_number as mech_phone, mech.full_name as mech_name
-      FROM service_records sr
-      JOIN vehicles v ON sr.vehicle_id = v.id
-      LEFT JOIN assignments a ON v.id = a.vehicle_id AND a.assignment_status = 'Active'
-      LEFT JOIN users u ON a.driver_id = u.id
-      LEFT JOIN users mech ON sr.mechanic_id = mech.id
-      WHERE sr.next_service_date IS NOT NULL
-        AND (sr.next_service_date - CURRENT_DATE IN (10, 5, 2))
-    `;
-    const serviceResult = await client.query(serviceQuery);
-    console.log(`Found ${serviceResult.rows.length} upcoming scheduled services.`);
+    const { data: serviceRows, error: serviceError } = await supabase
+      .from('service_records')
+      .select(`
+        id,
+        service_type,
+        next_service_date,
+        mechanic_id,
+        vehicles!inner (
+          id,
+          vehicle_number,
+          registration_number,
+          assignments (
+            driver_id,
+            assignment_status,
+            users:users!assignments_driver_id_fkey (
+              email,
+              phone_number,
+              full_name
+            )
+          )
+        ),
+        users (
+          email,
+          phone_number,
+          full_name
+        )
+      `)
+      .not('next_service_date', 'is', null);
 
-    for (const service of serviceResult.rows) {
+    if (serviceError) throw serviceError;
+
+    const filteredServices = (serviceRows || []).map((service) => {
+      const nextDate = new Date(service.next_service_date);
+      nextDate.setHours(0, 0, 0, 0);
+      const diffTime = nextDate - today;
+      const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      const activeAssignment = service.vehicles?.assignments?.find(
+        (a) => a.assignment_status === 'Active'
+      );
+
+      return {
+        service_id: service.id,
+        service_type: service.service_type,
+        next_service_date: service.next_service_date,
+        days_remaining: daysRemaining,
+        vehicle_id: service.vehicles?.id,
+        vehicle_number: service.vehicles?.vehicle_number,
+        registration_number: service.vehicles?.registration_number,
+        driver_id: activeAssignment?.driver_id,
+        driver_email: activeAssignment?.users?.email,
+        driver_phone: activeAssignment?.users?.phone_number,
+        driver_name: activeAssignment?.users?.full_name,
+        mechanic_id: service.mechanic_id,
+        mech_email: service.users?.email,
+        mech_phone: service.users?.phone_number,
+        mech_name: service.users?.full_name
+      };
+    }).filter((service) => [10, 5, 2].includes(service.days_remaining));
+
+    console.log(`Found ${filteredServices.length} upcoming scheduled services.`);
+
+    for (const service of filteredServices) {
       const days = service.days_remaining;
       const title = `Scheduled Maintenance in ${days} Days`;
       const message = `Vehicle ${service.vehicle_number} (${service.registration_number}) has a scheduled ${service.service_type} on ${new Date(service.next_service_date).toLocaleDateString()} (${days} days remaining). Please prepare the vehicle for maintenance.`;
@@ -224,10 +312,13 @@ const checkAndSendExpiryAlerts = async () => {
 
       // Send In-App Notification
       if (targetUserId) {
-        await client.query(`
-          INSERT INTO notifications (user_id, vehicle_id, title, message, notification_type)
-          VALUES ($1, $2, $3, $4, 'Maintenance Alert')
-        `, [targetUserId, service.vehicle_id, title, message]);
+        await supabase.from('notifications').insert([{
+          user_id: targetUserId,
+          vehicle_id: service.vehicle_id,
+          title,
+          message,
+          notification_type: 'Maintenance Alert'
+        }]);
       }
 
       // Send Email
@@ -255,13 +346,9 @@ const checkAndSendExpiryAlerts = async () => {
       }
     }
 
-    await client.query('COMMIT');
     console.log('✅ Expiry alert scan completed successfully.');
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('❌ Error during alert scan:', error);
-  } finally {
-    client.release();
   }
 };
 

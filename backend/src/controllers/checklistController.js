@@ -112,3 +112,81 @@ exports.createChecklist = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getAllChecklists = async (req, res, next) => {
+  try {
+    const queryText = `
+      SELECT c.*, 
+             v.vehicle_number, v.registration_number,
+             u.full_name as driver_name, u.email as driver_email
+      FROM checklists c
+      JOIN vehicles v ON c.vehicle_id = v.id
+      JOIN users u ON c.driver_id = u.id
+      ORDER BY c.checklist_date DESC, c.id DESC
+    `;
+    const result = await db.query(queryText);
+    res.status(200).json({ success: true, checklists: result.rows });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getMyChecklists = async (req, res, next) => {
+  try {
+    const driver_id = req.user.id;
+    const queryText = `
+      SELECT c.*, 
+             v.vehicle_number, v.registration_number
+      FROM checklists c
+      JOIN vehicles v ON c.vehicle_id = v.id
+      WHERE c.driver_id = $1
+      ORDER BY c.checklist_date DESC, c.id DESC
+    `;
+    const result = await db.query(queryText, [driver_id]);
+    res.status(200).json({ success: true, checklists: result.rows });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getChecklistsByVehicle = async (req, res, next) => {
+  try {
+    const { vehicleId } = req.params;
+    const queryText = `
+      SELECT c.*, 
+             u.full_name as driver_name, u.email as driver_email
+      FROM checklists c
+      JOIN users u ON c.driver_id = u.id
+      WHERE c.vehicle_id = $1
+      ORDER BY c.checklist_date DESC, c.id DESC
+    `;
+    const result = await db.query(queryText, [vehicleId]);
+    res.status(200).json({ success: true, checklists: result.rows });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getChecklistById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const queryText = `
+      SELECT c.*, 
+             v.vehicle_number, v.registration_number,
+             u.full_name as driver_name, u.email as driver_email
+      FROM checklists c
+      JOIN vehicles v ON c.vehicle_id = v.id
+      JOIN users u ON c.driver_id = u.id
+      WHERE c.id = $1
+    `;
+    const result = await db.query(queryText, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Checklist not found.' });
+    }
+
+    res.status(200).json({ success: true, checklist: result.rows[0] });
+  } catch (error) {
+    next(error);
+  }
+};
