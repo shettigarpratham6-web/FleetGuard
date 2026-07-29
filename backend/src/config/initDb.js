@@ -82,13 +82,6 @@ const initDb = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    await client.query(`
-      ALTER TABLE vehicles
-      DROP CONSTRAINT IF EXISTS check_vehicle_mileage;
-      ALTER TABLE vehicles
-      ADD CONSTRAINT check_vehicle_mileage
-      CHECK (current_mileage >= 0);
-     `);
     // 3. Create vehicles table (with NOT NULL branch_id and all constraints)
     await client.query(`
       CREATE TABLE IF NOT EXISTS vehicles (
@@ -124,6 +117,13 @@ const initDb = async () => {
       );
     `);
 
+    await client.query(`
+      ALTER TABLE vehicles
+      DROP CONSTRAINT IF EXISTS check_vehicle_mileage;
+      ALTER TABLE vehicles
+      ADD CONSTRAINT check_vehicle_mileage
+      CHECK (current_mileage >= 0);
+     `);
     // 4. Create compliance_documents table
     await client.query(`
       CREATE TABLE IF NOT EXISTS compliance_documents (
