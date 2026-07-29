@@ -4,10 +4,8 @@ const router = express.Router();
 const vehicleController = require('../controllers/vehicleController');
 const { auth, authorize } = require('../middleware/auth');
 
-// 1. Create a vehicle (Only Admins and Fleet Managers)
+// All vehicle routes require authentication
 router.post('/', auth, authorize(['Admin', 'Fleet Manager']), vehicleController.createVehicle);
-
-// 2. Get all vehicles (Any authenticated user)
 router.get('/', auth, vehicleController.getAllVehicles);
 
 // 3. Get a single vehicle by ID

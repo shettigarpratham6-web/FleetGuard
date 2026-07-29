@@ -7,6 +7,7 @@ const upload = require('../middleware/upload');
 // All compliance document routes require authentication
 router.post('/', auth, authorize(['Admin', 'Fleet Manager']), upload.single('file'), complianceController.createDocument);
 router.get('/', auth, complianceController.getAllDocuments);
+router.get('/vehicle/:vehicleId/status', auth, complianceController.getVehicleComplianceStatus);
 router.get('/vehicle/:vehicleId', auth, complianceController.getDocumentsByVehicle);
 router.get('/:id', auth, complianceController.getDocumentById);
 router.put('/:id', auth, authorize(['Admin', 'Fleet Manager']), upload.single('file'), complianceController.updateDocument);

@@ -125,7 +125,7 @@ exports.getAllChecklists = async (req, res, next) => {
       ORDER BY c.checklist_date DESC, c.id DESC
     `;
     const result = await db.query(queryText);
-    res.status(200).json({ success: true, checklists: result.rows });
+    res.status(200).json({ checklists: result.rows });
   } catch (error) {
     next(error);
   }
@@ -143,7 +143,7 @@ exports.getMyChecklists = async (req, res, next) => {
       ORDER BY c.checklist_date DESC, c.id DESC
     `;
     const result = await db.query(queryText, [driver_id]);
-    res.status(200).json({ success: true, checklists: result.rows });
+    res.status(200).json({ checklists: result.rows });
   } catch (error) {
     next(error);
   }
@@ -161,7 +161,7 @@ exports.getChecklistsByVehicle = async (req, res, next) => {
       ORDER BY c.checklist_date DESC, c.id DESC
     `;
     const result = await db.query(queryText, [vehicleId]);
-    res.status(200).json({ success: true, checklists: result.rows });
+    res.status(200).json({ checklists: result.rows });
   } catch (error) {
     next(error);
   }
@@ -182,10 +182,10 @@ exports.getChecklistById = async (req, res, next) => {
     const result = await db.query(queryText, [id]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'Checklist not found.' });
+      return res.status(404).json({ error: 'Checklist not found.' });
     }
 
-    res.status(200).json({ success: true, checklist: result.rows[0] });
+    res.status(200).json({ checklist: result.rows[0] });
   } catch (error) {
     next(error);
   }

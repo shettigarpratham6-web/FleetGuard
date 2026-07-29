@@ -12,10 +12,10 @@ const assignmentRoutes = require('./routes/assignmentRoutes');
 const overrideLogRoutes = require('./routes/overrideLogRoutes');
 const checklistRoutes = require('./routes/checklistRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
-const driverRoute = require("./routes/driverRoute");
-const dashboardRoutes = require("./routes/dashboardRoutes");
-const auditRoutes = require("./routes/auditRoutes");
+
 const maintenanceRoutes = require('./routes/maintenanceRoutes');
+
+const driverRoutes = require("./routes/driverRoutes");
 
 
 
@@ -43,10 +43,9 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/override-logs', overrideLogRoutes);
 app.use('/api/checklists', checklistRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use("/api/drivers", driverRoute);
 app.use('/api/maintenance', maintenanceRoutes);
-app.use("/api", dashboardRoutes);
-app.use("/api/audit", auditRoutes);
+app.use("/api/drivers", driverRoutes);
+
 
 // Base route status check
 app.get('/', (req, res) => {

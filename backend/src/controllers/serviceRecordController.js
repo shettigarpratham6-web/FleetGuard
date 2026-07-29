@@ -3,6 +3,16 @@ const fs = require('fs');
 const path = require('path');
 const { recalculateMaintenanceRisk } = require('../services/riskService');
 
+const safeUnlinkFile = (filePath) => {
+  if (filePath && fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (err) {
+      console.error(`Failed to delete file at ${filePath}:`, err);
+    }
+  }
+};
+
 exports.createServiceRecord = async (req, res, next) => {
   try {
     const {
@@ -21,7 +31,7 @@ exports.createServiceRecord = async (req, res, next) => {
 
     if (!vehicle_id || !service_date || !current_mileage || !service_type) {
       if (req.file) {
-        fs.unlinkSync(req.file.path);
+        safeUnlinkFile(req.file.path);
       }
       return res.status(400).json({ error: 'Vehicle ID, service date, current mileage, and service type are required.' });
     }
@@ -30,7 +40,7 @@ exports.createServiceRecord = async (req, res, next) => {
     const vehicleCheck = await db.query('SELECT current_mileage FROM vehicles WHERE id = $1', [vehicle_id]);
     if (vehicleCheck.rows.length === 0) {
       if (req.file) {
-        fs.unlinkSync(req.file.path);
+        safeUnlinkFile(req.file.path);
       }
       return res.status(400).json({ error: 'Invalid vehicle ID. Vehicle does not exist.' });
     }
@@ -86,7 +96,7 @@ exports.createServiceRecord = async (req, res, next) => {
     });
   } catch (error) {
     if (req.file) {
-      fs.unlinkSync(req.file.path);
+      safeUnlinkFile(req.file.path);
     }
     if (error.code === '23514') {
       if (error.message && error.message.includes('current_mileage')) {
@@ -203,10 +213,9 @@ exports.updateServiceRecord = async (req, res, next) => {
     if (req.file) {
       invoice_url = `/uploads/${req.file.filename}`;
       if (oldRecord.invoice_url) {
-        const oldFilePath = path.join(__dirname, '../..', oldRecord.invoice_url);
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
-        }
+        const relativePath = oldRecord.invoice_url.startsWith('/') ? oldRecord.invoice_url.substring(1) : oldRecord.invoice_url;
+        const oldFilePath = path.join(__dirname, '../..', relativePath);
+        safeUnlinkFile(oldFilePath);
       }
     }
 
@@ -255,11 +264,17 @@ exports.updateServiceRecord = async (req, res, next) => {
     });
   } catch (error) {
     if (req.file) {
-      fs.unlinkSync(req.file.path);
+      safeUnlinkFile(req.file.path);
     }
     if (error.code === '23514') {
       if (error.message && error.message.includes('current_mileage')) {
         return res.status(400).json({ error: 'Current mileage cannot be negative.' });
+      }
+      if (error.message && error.message.includes('labour_cost')) {
+        return res.status(400).json({ error: 'Labour cost cannot be negative.' });
+      }
+      if (error.message && error.message.includes('parts_cost')) {
+        return res.status(400).json({ error: 'Parts cost cannot be negative.' });
       }
       if (error.message && error.message.includes('next_service_mileage')) {
         return res.status(400).json({ error: 'Next service mileage must be greater than or equal to current service mileage.' });
@@ -348,10 +363,9 @@ exports.deleteServiceRecord = async (req, res, next) => {
 
     // Delete invoice file
     if (invoice_url) {
-      const filePath = path.join(__dirname, '../..', invoice_url);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      const relativePath = invoice_url.startsWith('/') ? invoice_url.substring(1) : invoice_url;
+      const filePath = path.join(__dirname, '../..', relativePath);
+      safeUnlinkFile(filePath);
     }
 
     // Recalculate Maintenance Risk
