@@ -4,7 +4,12 @@ const vehicleController = require('../controllers/vehicleController');
 const { auth, authorize } = require('../middleware/auth');
 
 // All vehicle routes require authentication
-router.post('/', auth, authorize(['Admin', 'Fleet Manager']), vehicleController.createVehicle);
+router.get(
+    "/dashboard",
+    authenticateToken,
+    authorize("Admin"),
+    dashboardController.getDashboard
+);
 router.get('/', auth, vehicleController.getAllVehicles);
 router.get('/:id', auth, vehicleController.getVehicleById);
 router.put('/:id', auth, authorize(['Admin', 'Fleet Manager']), vehicleController.updateVehicle);
