@@ -246,3 +246,76 @@ exports.deleteDocument = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getVehicleComplianceStatus = async (req, res, next) => {
+  try {
+    const { vehicleId } = req.params;
+
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(vehicleId)) {
+      return res.status(400).json({ error: 'Invalid vehicle ID format.' });
+    }
+
+    // Verify vehicle exists
+    const vehicleCheck = await db.query('SELECT id FROM vehicles WHERE id = $1', [vehicleId]);
+    if (vehicleCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Vehicle not found.' });
+    }
+
+    // Get compliance documents ordered by expiry_date descending
+    const queryText = `
+      SELECT cd.*, (cd.expiry_date < CURRENT_DATE) AS is_expired, u.username as uploaded_by_username
+      FROM compliance_documents cd
+      LEFT JOIN users u ON cd.uploaded_by = u.id
+      WHERE cd.vehicle_id = $1
+      ORDER BY cd.expiry_date DESC
+    `;
+    const result = await db.query(queryText, [vehicleId]);
+    const documents = result.rows;
+
+    const mandatoryTypes = ['Insurance', 'Inspection', 'PUC', 'Fitness Certificate'];
+    const latestDocs = {};
+
+    // Get the latest document for each type
+    for (const doc of documents) {
+      if (!latestDocs[doc.document_type]) {
+        latestDocs[doc.document_type] = doc;
+      }
+    }
+
+    const expiredDocuments = [];
+    const missingDocuments = [];
+    const activeDocuments = [];
+
+    for (const type of mandatoryTypes) {
+      const doc = latestDocs[type];
+      if (!doc) {
+        missingDocuments.push(type);
+      } else if (doc.is_expired) {
+        const { is_expired, ...cleanDoc } = doc;
+        expiredDocuments.push(cleanDoc);
+      } else {
+        const { is_expired, ...cleanDoc } = doc;
+        activeDocuments.push(cleanDoc);
+      }
+    }
+
+    if (expiredDocuments.length > 0 || missingDocuments.length > 0) {
+      return res.status(200).json({
+        vehicle_id: vehicleId,
+        overall_status: 'Non-Compliant',
+        expired_documents: expiredDocuments,
+        missing_documents: missingDocuments
+      });
+    }
+
+    return res.status(200).json({
+      vehicle_id: vehicleId,
+      overall_status: 'Compliant',
+      documents: activeDocuments
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
