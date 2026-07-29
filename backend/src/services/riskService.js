@@ -22,7 +22,7 @@ const recalculateMaintenanceRisk = async (vehicleId, customInterval = 10000) => 
 
     // 2. Find the mileage at the last completed service
     const serviceResult = await db.query(
-      'SELECT current_mileage FROM service_records WHERE vehicle_id = $1 ORDER BY service_date DESC, created_at DESC LIMIT 1',
+      'SELECT current_mileage FROM service_records WHERE vehicle_id = $1 ORDER BY service_date DESC, current_mileage DESC, created_at DESC LIMIT 1',
       [vehicleId]
     );
 
@@ -39,9 +39,13 @@ const recalculateMaintenanceRisk = async (vehicleId, customInterval = 10000) => 
     let riskLevel = 'Low';
     let summary = '';
 
-    if (remainingDistance <= 0) {
+    if (remainingDistance < 0) {
       riskLevel = 'High';
       summary = `High maintenance risk because the vehicle has exceeded its recommended service interval by ${Math.abs(remainingDistance)} km. Immediate servicing is recommended.`;
+
+    } else if (remainingDistance === 0) {
+      riskLevel = 'High';
+      summary = `High maintenance risk because the vehicle has reached its recommended service interval. Immediate servicing is recommended.`;
 
     } else if (remainingDistance <= 1000) {
       riskLevel = 'Medium';

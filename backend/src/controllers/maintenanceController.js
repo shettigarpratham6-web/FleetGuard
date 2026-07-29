@@ -1,3 +1,5 @@
+const maintenanceService = require('../services/maintenanceService');
+
 exports.getServiceQueue = async (req, res) => {
     try {
         const queue = await maintenanceService.getServiceQueue();
