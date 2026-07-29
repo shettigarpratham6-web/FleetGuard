@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 
-const authenticateToken = (req, res, next) => {
+// Renamed inner function to 'authMiddleware' so it doesn't clash
+const authMiddleware = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -26,4 +27,5 @@ const authenticateToken = (req, res, next) => {
     }
 };
 
-module.exports = authenticateToken;
+// Exported as 'authenticateToken' so vehicleRoutes.js receives it with that exact name
+module.exports = authMiddleware;
