@@ -22,13 +22,15 @@ const initDb = async () => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        firebase_uid VARCHAR(128) UNIQUE,
         username VARCHAR(50) UNIQUE,
         full_name VARCHAR(100) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
+        password_hash TEXT,
         phone_number VARCHAR(20),
-        role VARCHAR(20) NOT NULL CHECK (role IN ('Admin','Fleet Manager','Driver','Service Center')),
+        role VARCHAR(20) DEFAULT 'Driver' CHECK (role IN ('Admin','Fleet Manager','Driver','Service Center', 'Manager', 'User')),
         profile_picture TEXT,
+        branch_id UUID,
         status VARCHAR(20) DEFAULT 'Active' CHECK (status IN ('Active','Inactive')),
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -37,8 +39,12 @@ const initDb = async () => {
 
     // Ensure all required columns exist on the users table if it pre-existed
     await client.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50) UNIQUE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(128) UNIQUE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id UUID;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);
+      ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+      ALTER TABLE users ALTER COLUMN username DROP NOT NULL;
     `);
 
     // Update existing users to have full_name if null
@@ -287,6 +293,7 @@ const initDb = async () => {
 
     // 5. Create indexes
     await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid);
       CREATE INDEX IF NOT EXISTS idx_vehicles_branch_id ON vehicles(branch_id);
       CREATE INDEX IF NOT EXISTS idx_compliance_vehicle_id ON compliance_documents(vehicle_id);
       CREATE INDEX IF NOT EXISTS idx_compliance_expiry_date ON compliance_documents(expiry_date);
