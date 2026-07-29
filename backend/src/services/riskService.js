@@ -40,15 +40,17 @@ const recalculateMaintenanceRisk = async (vehicleId, customInterval = 10000) => 
     let summary = '';
 
     if (remainingDistance <= 0) {
-      riskLevel = 'High';
-      summary = `Service is overdue by ${Math.abs(remainingDistance)} units.`;
-    } else if (remainingDistance <= recommendedInterval * 0.15) { // Within 15% of interval
-      riskLevel = 'Medium';
-      summary = `Service is due soon. Only ${remainingDistance} units remaining.`;
-    } else {
-      riskLevel = 'Low';
-      summary = `Vehicle is in good health. ${remainingDistance} units remaining until next service.`;
-    }
+  riskLevel = 'High';
+  summary = `High maintenance risk because the vehicle has exceeded its recommended service interval by ${Math.abs(remainingDistance)} km. Immediate servicing is recommended.`;
+
+} else if (remainingDistance <= 1000) {
+  riskLevel = 'Medium';
+  summary = `Medium maintenance risk because only ${remainingDistance} km remain before the next scheduled service. Plan maintenance soon.`;
+
+} else {
+  riskLevel = 'Low';
+  summary = `Low maintenance risk because approximately ${remainingDistance} km remain before the next scheduled service. No immediate maintenance is required.`;
+}
 
     // 5. Upsert into maintenance_risks
     const upsertQuery = `
