@@ -3,8 +3,10 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const { auth } = require('../middleware/auth');
 
-router.post('/register', authController.register);
-router.post('/login', authController.login);
+// Synchronize Firebase user with Supabase PostgreSQL users table
+router.post('/sync', auth, authController.syncUser);
+
+// Get current authenticated user profile
 router.get('/me', auth, authController.getMe);
 
 module.exports = router;

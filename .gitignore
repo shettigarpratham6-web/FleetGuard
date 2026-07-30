@@ -27,3 +27,17 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Node modules
+node_modules/
+**/node_modules/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

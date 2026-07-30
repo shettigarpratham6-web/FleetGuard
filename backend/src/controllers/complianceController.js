@@ -200,9 +200,60 @@ exports.updateDocument = async (req, res, next) => {
       id
     ]);
 
+    const updatedDoc = result.rows[0];
+
+    // Check if the updated expiry_date is exactly 10, 5, or 2 days from now
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const expDate = new Date(updatedDoc.expiry_date);
+      expDate.setHours(0, 0, 0, 0);
+      const diffTime = expDate - today;
+      const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if ([10, 5, 2].includes(daysRemaining)) {
+        const title = `${updatedDoc.document_type} Expiring in ${daysRemaining} Days`;
+        const message = `The ${updatedDoc.document_type} (No: ${updatedDoc.document_number || 'N/A'}) is expiring on ${expDate.toLocaleDateString()} (${daysRemaining} days remaining). Please renew it immediately.`;
+
+        // 1. Fetch uploader details
+        const uploaderRes = await db.query('SELECT id, email, full_name FROM users WHERE id = $1', [updatedDoc.uploaded_by]);
+        const uploader = uploaderRes.rows[0];
+
+        // 2. Fetch active driver for the vehicle
+        const driverRes = await db.query(`
+          SELECT u.id, u.email, u.full_name 
+          FROM assignments a 
+          JOIN users u ON a.driver_id = u.id 
+          WHERE a.vehicle_id = $1 AND a.assignment_status = 'Active'
+          LIMIT 1
+        `, [updatedDoc.vehicle_id]);
+        const driver = driverRes.rows[0];
+
+        // 3. Fetch all Admin users
+        const adminRes = await db.query("SELECT id, email, full_name FROM users WHERE role = 'Admin'");
+        const admins = adminRes.rows;
+
+        // Insert in-app notifications
+        const userIds = new Set();
+        admins.forEach(a => userIds.add(a.id));
+        if (uploader) userIds.add(uploader.id);
+        if (driver) userIds.add(driver.id);
+
+        for (const userId of userIds) {
+          await db.query(`
+            INSERT INTO notifications (user_id, vehicle_id, title, message, notification_type)
+            VALUES ($1, $2, $3, $4, $5)
+          `, [userId, updatedDoc.vehicle_id, title, message, 'Compliance Alert']);
+        }
+        console.log(`[Compliance Update Alert] In-app notifications generated for ${daysRemaining} days remaining.`);
+      }
+    } catch (err) {
+      console.error('⚠️ Could not process instant alert on update:', err.message);
+    }
+
     res.status(200).json({
       message: 'Compliance document updated successfully',
-      document: result.rows[0]
+      document: updatedDoc
     });
   } catch (error) {
     if (req.file) {

@@ -3,6 +3,16 @@ const fs = require('fs');
 const path = require('path');
 const { recalculateMaintenanceRisk } = require('../services/riskService');
 
+const safeUnlinkFile = (filePath) => {
+  if (filePath && fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (err) {
+      console.error(`Failed to delete file at ${filePath}:`, err);
+    }
+  }
+};
+
 exports.createServiceRecord = async (req, res, next) => {
   try {
     const {
@@ -21,7 +31,7 @@ exports.createServiceRecord = async (req, res, next) => {
 
     if (!vehicle_id || !service_date || !current_mileage || !service_type) {
       if (req.file) {
-        fs.unlinkSync(req.file.path);
+        safeUnlinkFile(req.file.path);
       }
       return res.status(400).json({ error: 'Vehicle ID, service date, current mileage, and service type are required.' });
     }
@@ -30,7 +40,7 @@ exports.createServiceRecord = async (req, res, next) => {
     const vehicleCheck = await db.query('SELECT current_mileage FROM vehicles WHERE id = $1', [vehicle_id]);
     if (vehicleCheck.rows.length === 0) {
       if (req.file) {
-        fs.unlinkSync(req.file.path);
+        safeUnlinkFile(req.file.path);
       }
       return res.status(400).json({ error: 'Invalid vehicle ID. Vehicle does not exist.' });
     }
@@ -86,7 +96,7 @@ exports.createServiceRecord = async (req, res, next) => {
     });
   } catch (error) {
     if (req.file) {
-      fs.unlinkSync(req.file.path);
+      safeUnlinkFile(req.file.path);
     }
     if (error.code === '23514') {
       if (error.message && error.message.includes('current_mileage')) {
@@ -203,10 +213,9 @@ exports.updateServiceRecord = async (req, res, next) => {
     if (req.file) {
       invoice_url = `/uploads/${req.file.filename}`;
       if (oldRecord.invoice_url) {
-        const oldFilePath = path.join(__dirname, '../..', oldRecord.invoice_url);
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
-        }
+        const relativePath = oldRecord.invoice_url.startsWith('/') ? oldRecord.invoice_url.substring(1) : oldRecord.invoice_url;
+        const oldFilePath = path.join(__dirname, '../..', relativePath);
+        safeUnlinkFile(oldFilePath);
       }
     }
 
@@ -249,22 +258,142 @@ exports.updateServiceRecord = async (req, res, next) => {
     // Recalculate Maintenance Risk
     await recalculateMaintenanceRisk(vehicle_id);
 
+    // Check if the updated next_service_date is exactly 10, 5, or 2 days from now
+    try {
+      if (updatedRecord.next_service_date) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const nextDate = new Date(updatedRecord.next_service_date);
+        nextDate.setHours(0, 0, 0, 0);
+        const diffTime = nextDate - today;
+        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if ([10, 5, 2].includes(daysRemaining)) {
+          const title = `Scheduled Maintenance in ${daysRemaining} Days`;
+          const message = `Vehicle is due for ${updatedRecord.service_type || 'Routine Maintenance'} on ${nextDate.toLocaleDateString()} (${daysRemaining} days remaining). Please prepare the vehicle for maintenance.`;
+
+          // 1. Fetch mechanic details
+          const mechanicRes = await db.query('SELECT id, email, full_name FROM users WHERE id = $1', [updatedRecord.mechanic_id || req.user.id]);
+          const mechanic = mechanicRes.rows[0];
+
+          // 2. Fetch active driver for the vehicle
+          const driverRes = await db.query(`
+            SELECT u.id, u.email, u.full_name 
+            FROM assignments a 
+            JOIN users u ON a.driver_id = u.id 
+            WHERE a.vehicle_id = $1 AND a.assignment_status = 'Active'
+            LIMIT 1
+          `, [updatedRecord.vehicle_id]);
+          const driver = driverRes.rows[0];
+
+          // 3. Fetch Admin/Manager details
+          const adminRes = await db.query("SELECT id, email, full_name FROM users WHERE role = 'Admin' OR role = 'Fleet Manager'");
+          const admins = adminRes.rows;
+
+          // Insert in-app notifications
+          const userIds = new Set();
+          admins.forEach(a => userIds.add(a.id));
+          if (mechanic) userIds.add(mechanic.id);
+          if (driver) userIds.add(driver.id);
+
+          for (const userId of userIds) {
+            await db.query(`
+              INSERT INTO notifications (user_id, vehicle_id, title, message, notification_type)
+              VALUES ($1, $2, $3, $4, $5)
+            `, [userId, updatedRecord.vehicle_id, title, message, 'Maintenance Alert']);
+          }
+          console.log(`[Service Update Alert] In-app notifications generated for ${daysRemaining} days remaining.`);
+        }
+      }
+    } catch (err) {
+      console.error('⚠️ Could not process instant alert on service record update:', err.message);
+    }
+
     res.status(200).json({
       message: 'Service record updated successfully',
       record: updatedRecord
     });
   } catch (error) {
     if (req.file) {
-      fs.unlinkSync(req.file.path);
+      safeUnlinkFile(req.file.path);
     }
     if (error.code === '23514') {
       if (error.message && error.message.includes('current_mileage')) {
         return res.status(400).json({ error: 'Current mileage cannot be negative.' });
       }
+      if (error.message && error.message.includes('labour_cost')) {
+        return res.status(400).json({ error: 'Labour cost cannot be negative.' });
+      }
+      if (error.message && error.message.includes('parts_cost')) {
+        return res.status(400).json({ error: 'Parts cost cannot be negative.' });
+      }
       if (error.message && error.message.includes('next_service_mileage')) {
         return res.status(400).json({ error: 'Next service mileage must be greater than or equal to current service mileage.' });
       }
     }
+    next(error);
+  }
+};
+
+exports.getVehicleServiceHistory = async (req, res, next) => {
+  try {
+    const { vehicleId } = req.params;
+
+    // Verify vehicle exists
+    const vehicleResult = await db.query(
+      `SELECT id, vehicle_number, registration_number, manufacturer, model
+       FROM vehicles
+       WHERE id = $1`,
+      [vehicleId]
+    );
+
+    if (vehicleResult.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Vehicle not found.'
+      });
+    }
+
+    // Fetch complete service history
+    const historyQuery = `
+      SELECT
+        sr.id,
+        sr.service_date,
+        sr.current_mileage,
+        sr.service_type,
+        sr.description,
+        sr.parts_changed,
+        sr.labour_cost,
+        sr.parts_cost,
+        sr.total_cost,
+        sr.invoice_url,
+        sr.next_service_mileage,
+        sr.next_service_date,
+        sr.created_at,
+        sr.updated_at,
+
+        u.username AS mechanic_name
+
+      FROM service_records sr
+
+      LEFT JOIN users u
+        ON sr.mechanic_id = u.id
+
+      WHERE sr.vehicle_id = $1
+
+      ORDER BY
+        sr.service_date DESC,
+        sr.created_at DESC;
+    `;
+
+    const historyResult = await db.query(historyQuery, [vehicleId]);
+
+    res.status(200).json({
+      vehicle: vehicleResult.rows[0],
+      total_records: historyResult.rows.length,
+      history: historyResult.rows
+    });
+
+  } catch (error) {
     next(error);
   }
 };
@@ -285,10 +414,9 @@ exports.deleteServiceRecord = async (req, res, next) => {
 
     // Delete invoice file
     if (invoice_url) {
-      const filePath = path.join(__dirname, '../..', invoice_url);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
+      const relativePath = invoice_url.startsWith('/') ? invoice_url.substring(1) : invoice_url;
+      const filePath = path.join(__dirname, '../..', relativePath);
+      safeUnlinkFile(filePath);
     }
 
     // Recalculate Maintenance Risk
