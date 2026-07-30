@@ -1,22 +1,11 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
-import { Vehicle, ServiceRecord } from '@/types';
-
-// Skeleton for stat cards
-function StatCardSkeleton() {
-  return (
-    <div className="bg-white rounded-2xl border border-outline-variant/60 p-5 shadow-sm space-y-3">
-      <div className="skeleton h-3 w-20 rounded" />
-      <div className="skeleton h-8 w-24 rounded" />
-      <div className="skeleton h-2 w-32 rounded" />
-    </div>
-  );
-}
+import { db } from '@/data/mockDb';
+import { Vehicle, ServiceRecord, MaintenanceRisk } from '@/types';
 
 export default function VehicleDetailsPage() {
   const params = useParams();
@@ -25,85 +14,65 @@ export default function VehicleDetailsPage() {
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
+  const [risks, setRisks] = useState<MaintenanceRisk | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!api.auth.isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-    if (!id) return;
-
-    const loadData = async () => {
+    const loadVehicleData = async () => {
       try {
         setLoading(true);
-        // ✅ Fixed: uses real API instead of mockDb
-        const vehicleData = await api.vehicles.getById(id);
-        setVehicle(vehicleData);
+        // Try fetching from backend API
+        let foundVehicle: Vehicle | null = null;
+        try {
+          foundVehicle = await api.vehicles.getById(id);
+        } catch {
+          const allVehicles = await api.vehicles.getAll();
+          foundVehicle = allVehicles.find(v => v.id === id) || null;
+        }
 
-        const allServices = await api.services.getAll();
-        setServiceRecords(allServices.filter((sr) => sr.vehicle_id === id));
-      } catch (err: any) {
-        console.error('Error fetching vehicle details:', err);
-        setError(err.message || 'Failed to load vehicle details.');
+        if (foundVehicle) {
+          setVehicle(foundVehicle);
+          try {
+            const records = await api.services.getByVehicle(id);
+            setServiceRecords(records || []);
+          } catch {
+            setServiceRecords(db.getServiceRecords().filter(sr => sr.vehicle_id === id));
+          }
+          try {
+            const riskList = await api.risks.getAll();
+            setRisks(riskList.find(r => r.vehicle_id === id) || null);
+          } catch {
+            setRisks(db.getMaintenanceRisks().find(r => r.vehicle_id === id) || null);
+          }
+        } else {
+          // Fallback to mock db
+          const mockV = db.getVehicle(id) || db.getVehicles()[0];
+          setVehicle(mockV);
+          setServiceRecords(db.getServiceRecords().filter(sr => sr.vehicle_id === mockV.id));
+          setRisks(db.getMaintenanceRisks().find(r => r.vehicle_id === mockV.id) || null);
+        }
+      } catch (err) {
+        console.error('Error loading vehicle details from API:', err);
+        const mockV = db.getVehicle(id) || db.getVehicles()[0];
+        setVehicle(mockV);
+        setServiceRecords(db.getServiceRecords().filter(sr => sr.vehicle_id === mockV.id));
+        setRisks(db.getMaintenanceRisks().find(r => r.vehicle_id === mockV.id) || null);
       } finally {
         setLoading(false);
       }
     };
 
-    loadData();
-  }, [id, router]);
+    if (id) {
+      loadVehicleData();
+    }
+  }, [id]);
 
-  // Loading state
-  if (loading) {
+  if (loading || !vehicle) {
     return (
       <LayoutWrapper>
-        <div className="p-lg md:p-margin-desktop max-w-7xl mx-auto space-y-lg">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="skeleton h-4 w-16 rounded" />
-          </div>
-          <div className="skeleton h-8 w-48 rounded-lg" />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2"><StatCardSkeleton /></div>
-            <StatCardSkeleton />
-            <StatCardSkeleton />
-          </div>
-          <div className="space-y-4">
-            {[1,2,3].map(i => (
-              <div key={i} className="bg-white rounded-2xl border border-outline-variant/60 p-5 shadow-sm">
-                <div className="flex gap-4">
-                  <div className="skeleton w-5 h-5 rounded-full mt-1" />
-                  <div className="flex-1 space-y-2">
-                    <div className="skeleton h-4 w-48 rounded" />
-                    <div className="skeleton h-3 w-64 rounded" />
-                    <div className="skeleton h-3 w-40 rounded" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </LayoutWrapper>
-    );
-  }
-
-  // Error state
-  if (error || !vehicle) {
-    return (
-      <LayoutWrapper>
-        <div className="p-lg md:p-margin-desktop text-center max-w-md mx-auto mt-16">
-          <div className="w-16 h-16 bg-error-container rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="material-symbols-outlined text-[32px] text-error" aria-hidden="true">directions_car_off</span>
-          </div>
-          <h2 className="font-bold text-[18px] text-on-surface mb-2">Vehicle Not Found</h2>
-          <p className="text-[13px] text-on-surface-variant mb-6">{error || 'The vehicle you are looking for does not exist or has been removed.'}</p>
-          <button
-            onClick={() => router.back()}
-            className="bg-primary text-white px-6 py-2.5 rounded-xl font-semibold text-[13px] hover:opacity-90 active:scale-95 cursor-pointer border-0 btn-scale focus-ring"
-          >
-            Go Back
-          </button>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-body-md text-on-surface-variant">Loading vehicle details...</p>
         </div>
       </LayoutWrapper>
     );

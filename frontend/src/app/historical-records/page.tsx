@@ -1,19 +1,39 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import LayoutWrapper from '@/components/LayoutWrapper';
+import { api } from '@/services/api';
 import { mockHistoricalServices } from '@/data/mockDb';
 
 export default function HistoricalRecordsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [records, setRecords] = useState<any[]>(mockHistoricalServices);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchHistoricalRecords = async () => {
+      try {
+        setLoading(true);
+        const data = await api.historicalServices.getAll();
+        if (data && Array.isArray(data) && data.length > 0) {
+          setRecords(data);
+        }
+      } catch (err) {
+        console.error('Error fetching historical records:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHistoricalRecords();
+  }, []);
 
   // Filtering Logic
-  const filteredRecords = mockHistoricalServices.filter((record) => {
+  const filteredRecords = records.filter((record) => {
     return (
-      record.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.remarks?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.vehicle_id.toLowerCase().includes(searchQuery.toLowerCase())
+      (record.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (record.remarks || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (record.vehicle_id || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 

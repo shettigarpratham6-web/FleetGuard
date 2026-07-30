@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import LayoutWrapper from '@/components/LayoutWrapper';
+import { api } from '@/services/api';
 
 interface RiskItem {
   id: string;
@@ -14,67 +15,97 @@ interface RiskItem {
   depot: string;
 }
 
+const defaultRiskData: RiskItem[] = [
+  {
+    id: 'mr-h1',
+    unit: '#842',
+    model: 'Volvo VNL 860',
+    alert: 'Transmission fluid pressure dropping rapidly; abnormal gear slip detected.',
+    risk: 'High',
+    range: '< 15 mi',
+    depot: 'Central Depot',
+  },
+  {
+    id: 'mr-h2',
+    unit: '#119',
+    model: 'Freightliner Cascadia',
+    alert: 'Engine vibration (Harmonic balancer) detected 40% above baseline threshold.',
+    risk: 'High',
+    range: '~ 45 mi',
+    depot: 'Northwest Hub',
+  },
+  {
+    id: 'mr-m1',
+    unit: '#592',
+    model: 'Peterbilt 579',
+    alert: 'DPF (Diesel Particulate Filter) pressure differential trending upwards. Regeneration cycle inefficient over last 3 trips.',
+    risk: 'Medium',
+    range: '~ 850 mi',
+    depot: 'Central Depot',
+  },
+  {
+    id: 'mr-m2',
+    unit: '#401',
+    model: 'Kenworth T680',
+    alert: 'Coolant temperature minor fluctuations detected during sustained incline grades. Potential thermostat sticking.',
+    risk: 'Medium',
+    range: '~ 1,200 mi',
+    depot: 'East Coast',
+  },
+  {
+    id: 'mr-l1',
+    unit: '#992',
+    model: 'Volvo VNL 760',
+    alert: 'Brake pad wear sensor indicates ~15% life remaining on steer axle. Schedule replacement next routine PM.',
+    risk: 'Low',
+    range: '~ 5,000 mi',
+    depot: 'Northwest Hub',
+  },
+  {
+    id: 'mr-l2',
+    unit: '#105',
+    model: 'Freightliner Cascadia',
+    alert: 'Battery voltage resting slightly below optimal threshold post-trip. Alternator output normal. Monitor cold starts.',
+    risk: 'Low',
+    range: 'N/A',
+    depot: 'East Coast',
+  },
+];
+
 export default function PredictiveRiskPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [riskFilter, setRiskFilter] = useState('All Risk Levels');
   const [branchFilter, setBranchFilter] = useState('All Branches');
+  const [riskData, setRiskData] = useState<RiskItem[]>(defaultRiskData);
 
-  const riskData: RiskItem[] = [
-    {
-      id: 'mr-h1',
-      unit: '#842',
-      model: 'Volvo VNL 860',
-      alert: 'Transmission fluid pressure dropping rapidly; abnormal gear slip detected.',
-      risk: 'High',
-      range: '< 15 mi',
-      depot: 'Central Depot',
-    },
-    {
-      id: 'mr-h2',
-      unit: '#119',
-      model: 'Freightliner Cascadia',
-      alert: 'Engine vibration (Harmonic balancer) detected 40% above baseline threshold.',
-      risk: 'High',
-      range: '~ 45 mi',
-      depot: 'Northwest Hub',
-    },
-    {
-      id: 'mr-m1',
-      unit: '#592',
-      model: 'Peterbilt 579',
-      alert: 'DPF (Diesel Particulate Filter) pressure differential trending upwards. Regeneration cycle inefficient over last 3 trips.',
-      risk: 'Medium',
-      range: '~ 850 mi',
-      depot: 'Central Depot',
-    },
-    {
-      id: 'mr-m2',
-      unit: '#401',
-      model: 'Kenworth T680',
-      alert: 'Coolant temperature minor fluctuations detected during sustained incline grades. Potential thermostat sticking.',
-      risk: 'Medium',
-      range: '~ 1,200 mi',
-      depot: 'East Coast',
-    },
-    {
-      id: 'mr-l1',
-      unit: '#992',
-      model: 'Volvo VNL 760',
-      alert: 'Brake pad wear sensor indicates ~15% life remaining on steer axle. Schedule replacement next routine PM.',
-      risk: 'Low',
-      range: '~ 5,000 mi',
-      depot: 'Northwest Hub',
-    },
-    {
-      id: 'mr-l2',
-      unit: '#105',
-      model: 'Freightliner Cascadia',
-      alert: 'Battery voltage resting slightly below optimal threshold post-trip. Alternator output normal. Monitor cold starts.',
-      risk: 'Low',
-      range: 'N/A',
-      depot: 'East Coast',
-    },
-  ];
+  useEffect(() => {
+    const fetchRiskData = async () => {
+      try {
+        const [backendRisks, backendVehicles] = await Promise.all([
+          api.risks.getAll(),
+          api.vehicles.getAll(),
+        ]);
+        if (backendRisks && backendRisks.length > 0) {
+          const mapped: RiskItem[] = backendRisks.map((r: any) => {
+            const v = backendVehicles.find((veh: any) => veh.id === r.vehicle_id);
+            return {
+              id: r.id,
+              unit: v ? `#${v.vehicle_number}` : `#${r.vehicle_id.slice(0, 4)}`,
+              model: v ? `${v.manufacturer} ${v.model}` : 'Fleet Asset',
+              alert: r.summary || 'Preventive telemetry alert.',
+              risk: (r.risk_level as 'High' | 'Medium' | 'Low') || 'Low',
+              range: r.remaining_distance ? `~ ${r.remaining_distance.toLocaleString()} mi` : 'N/A',
+              depot: v?.branch_id ? `Branch ${v.branch_id.slice(0, 6)}` : 'Central Depot',
+            };
+          });
+          setRiskData(mapped);
+        }
+      } catch (err) {
+        console.error('Error loading predictive risks from API:', err);
+      }
+    };
+    fetchRiskData();
+  }, []);
 
   // Filtering Logic
   const filteredData = riskData.filter((item) => {
