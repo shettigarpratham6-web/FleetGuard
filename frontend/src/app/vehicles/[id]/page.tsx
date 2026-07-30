@@ -1,5 +1,4 @@
 'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -20,8 +19,8 @@ export default function VehicleDetailsPage() {
     vehicle.status === 'Maintenance'
       ? 'bg-error-container text-on-error-container'
       : vehicle.status === 'Assigned'
-      ? 'bg-primary-container text-on-primary-container'
-      : 'bg-tertiary-container/10 text-tertiary-container border border-tertiary-container/20';
+        ? 'bg-primary-container text-on-primary-container'
+        : 'bg-tertiary-container/10 text-tertiary-container border border-tertiary-container/20';
 
   return (
     <LayoutWrapper searchPlaceholder="Search services for this vehicle...">
@@ -150,7 +149,7 @@ export default function VehicleDetailsPage() {
 
                   <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow relative overflow-hidden">
                     <div className={`absolute top-0 left-0 w-1 h-full ${bannerColorClass}`}></div>
-                    
+
                     <div className="flex flex-col md:flex-row justify-between md:items-start gap-md mb-md">
                       <div>
                         <div className="flex items-center gap-sm mb-1">
@@ -168,7 +167,7 @@ export default function VehicleDetailsPage() {
                           {record.description}
                         </p>
                       </div>
-                      
+
                       <div className="text-right flex-shrink-0">
                         <span className="font-headline-sm text-headline-sm font-data-mono text-primary block">
                           ${record.total_cost.toFixed(2)}

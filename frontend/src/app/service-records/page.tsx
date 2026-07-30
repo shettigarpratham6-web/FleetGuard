@@ -1,24 +1,56 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
-import { db } from '@/data/mockDb';
+import { api } from '@/services/api';
+import { Vehicle, ServiceRecord, User } from '@/types';
 
 export default function ServiceRecordsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [vehicleFilter, setVehicleFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [mechanicFilter, setMechanicFilter] = useState('');
 
-  const vehicles = db.getVehicles();
-  const users = db.getUsers();
-  const serviceRecords = db.getServiceRecords();
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!api.auth.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [vehiclesData, serviceRecordsData, usersData] = await Promise.all([
+          api.vehicles.getAll(),
+          api.services.getAll(),
+          api.auth.getUsers(),
+        ]);
+        setVehicles(vehiclesData || []);
+        setServiceRecords(serviceRecordsData || []);
+        setUsers(usersData || []);
+      } catch (err: any) {
+        console.error('Error fetching records:', err);
+        setError(err.message || 'Failed to retrieve records from backend.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [router]);
 
   // Filters logic
   const filteredRecords = serviceRecords.filter((record) => {
     const vehicle = vehicles.find((v) => v.id === record.vehicle_id);
-    const mechanic = users.find((u) => u.id === record.mechanic_id);
 
     // Global Search Matches
     const matchesSearch =
@@ -38,6 +70,17 @@ export default function ServiceRecordsPage() {
     return matchesSearch && matchesVehicle && matchesType && matchesMechanic;
   });
 
+  if (loading) {
+    return (
+      <LayoutWrapper>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-body-md text-on-surface-variant">Connecting to service database...</p>
+        </div>
+      </LayoutWrapper>
+    );
+  }
+
   return (
     <LayoutWrapper
       searchPlaceholder="Search records, VIN, notes..."
@@ -55,16 +98,23 @@ export default function ServiceRecordsPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
+            <span className="material-symbols-outlined text-[20px]">error</span>
+            {error}
+          </div>
+        )}
+
         {/* Controls Toolbar: Filters & Actions */}
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm flex flex-col xl:flex-row gap-md items-start xl:items-center justify-between">
           <div className="flex flex-col sm:flex-row flex-wrap gap-md w-full xl:w-auto">
             {/* Search Input (In toolbar too) */}
             <div className="relative w-full sm:w-64">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
                 search
               </span>
               <input
-                className="w-full pl-10 pr-4 py-2 bg-surface rounded-lg border border-outline-variant focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-all outline-none font-body-md text-body-md placeholder:text-on-surface-variant"
+                className="w-full pl-10 pr-4 py-2 bg-surface rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none font-body-md text-body-md placeholder:text-on-surface-variant"
                 placeholder="Search records, VIN..."
                 type="text"
                 value={searchQuery}
@@ -105,7 +155,7 @@ export default function ServiceRecordsPage() {
               >
                 <option value="">All Mechanics</option>
                 {users
-                  .filter((u) => u.role === 'Service Center')
+                  .filter((u) => u.role === 'Service Center' || u.role === 'Driver')
                   .map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.full_name}
@@ -118,13 +168,14 @@ export default function ServiceRecordsPage() {
           {/* Primary Actions */}
           <div className="flex items-center gap-sm w-full xl:w-auto justify-end shrink-0">
             <button
-              className="p-2 bg-surface rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors cursor-pointer"
+              onClick={() => alert('Exporting record spreadsheet...')}
+              className="p-2 bg-surface rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors cursor-pointer border-none"
               title="Download Report"
             >
               <span className="material-symbols-outlined text-md">download</span>
             </button>
             <Link href="/service-records/create">
-              <button className="bg-primary hover:bg-slate-800 text-on-primary font-label-md text-label-md py-2 px-md rounded-lg flex items-center justify-center gap-xs transition-colors shadow-sm whitespace-nowrap cursor-pointer active:opacity-80">
+              <button className="bg-primary hover:opacity-95 text-on-primary font-label-md text-label-md py-2 px-md rounded-lg flex items-center justify-center gap-xs transition-colors shadow-sm whitespace-nowrap cursor-pointer active:opacity-80 border-none">
                 <span className="material-symbols-outlined text-sm">add</span>
                 Create Service Record
               </button>
@@ -169,8 +220,7 @@ export default function ServiceRecordsPage() {
                   filteredRecords.map((record) => {
                     const vehicle = vehicles.find((v) => v.id === record.vehicle_id);
                     const mechanic = users.find((u) => u.id === record.mechanic_id);
-                    const isCompleted =
-                      record.total_cost > 150 || record.service_type !== 'Transmission Diag.';
+                    const isCompleted = true; // For database-backed systems
 
                     return (
                       <tr key={record.id} className="hover:bg-surface/50 transition-colors group">
@@ -194,7 +244,7 @@ export default function ServiceRecordsPage() {
                           </Link>
                         </td>
                         <td className="py-3 px-4 text-on-surface whitespace-nowrap">
-                          {record.service_date}
+                          {new Date(record.service_date).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-4 text-on-surface text-right whitespace-nowrap">
                           {record.current_mileage.toLocaleString()} mi
@@ -212,27 +262,19 @@ export default function ServiceRecordsPage() {
                         <td className="py-3 px-4 text-on-surface">
                           {mechanic?.full_name || 'N/A'}
                           <br />
-                          <span className="text-xs text-on-surface-variant font-body-sm">
+                          <span className="text-xs text-on-surface-variant font-body-sm capitalize">
                             {mechanic?.role}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-on-surface text-right font-medium">
-                          ${record.total_cost.toFixed(2)}
+                          ${Number(record.total_cost).toFixed(2)}
                         </td>
                         <td className="py-3 px-4">
                           <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-label-md border ${
-                              isCompleted
-                                ? 'bg-tertiary-container/10 text-tertiary-container border-tertiary-container/20'
-                                : 'bg-amber-500/10 text-amber-700 border-amber-500/20'
-                            }`}
+                            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-label-md border bg-tertiary-container/10 text-tertiary-container border-tertiary-container/20`}
                           >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                isCompleted ? 'bg-tertiary-container' : 'bg-amber-500'
-                              }`}
-                            ></span>
-                            {isCompleted ? 'Completed' : 'In Progress'}
+                            <span className="w-1.5 h-1.5 rounded-full bg-tertiary-container"></span>
+                            Completed
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right whitespace-nowrap">
@@ -247,7 +289,7 @@ export default function ServiceRecordsPage() {
                               </span>
                             </Link>
                             <button
-                              className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded transition-colors cursor-pointer"
+                              className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded transition-colors cursor-pointer border-none bg-transparent"
                               title="Edit Record"
                             >
                               <span className="material-symbols-outlined text-[20px]">edit</span>
@@ -275,18 +317,18 @@ export default function ServiceRecordsPage() {
             </span>
             <div className="flex items-center gap-xs">
               <button
-                className="p-1 rounded text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50"
+                className="p-1 rounded text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50 border-none bg-transparent"
                 disabled
               >
                 <span className="material-symbols-outlined text-[20px]">chevron_left</span>
               </button>
               <div className="flex gap-1">
-                <button className="w-7 h-7 rounded bg-primary-container text-on-primary-container font-label-md text-label-md flex items-center justify-center">
+                <button className="w-7 h-7 rounded bg-primary-container text-on-primary-container font-label-md text-label-md flex items-center justify-center border-none">
                   1
                 </button>
               </div>
               <button
-                className="p-1 rounded text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50"
+                className="p-1 rounded text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50 border-none bg-transparent"
                 disabled
               >
                 <span className="material-symbols-outlined text-[20px]">chevron_right</span>

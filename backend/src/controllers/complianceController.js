@@ -211,7 +211,7 @@ exports.updateDocument = async (req, res, next) => {
       const diffTime = expDate - today;
       const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if ([10, 5, 2].includes(daysRemaining)) {
+      if ([10, 7, 5].includes(daysRemaining)) {
         const title = `${updatedDoc.document_type} Expiring in ${daysRemaining} Days`;
         const message = `The ${updatedDoc.document_type} (No: ${updatedDoc.document_number || 'N/A'}) is expiring on ${expDate.toLocaleDateString()} (${daysRemaining} days remaining). Please renew it immediately.`;
 

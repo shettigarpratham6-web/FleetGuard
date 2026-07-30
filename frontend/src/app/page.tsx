@@ -1,5 +1,28 @@
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '@/services/api';
 
 export default function Home() {
-  redirect('/dashboard');
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!api.auth.isAuthenticated()) {
+      router.push('/login');
+    } else {
+      const user = api.auth.getLocalUser();
+      if (user?.role === 'Admin' || user?.role === 'Fleet Manager' || user?.role === 'Manager') {
+        router.push('/dashboard');
+      } else {
+        router.push('/register');
+      }
+    }
+  }, [router]);
+
+  return (
+    <div className="flex h-screen w-screen items-center justify-center bg-background">
+      <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 }

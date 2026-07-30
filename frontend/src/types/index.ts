@@ -74,3 +74,16 @@ export interface ComplianceDocument {
   status: 'Valid' | 'Expired' | 'Pending';
   uploaded_by?: string;
 }
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  vehicle_id?: string;
+  title: string;
+  message: string;
+  notification_type?: string;
+  is_read: boolean;
+  created_at: string;
+  vehicle_number?: string;
+  registration_number?: string;
+}
