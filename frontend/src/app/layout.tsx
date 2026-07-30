@@ -29,7 +29,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-background text-on-background h-full font-sans antialiased overflow-hidden flex">
+      <body className="bg-background text-on-background min-h-screen font-sans antialiased overflow-x-hidden">
         {children}
       </body>
     </html>

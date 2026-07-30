@@ -1,11 +1,61 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
+import HeroBackground from '@/components/HeroBackground';
 import { api } from '@/services/api';
 import { User, Vehicle, ServiceRecord, MaintenanceRisk } from '@/types';
+
+// ─── Skeleton loader component ───────────────────────────────
+function StatSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-outline-variant/60 p-5 space-y-3 shadow-sm">
+      <div className="skeleton h-3 w-24 rounded" />
+      <div className="skeleton h-8 w-16 rounded" />
+      <div className="skeleton h-2 w-32 rounded" />
+    </div>
+  );
+}
+
+// ─── Bar chart bar ────────────────────────────────────────────
+function ChartBar({ month, cost, maxCost, isLast, index }: { month: string; cost: number; maxCost: number; isLast: boolean; index: number }) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const heightPct = Math.round((cost / maxCost) * 78) + 5;
+
+  return (
+    <div className="flex flex-col items-center flex-1 group">
+      <div className="relative w-full flex items-end" style={{ height: '200px' }}>
+        {/* Tooltip */}
+        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface text-[10px] px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-md">
+          ${cost.toFixed(0)}
+        </div>
+        {/* Bar */}
+        <div
+          ref={barRef}
+          className={`w-full rounded-t-lg transition-all duration-700 cursor-pointer ${
+            isLast
+              ? 'shadow-lg'
+              : 'group-hover:opacity-80'
+          }`}
+          style={{
+            height: `${heightPct}%`,
+            background: isLast
+              ? 'linear-gradient(180deg, #1e3a5f 0%, #091426 100%)'
+              : 'linear-gradient(180deg, #bcc7de 0%, #8590a6 100%)',
+            transformOrigin: 'bottom',
+            animation: `bar-grow 0.6s ease ${index * 80}ms both`,
+          }}
+          title={`${month}: $${cost.toFixed(0)}`}
+        />
+      </div>
+      <span className={`text-[11px] mt-1 font-medium ${isLast ? 'text-primary font-bold' : 'text-on-surface-variant'}`}>
+        {month}
+      </span>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -17,7 +67,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Form State for sending notifications
+  // Notification dispatcher form state
   const [targetUserId, setTargetUserId] = useState('');
   const [targetVehicleId, setTargetVehicleId] = useState('');
   const [alertType, setAlertType] = useState('Compliance Alert');
@@ -27,27 +77,24 @@ export default function DashboardPage() {
   const [sendError, setSendError] = useState('');
   const [sendingAlert, setSendingAlert] = useState(false);
 
+  // Report toast
+  const [reportToast, setReportToast] = useState(false);
+
   useEffect(() => {
-    // Check authentication and authorize Admin/Managers
     if (!api.auth.isAuthenticated()) {
       router.push('/login');
       return;
     }
     const currentUser = api.auth.getLocalUser();
-
-if (!currentUser) {
-  router.push('/login');
-  return;
-}
-
-   const role = currentUser.role?.trim().toLowerCase();
-    if (
-     currentUser &&
-     !['Admin', 'Fleet Manager', 'Manager'].includes(currentUser.role)
-      ) {
-    router.push('/dashboard');   // or '/dashboard' or '/home'
-    return;
+    if (!currentUser) {
+      router.push('/login');
+      return;
     }
+    if (!['Admin', 'Fleet Manager', 'Manager'].includes(currentUser.role)) {
+      router.push('/dashboard');
+      return;
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -72,31 +119,16 @@ if (!currentUser) {
     fetchData();
   }, [router]);
 
-  // Calculate dynamic monthly costs from service records
+  // Monthly cost aggregation
   const getMonthlyCosts = () => {
-    const monthlyData = [
-      { name: 'Jan', cost: 0 },
-      { name: 'Feb', cost: 0 },
-      { name: 'Mar', cost: 0 },
-      { name: 'Apr', cost: 0 },
-      { name: 'May', cost: 0 },
-      { name: 'Jun', cost: 0 },
-      { name: 'Jul', cost: 0 },
-      { name: 'Aug', cost: 0 },
-      { name: 'Sep', cost: 0 },
-      { name: 'Oct', cost: 0 },
-      { name: 'Nov', cost: 0 },
-      { name: 'Dec', cost: 0 }
-    ];
-
+    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+      name: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][i],
+      cost: 0,
+    }));
     serviceRecords.forEach((record) => {
-      const date = new Date(record.service_date);
-      const month = date.getMonth();
-      if (!isNaN(month)) {
-        monthlyData[month].cost += Number(record.total_cost) || 0;
-      }
+      const month = new Date(record.service_date).getMonth();
+      if (!isNaN(month)) monthlyData[month].cost += Number(record.total_cost) || 0;
     });
-
     const currentMonth = new Date().getMonth();
     const result = [];
     for (let i = 5; i >= 0; i--) {
@@ -110,80 +142,51 @@ if (!currentUser) {
   const monthlyCosts = getMonthlyCosts();
   const maxCost = Math.max(...monthlyCosts.map(m => m.cost), 100);
 
-  // Filter recent service records based on search query
   const filteredRecords = serviceRecords.filter(
     (record) =>
       record.service_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicles
-        .find((v) => v.id === record.vehicle_id)
+      vehicles.find((v) => v.id === record.vehicle_id)
         ?.vehicle_number.toLowerCase()
         .includes(searchQuery.toLowerCase())
   );
 
-  // Filter upcoming services (scheduled in the future)
   const upcomingServices = serviceRecords
     .filter((sr) => sr.next_service_date && new Date(sr.next_service_date) >= new Date())
     .sort((a, b) => new Date(a.next_service_date!).getTime() - new Date(b.next_service_date!).getTime())
     .slice(0, 3);
 
-  // Compute Risk Distribution
   const totalRisks = risks.length || 1;
   const highRiskCount = risks.filter((r) => r.risk_level === 'High').length;
   const mediumRiskCount = risks.filter((r) => r.risk_level === 'Medium').length;
   const lowRiskCount = risks.filter((r) => r.risk_level === 'Low').length;
-
   const lowPct = Math.round((lowRiskCount / totalRisks) * 100);
   const medPct = Math.round((mediumRiskCount / totalRisks) * 100);
   const highPct = 100 - lowPct - medPct;
 
-  // Handle Send Expiry Notification
   const handleSendNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     setSendSuccess('');
     setSendError('');
-
-    if (!targetUserId) {
-      setSendError('Please select a target user.');
-      return;
-    }
-
+    if (!targetUserId) { setSendError('Please select a target user.'); return; }
     const selectedUser = users.find(u => u.id === targetUserId);
     const selectedVehicle = vehicles.find(v => v.id === targetVehicleId);
-
-    if (!selectedUser) {
-      setSendError('Invalid user selected.');
-      return;
-    }
-
+    if (!selectedUser) { setSendError('Invalid user selected.'); return; }
     setSendingAlert(true);
-
     try {
       const vNum = selectedVehicle ? selectedVehicle.vehicle_number : 'All Fleet';
       const daysStr = `${expiryDays} Days`;
-      
       let title = '';
       let message = '';
-
       if (alertType === 'Compliance Alert') {
         title = `Compliance Expiry Alert in ${daysStr}`;
-        message = customMsg || `Dear ${selectedUser.full_name}, your vehicle (${vNum}) compliance documents are set to expire in exactly ${expiryDays} days. Please upload updated fitness certificates or PUC details.`;
+        message = customMsg || `Dear ${selectedUser.full_name}, your vehicle (${vNum}) compliance documents expire in ${expiryDays} days. Please upload updated documents.`;
       } else {
         title = `Scheduled Maintenance in ${daysStr}`;
-        message = customMsg || `Dear ${selectedUser.full_name}, your vehicle (${vNum}) is scheduled for routine maintenance checkup in ${expiryDays} days. Please drop it off at the nearest service center.`;
+        message = customMsg || `Dear ${selectedUser.full_name}, your vehicle (${vNum}) is due for routine maintenance in ${expiryDays} days.`;
       }
-
-      await api.notifications.create({
-        user_id: targetUserId,
-        vehicle_id: targetVehicleId || undefined,
-        title,
-        message,
-        notification_type: alertType
-      });
-
+      await api.notifications.create({ user_id: targetUserId, vehicle_id: targetVehicleId || undefined, title, message, notification_type: alertType });
       setSendSuccess(`Alert sent successfully to ${selectedUser.full_name}!`);
-      setCustomMsg('');
-      setTargetVehicleId('');
-      setTargetUserId('');
+      setCustomMsg(''); setTargetVehicleId(''); setTargetUserId('');
     } catch (err: any) {
       setSendError(err.message || 'Failed to dispatch alert.');
     } finally {
@@ -191,275 +194,362 @@ if (!currentUser) {
     }
   };
 
+  const handleGenerateReport = () => {
+    setReportToast(true);
+    setTimeout(() => setReportToast(false), 3000);
+    window.print();
+  };
+
+  // ── SKELETON LOADING STATE ─────────────────────────────────
   if (loading) {
     return (
       <LayoutWrapper>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="font-body-md text-on-surface-variant">Connecting to live PostgreSQL database...</p>
+        <div className="p-lg md:p-margin-desktop space-y-lg max-w-7xl mx-auto">
+          {/* Header skeleton */}
+          <div className="flex justify-between items-end">
+            <div className="space-y-2">
+              <div className="skeleton h-8 w-40 rounded-lg" />
+              <div className="skeleton h-4 w-56 rounded" />
+            </div>
+            <div className="flex gap-2">
+              <div className="skeleton h-9 w-28 rounded-xl" />
+              <div className="skeleton h-9 w-32 rounded-xl" />
+              <div className="skeleton h-9 w-36 rounded-xl" />
+            </div>
+          </div>
+          {/* KPI skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
+            {[1,2,3,4].map(i => <StatSkeleton key={i} />)}
+          </div>
+          {/* Chart skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+            <div className="lg:col-span-2 space-y-lg">
+              <div className="bg-white rounded-2xl border border-outline-variant/60 p-lg h-[400px] shadow-sm">
+                <div className="skeleton h-4 w-48 rounded mb-2" />
+                <div className="skeleton h-3 w-64 rounded mb-8" />
+                <div className="flex items-end gap-3 h-48 px-4">
+                  {[60,40,80,55,90,70].map((h, i) => (
+                    <div key={i} className="flex-1 skeleton rounded-t-lg" style={{ height: `${h}%` }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-lg">
+              <div className="bg-white rounded-2xl border border-outline-variant/60 p-lg h-64 shadow-sm">
+                <div className="skeleton h-4 w-32 rounded mb-4" />
+                <div className="w-40 h-40 skeleton rounded-full mx-auto" />
+              </div>
+            </div>
+          </div>
         </div>
-      </LayoutWrapper>
-    );
-  }
+        <p className="font-semibold text-sm text-slate-600 tracking-wide">
+          Connecting to live PostgreSQL database...
+        </p>
+      </div>
+    </LayoutWrapper>
+  );
+}
 
   return (
+    <div className="relative min-h-screen">
+      {/* Animated CSS Hero Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <HeroBackground />
+      </div>
+
+      {/* Dashboard content rendered above background */}
+      <div className="relative z-10">
     <LayoutWrapper
       searchPlaceholder="Search vehicles, VINs, or records..."
       searchValue={searchQuery}
       onSearchChange={setSearchQuery}
     >
+      {/* Report toast */}
+      {reportToast && (
+        <div className="fixed top-4 right-4 z-[100] bg-primary text-white px-4 py-3 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-2 animate-slide-in-right">
+          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+          Report sent to printer!
+        </div>
+      )}
+
       <div className="p-lg md:p-margin-desktop space-y-lg max-w-7xl mx-auto">
-        
-        {/* Header & Quick Actions */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-md">
+
+        {/* ── Header & Quick Actions ───────────────────────────── */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-md animate-fade-in-up">
           <div>
-            <h2 className="font-display-lg text-display-lg text-primary">Overview</h2>
-            <p className="font-body-lg text-body-lg text-on-surface-variant mt-xs">
+            <h2 className="font-black text-[28px] md:text-[32px] text-primary leading-tight">Overview</h2>
+            <p className="text-[14px] text-on-surface-variant mt-1">
               Live status from PostgreSQL backend.
             </p>
           </div>
-          <div className="flex flex-wrap gap-sm">
-            <button className="bg-surface-container-high text-on-surface px-md py-sm rounded-lg font-label-md text-label-md hover:bg-surface-container-highest transition-colors border border-outline-variant flex items-center gap-xs cursor-pointer active:opacity-80">
-              <span className="material-symbols-outlined text-[18px]">directions_car</span>
-              New Vehicle
-            </button>
-            <button className="bg-surface-container-high text-on-surface px-md py-sm rounded-lg font-label-md text-label-md hover:bg-surface-container-highest transition-colors border border-outline-variant flex items-center gap-xs cursor-pointer active:opacity-80">
-              <span className="material-symbols-outlined text-[18px]">summarize</span>
+          <div className="flex flex-wrap gap-2">
+            {/* ✅ New Vehicle — now linked */}
+            <Link href="/vehicles/new">
+              <button className="bg-surface-container-high text-on-surface px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-surface-container-highest transition-all border border-outline-variant/60 flex items-center gap-1.5 cursor-pointer btn-scale shadow-sm focus-ring">
+                <span className="material-symbols-outlined text-[17px]" aria-hidden="true">directions_car</span>
+                New Vehicle
+              </button>
+            </Link>
+
+            {/* ✅ Generate Report — now functional */}
+            <button
+              onClick={handleGenerateReport}
+              className="bg-surface-container-high text-on-surface px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:bg-surface-container-highest transition-all border border-outline-variant/60 flex items-center gap-1.5 cursor-pointer btn-scale shadow-sm focus-ring"
+            >
+              <span className="material-symbols-outlined text-[17px]" aria-hidden="true">summarize</span>
               Generate Report
             </button>
+
+            {/* ✅ Create Service Record */}
             <Link href="/service-records/create">
-              <button className="bg-primary text-on-primary px-md py-sm rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity flex items-center gap-xs shadow-sm cursor-pointer active:opacity-80">
-                <span className="material-symbols-outlined text-[18px]">add_notes</span>
+              <button className="text-white px-4 py-2.5 rounded-xl text-[13px] font-semibold hover:opacity-90 transition-all flex items-center gap-1.5 shadow-md cursor-pointer btn-scale focus-ring border-0" style={{ background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)' }}>
+                <span className="material-symbols-outlined text-[17px]" aria-hidden="true">add_notes</span>
                 Create Service Record
               </button>
             </Link>
           </div>
         </div>
+      </div>
 
         {error && (
-          <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-[20px]">error</span>
+          <div className="p-4 rounded-xl bg-error-container/10 border border-error/20 text-error text-[13px] flex items-center gap-2 animate-fade-in">
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">error</span>
             {error}
           </div>
         )}
 
-        {/* KPI Bento Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
+        {/* ── KPI Bento Grid ────────────────────────────────────── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-md stagger-children">
           {/* Total Vehicles */}
-          <div className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-sm opacity-10 group-hover:opacity-20 transition-opacity">
-              <span className="material-symbols-outlined text-[64px] text-primary">local_shipping</span>
+          <div className="bg-white p-5 rounded-2xl border border-outline-variant/60 shadow-sm hover:shadow-md transition-all duration-250 card-hover relative overflow-hidden group animate-fade-in-up">
+            <div className="absolute -top-2 -right-2 opacity-5 group-hover:opacity-10 transition-opacity">
+              <span className="material-symbols-outlined text-[80px] text-primary" aria-hidden="true">local_shipping</span>
             </div>
-            <p className="font-label-md text-label-md text-on-surface-variant uppercase">Total Vehicles</p>
-            <div className="mt-sm flex items-baseline gap-sm">
-              <span className="font-display-lg text-display-lg text-primary">{vehicles.length}</span>
-              <span className="font-body-sm text-body-sm text-[#16a34a] flex items-center">
-                <span className="material-symbols-outlined text-[14px]">arrow_upward</span> Live
+            <p className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Total Vehicles</p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-[36px] font-black text-primary leading-none">{vehicles.length}</span>
+              <span className="text-[12px] text-green-600 flex items-center font-semibold">
+                <span className="material-symbols-outlined text-[14px]" aria-hidden="true">arrow_upward</span>Live
               </span>
             </div>
+            <div className="mt-3 h-1 bg-surface-container rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all duration-700" style={{ width: '100%' }} />
+            </div>
           </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">{vehicles.length}</span>
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-[12px]">arrow_upward</span> Live
+            </span>
+          </div>
+        </div>
 
           {/* Due for Service */}
-          <Link href="/maintenance-queue" className="block">
-            <div className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow h-full">
+          <Link href="/maintenance-queue" className="block animate-fade-in-up">
+            <div className="bg-white p-5 rounded-2xl border border-outline-variant/60 shadow-sm hover:shadow-md transition-all duration-250 card-hover h-full">
               <div className="flex justify-between items-start">
-                <p className="font-label-md text-label-md text-on-surface-variant uppercase">Due for Service</p>
-                <span className="material-symbols-outlined text-surface-tint">build</span>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Due for Service</p>
+                <div className="w-8 h-8 rounded-lg bg-surface-tint/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[18px] text-surface-tint" aria-hidden="true">build</span>
+                </div>
               </div>
-              <div className="mt-sm flex items-baseline gap-sm">
-                <span className="font-display-lg text-display-lg text-surface-tint">
-                  {mediumRiskCount + highRiskCount}
-                </span>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-[36px] font-black text-surface-tint leading-none">{mediumRiskCount + highRiskCount}</span>
               </div>
-              <div className="mt-md w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
-                <div className="bg-surface-tint h-full" style={{ width: `${Math.round(((mediumRiskCount + highRiskCount) / totalRisks) * 100)}%` }}></div>
+              <div className="mt-3 h-1.5 bg-surface-container rounded-full overflow-hidden">
+                <div className="h-full bg-surface-tint rounded-full transition-all duration-700" style={{ width: `${Math.round(((mediumRiskCount + highRiskCount) / totalRisks) * 100)}%` }} />
               </div>
             </div>
           </Link>
 
           {/* Overdue */}
-          <Link href="/maintenance-queue" className="block">
-            <div className="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow border-l-4 border-l-[#d97706] h-full">
+          <Link href="/maintenance-queue" className="block animate-fade-in-up">
+            <div className="bg-white p-5 rounded-2xl border border-outline-variant/60 border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all duration-250 card-hover h-full">
               <div className="flex justify-between items-start">
-                <p className="font-label-md text-label-md text-on-surface-variant uppercase">Overdue</p>
-                <span className="material-symbols-outlined text-[#d97706]">warning</span>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Overdue</p>
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[18px] text-amber-600" aria-hidden="true">warning</span>
+                </div>
               </div>
-              <div className="mt-sm flex items-baseline gap-sm">
-                <span className="font-display-lg text-display-lg text-on-surface">
-                  {highRiskCount}
-                </span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">vehicles</span>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-[36px] font-black text-on-surface leading-none">{highRiskCount}</span>
+                <span className="text-[12px] text-on-surface-variant">vehicles</span>
               </div>
             </div>
-          </Link>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl md:text-4xl font-extrabold text-rose-600 tracking-tight">
+                {highRiskCount}
+              </span>
+              <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                Immediate Action
+              </span>
+            </div>
+          </div>
+        </Link>
+      </div>
 
           {/* High Risk */}
-          <Link href="/predictive-risk" className="block">
-            <div className="bg-error-container p-lg rounded-xl border border-[#ffb4ab] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow border-l-4 border-l-error h-full">
+          <Link href="/predictive-risk" className="block animate-fade-in-up">
+            <div className="p-5 rounded-2xl border border-red-200 border-l-4 border-l-error shadow-sm hover:shadow-md transition-all duration-250 card-hover h-full" style={{ background: 'linear-gradient(135deg, #fff5f5 0%, #ffe4e4 100%)' }}>
               <div className="flex justify-between items-start">
-                <p className="font-label-md text-label-md text-on-error-container uppercase">High Risk</p>
-                <span className="material-symbols-outlined text-error">report</span>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-error/70">High Risk</p>
+                <div className="w-8 h-8 rounded-lg bg-error/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[18px] text-error fill" aria-hidden="true">report</span>
+                </div>
               </div>
-              <div className="mt-sm flex items-baseline gap-sm">
-                <span className="font-display-lg text-display-lg text-on-error-container">
-                  {highRiskCount}
-                </span>
-                <span className="font-body-sm text-body-sm text-error ml-xs">immediate action</span>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-[36px] font-black text-error leading-none">{highRiskCount}</span>
+                <span className="text-[12px] text-error/80 font-semibold">immediate</span>
               </div>
+              <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+                USD ($)
+              </span>
             </div>
           </Link>
         </div>
 
-        {/* Charts & Lists Layout */}
+        {/* ── Main Content Grid ─────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
-          {/* Left Column: Charts & Table */}
+          {/* Left Column */}
           <div className="lg:col-span-2 space-y-lg">
-            
-            {/* Cost Chart */}
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] p-lg flex flex-col h-[400px]">
-              <div className="flex justify-between items-center mb-md pb-sm border-b border-outline-variant">
+
+            {/* Bar Chart */}
+            <div className="bg-white rounded-2xl border border-outline-variant/60 shadow-sm p-6 animate-fade-in-up">
+              <div className="flex justify-between items-center mb-6 pb-4 border-b border-outline-variant/40">
                 <div>
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface">Maintenance Expenditures</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Monthly spending dynamically calculated from backend records</p>
+                  <h3 className="font-bold text-[16px] text-on-surface">Maintenance Expenditures</h3>
+                  <p className="text-[12px] text-on-surface-variant mt-0.5">Monthly spending from backend records</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] text-on-surface-variant">Total (6 mo.)</p>
+                  <p className="font-bold text-[15px] text-primary">${monthlyCosts.reduce((s, m) => s + m.cost, 0).toFixed(0)}</p>
                 </div>
               </div>
-              <div className="flex-1 relative flex items-end justify-between pt-lg px-md gap-sm">
-                {/* Chart Grid Lines */}
-                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 px-md pt-lg">
-                  <div className="w-full border-t border-outline-variant border-dashed"></div>
-                  <div className="w-full border-t border-outline-variant border-dashed"></div>
-                  <div className="w-full border-t border-outline-variant border-dashed"></div>
-                  <div className="w-full border-t border-outline-variant border-dashed"></div>
-                  <div className="w-full border-t border-outline-variant border-solid"></div>
-                </div>
-                
-                {/* Dynamic Bars */}
-                <div className="relative w-full h-full flex items-end justify-between px-lg z-10 pb-8">
-                  {monthlyCosts.map((m, index) => {
-                    const heightPct = Math.round((m.cost / maxCost) * 80) + 5; // offset for visible bar
-                    const isLast = index === monthlyCosts.length - 1;
-                    return (
-                      <div key={m.name} className="flex flex-col items-center w-12 group">
-                        <div 
-                          style={{ height: `${heightPct}%` }}
-                          className={`w-full rounded-t-md transition-all duration-300 relative ${isLast ? 'bg-primary shadow-md' : 'bg-primary-fixed-dim group-hover:bg-primary-fixed'}`}
-                        >
-                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20">
-                            ${m.cost.toFixed(0)}
-                          </div>
-                        </div>
-                        <span className={`absolute bottom-0 font-body-sm text-body-sm mt-sm pt-xs ${isLast ? 'text-on-surface font-semibold' : 'text-on-surface-variant'}`}>
-                          {m.name}
-                        </span>
+              <div className="flex items-end gap-2 px-2" style={{ height: '220px' }}>
+                {/* Y-axis guide lines */}
+                <div className="relative flex-1 flex gap-2 items-end h-full">
+                  <div className="absolute inset-0 flex flex-col-reverse justify-between pointer-events-none pb-6">
+                    {[0,25,50,75,100].map(pct => (
+                      <div key={pct} className="w-full border-t border-dashed border-outline-variant/40 flex">
+                        <span className="text-[9px] text-on-surface-variant/50 pr-1 -translate-y-2">{pct}%</span>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                  <div className="flex items-end gap-2 w-full h-full relative z-10">
+                    {monthlyCosts.map((m, i) => (
+                      <ChartBar key={m.name} month={m.name} cost={m.cost} maxCost={maxCost} isLast={i === monthlyCosts.length - 1} index={i} />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
 
             {/* Recent Service Records Table */}
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] overflow-hidden">
-              <div className="flex justify-between items-center p-lg border-b border-outline-variant bg-surface-bright">
+            <div className="bg-white rounded-2xl border border-outline-variant/60 shadow-sm overflow-hidden animate-fade-in-up">
+              <div className="flex justify-between items-center p-5 border-b border-outline-variant/40">
                 <div>
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface">Recent Service Records</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Live maintenance records history</p>
+                  <h3 className="font-bold text-[15px] text-on-surface">Recent Service Records</h3>
+                  <p className="text-[12px] text-on-surface-variant mt-0.5">Live maintenance records history</p>
                 </div>
-                <Link href="/service-records" className="text-primary font-label-md text-label-md hover:underline">
-                  View All
+                <Link href="/service-records" className="text-[13px] text-primary font-semibold hover:underline focus-ring rounded px-1">
+                  View All →
                 </Link>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse" role="table">
                   <thead>
-                    <tr className="bg-surface-container-low border-b border-outline-variant font-label-md text-label-md text-on-surface-variant">
-                      <th className="p-sm pl-lg font-medium">Vehicle ID</th>
-                      <th className="p-sm font-medium">Service Type</th>
-                      <th className="p-sm font-medium">Date</th>
-                      <th className="p-sm font-medium">Cost</th>
+                    <tr className="bg-surface-container-low border-b border-outline-variant/40">
+                      <th className="py-3 px-5 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Vehicle</th>
+                      <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Service Type</th>
+                      <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Date</th>
+                      <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant text-right">Cost</th>
                     </tr>
                   </thead>
-                  <tbody className="font-body-md text-body-md">
+                  <tbody>
                     {filteredRecords.length > 0 ? (
-                      filteredRecords.slice(0, 6).map((record) => {
+                      filteredRecords.slice(0, 6).map((record, idx) => {
                         const vehicle = vehicles.find((v) => v.id === record.vehicle_id);
                         return (
                           <tr
                             key={record.id}
-                            className="border-b border-outline-variant hover:bg-surface-container-low transition-colors group cursor-pointer"
+                            className="border-b border-outline-variant/30 hover:bg-surface-container-low/60 transition-colors group cursor-pointer"
+                            style={{ animationDelay: `${idx * 50}ms` }}
                           >
-                            <td className="p-sm pl-lg">
-                              <Link href={`/vehicles/${vehicle?.id}`} className="flex items-center gap-sm">
-                                <div className="w-8 h-8 rounded bg-surface-container flex items-center justify-center text-on-surface-variant group-hover:bg-primary-fixed transition-colors">
-                                  <span className="material-symbols-outlined text-[16px]">
-                                    local_shipping
-                                  </span>
+                            <td className="py-3 px-5">
+                              <Link href={`/vehicles/${vehicle?.id}`} className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant/40 group-hover:bg-primary-fixed transition-colors flex-shrink-0">
+                                  <span className="material-symbols-outlined text-[15px] text-on-surface-variant" aria-hidden="true">local_shipping</span>
                                 </div>
-                                <span className="font-data-mono text-data-mono hover:underline">{vehicle?.vehicle_number || 'Unknown'}</span>
+                                <span className="font-mono text-[13px] font-semibold text-primary hover:underline">{vehicle?.vehicle_number || 'Unknown'}</span>
                               </Link>
                             </td>
-                            <td className="p-sm text-on-surface font-semibold">
-                              {record.service_type}
-                            </td>
-                            <td className="p-sm text-on-surface-variant text-sm">
-                              {new Date(record.service_date).toLocaleDateString()}
-                            </td>
-                            <td className="p-sm font-data-mono text-data-mono text-on-surface">
-                              ${Number(record.total_cost).toFixed(2)}
-                            </td>
+                            <td className="py-3 px-4 text-[13px] font-semibold text-on-surface">{record.service_type}</td>
+                            <td className="py-3 px-4 text-[12px] text-on-surface-variant">{new Date(record.service_date).toLocaleDateString()}</td>
+                            <td className="py-3 px-4 font-mono text-[13px] font-bold text-on-surface text-right">${Number(record.total_cost).toFixed(2)}</td>
                           </tr>
                         );
                       })
                     ) : (
                       <tr>
-                        <td colSpan={4} className="p-lg text-center text-on-surface-variant">
-                          No service records found in backend.
+                        <td colSpan={4} className="py-12 text-center">
+                          <span className="material-symbols-outlined text-[36px] text-outline-variant mb-2 block" aria-hidden="true">description</span>
+                          <p className="text-[13px] text-on-surface-variant">No service records found.</p>
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+              <Link href="/service-records" className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline">
+                View All <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </Link>
             </div>
 
             {/* Users Directory Table */}
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] overflow-hidden">
-              <div className="p-lg border-b border-outline-variant bg-surface-bright">
-                <h3 className="font-headline-sm text-headline-sm text-on-surface">Registered User Directory</h3>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">Active personnel and organization profiles</p>
+            <div className="bg-white rounded-2xl border border-outline-variant/60 shadow-sm overflow-hidden animate-fade-in-up">
+              <div className="p-5 border-b border-outline-variant/40">
+                <h3 className="font-bold text-[15px] text-on-surface">Registered User Directory</h3>
+                <p className="text-[12px] text-on-surface-variant mt-0.5">Active personnel and organization profiles</p>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse" role="table">
                   <thead>
-                    <tr className="bg-surface-container-low border-b border-outline-variant font-label-md text-label-md text-on-surface-variant">
-                      <th className="p-sm pl-lg font-medium">Name</th>
-                      <th className="p-sm font-medium">Email</th>
-                      <th className="p-sm font-medium">Role</th>
-                      <th className="p-sm font-medium">Status</th>
+                    <tr className="bg-surface-container-low border-b border-outline-variant/40">
+                      <th className="py-3 px-5 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Name</th>
+                      <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Email</th>
+                      <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Role</th>
+                      <th className="py-3 px-4 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="font-body-md text-body-md">
+                  <tbody>
                     {users.length > 0 ? (
                       users.map((u) => (
-                        <tr key={u.id} className="border-b border-outline-variant hover:bg-surface-container-low transition-colors">
-                          <td className="p-sm pl-lg flex items-center gap-sm">
-                            <div className="w-7 h-7 rounded-full bg-secondary-container overflow-hidden border border-outline-variant">
-                              <img 
-                                src={u.profile_picture || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAyNWRLx_E1OWgPi7aT-s7keymJamS_sAULSOKC77sBamBVVEH8asmCa3f4NYOaE3mG3geTNRGrCEk9EHHGtRbopLaZ52J0biD4pjdRExkF4tELoYtoq-zasE6so0CeaGSIAvvheeL2qrq5EGlYXYnXy2LFAAHWpIX7MRS7rUU0FgN3ulrekGF7ncrztv17tLcE_3HUrNuSMCnC1wGiBZ6Az6Q7ajamDg6nZkmfN3G0rW9Vloo_heFU'} 
-                                alt={u.full_name} 
-                                className="w-full h-full object-cover" 
+                        <tr key={u.id} className="border-b border-outline-variant/30 hover:bg-surface-container-low/60 transition-colors">
+                          <td className="py-3 px-5 flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-secondary-container overflow-hidden border border-outline-variant/40 flex-shrink-0">
+                              <img
+                                src={u.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=091426&color=fff&size=64`}
+                                alt={u.full_name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=091426&color=fff&size=64`; }}
                               />
                             </div>
-                            <span className="font-semibold text-on-surface">{u.full_name}</span>
+                            <span className="font-semibold text-[13px] text-on-surface">{u.full_name}</span>
                           </td>
-                          <td className="p-sm text-on-surface-variant text-sm">{u.email}</td>
-                          <td className="p-sm">
-                            <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-surface-variant text-on-surface-variant">
+                          <td className="py-3 px-4 text-[12px] text-on-surface-variant">{u.email}</td>
+                          <td className="py-3 px-4">
+                            <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-surface-container-high text-on-surface-variant border border-outline-variant/40">
                               {u.role}
                             </span>
                           </td>
-                          <td className="p-sm">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${u.status === 'Active' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#fee2e2] text-[#991b1b]'}`}>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                              u.status === 'Active'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-red-50 text-red-700 border-red-200'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`} />
                               {u.status}
                             </span>
                           </td>
@@ -467,219 +557,223 @@ if (!currentUser) {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={4} className="p-lg text-center text-on-surface-variant">
-                          No users registered in directory.
-                        </td>
+                        <td colSpan={4} className="py-8 text-center text-[13px] text-on-surface-variant">No users registered.</td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-xs text-slate-500">
+                        No registered users found in directory.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+          {/* Right Column */}
+          <div className="space-y-lg">
+
+            {/* Risk Distribution Donut */}
+            <div className="bg-white rounded-2xl border border-outline-variant/60 shadow-sm p-6 animate-fade-in-up">
+              <h3 className="font-bold text-[15px] text-on-surface mb-4">Risk Distribution</h3>
+              <div className="flex flex-col items-center">
+                <div
+                  className="w-44 h-44 relative mb-5 shadow-inner rounded-full flex items-center justify-center"
+                  style={{
+                    background: `conic-gradient(
+                      #ba1a1a 0% ${highPct}%,
+                      #545f73 ${highPct}% ${highPct + medPct}%,
+                      #e0e3e5 ${highPct + medPct}% 100%
+                    )`,
+                    padding: '3px',
+                  }}
+                  role="img"
+                  aria-label={`Risk distribution: ${highPct}% High, ${medPct}% Medium, ${lowPct}% Low`}
+                >
+                  <div className="absolute inset-5 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
+                    <span className="font-black text-[28px] text-primary leading-none">{vehicles.length}</span>
+                    <span className="text-[11px] text-on-surface-variant font-medium">Total Assets</span>
+                  </div>
+                </div>
+                <div className="w-full space-y-2">
+                  {[
+                    { label: 'Low Risk (Healthy)', pct: lowPct, color: '#e0e3e5', textColor: 'text-on-surface' },
+                    { label: 'Moderate Risk', pct: medPct, color: '#545f73', textColor: 'text-surface-tint' },
+                    { label: 'High Risk', pct: highPct, color: '#ba1a1a', textColor: 'text-error' },
+                  ].map(({ label, pct, color, textColor }) => (
+                    <div key={label} className="flex justify-between items-center px-3 py-2.5 rounded-xl hover:bg-surface-container-low transition-colors">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: color }} aria-hidden="true" />
+                        <span className="text-[12.5px] text-on-surface">{label}</span>
+                      </div>
+                      <span className={`font-mono font-bold text-[13px] ${textColor}`}>{pct}%</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Risk & Expiry alert dispatch */}
-          <div className="space-y-lg">
-            
-            {/* Risk Distribution Pie Chart */}
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] p-lg">
-              <h3 className="font-headline-sm text-headline-sm text-on-surface mb-md">Risk Distribution</h3>
-              <div className="flex flex-col items-center">
-                <div 
-                  className="w-48 h-48 relative mb-lg shadow-inner rounded-full flex items-center justify-center"
-                  style={{
-                    background: `conic-gradient(var(--color-error) 0% ${highPct}%, var(--color-surface-tint) ${highPct}% ${highPct + medPct}%, var(--color-secondary-container) ${highPct + medPct}% 100%)`
-                  }}
-                >
-                  <div className="absolute inset-4 bg-surface-container-lowest rounded-full flex flex-col items-center justify-center">
-                    <span className="font-display-lg text-display-lg text-on-surface font-bold">
-                      {vehicles.length}
-                    </span>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Total Assets</span>
-                  </div>
-                </div>
-                <div className="w-full space-y-xs">
-                  <div className="flex justify-between items-center p-sm rounded-lg hover:bg-surface-container-low transition-colors">
-                    <div className="flex items-center gap-sm">
-                      <div className="w-3 h-3 rounded-full bg-secondary-container"></div>
-                      <span className="font-body-sm text-body-sm text-on-surface">Low Risk (Healthy)</span>
-                    </div>
-                    <span className="font-data-mono text-data-mono font-bold">{lowPct}%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-sm rounded-lg hover:bg-surface-container-low transition-colors">
-                    <div className="flex items-center gap-sm">
-                      <div className="w-3 h-3 rounded-full bg-surface-tint"></div>
-                      <span className="font-body-sm text-body-sm text-on-surface">Moderate Risk</span>
-                    </div>
-                    <span className="font-data-mono text-data-mono font-bold">{medPct}%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-sm rounded-lg hover:bg-surface-container-low transition-colors">
-                    <div className="flex items-center gap-sm">
-                      <div className="w-3 h-3 rounded-full bg-error"></div>
-                      <span className="font-body-sm text-body-sm text-on-surface">High Risk</span>
-                    </div>
-                    <span className="font-data-mono text-data-mono font-bold text-error">{highPct}%</span>
-                  </div>
-                </div>
-              </div>
+          {/* Expiry Alerts Form */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6">
+            <div className="pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-lg font-bold text-slate-900">Dispatch Expiry Alerts</h3>
+              <p className="text-xs font-medium text-slate-500">Send direct 10/7/5 days expiry notices to driver in-app bar</p>
             </div>
 
-            {/* In-app Expiry Dispatcher Form (Admin sends 10/7/5 alerts) */}
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] p-lg flex flex-col">
-              <div className="pb-sm border-b border-outline-variant mb-md">
-                <h3 className="font-headline-sm text-headline-sm text-on-surface">Dispatch Expiry Alerts</h3>
-                <p className="font-body-sm text-body-sm text-on-surface-variant">Send a manual 10/7/5 days expiry notice to driver in-app bar</p>
+            {/* Expiry Dispatcher Form */}
+            <div className="bg-white rounded-2xl border border-outline-variant/60 shadow-sm p-6 animate-fade-in-up">
+              <div className="pb-4 border-b border-outline-variant/40 mb-4">
+                <h3 className="font-bold text-[15px] text-on-surface">Dispatch Expiry Alerts</h3>
+                <p className="text-[12px] text-on-surface-variant mt-0.5">Send manual expiry notices in-app</p>
               </div>
 
-              <form onSubmit={handleSendNotification} className="space-y-md">
+              <form onSubmit={handleSendNotification} className="space-y-4">
                 {sendSuccess && (
-                  <div className="p-sm rounded-lg bg-[#dcfce7] border border-[#bbf7d0] text-[#166534] text-xs flex items-center gap-xs">
-                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                  <div className="p-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-[12px] flex items-center gap-2 animate-fade-in">
+                    <span className="material-symbols-outlined text-[16px] text-green-600" aria-hidden="true">check_circle</span>
                     {sendSuccess}
                   </div>
                 )}
                 {sendError && (
-                  <div className="p-sm rounded-lg bg-[#fee2e2] border border-[#fecaca] text-[#991b1b] text-xs flex items-center gap-xs">
-                    <span className="material-symbols-outlined text-[18px]">error</span>
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-[12px] flex items-center gap-2 animate-fade-in">
+                    <span className="material-symbols-outlined text-[16px] text-red-600" aria-hidden="true">error</span>
                     {sendError}
                   </div>
                 )}
 
-                {/* Target User */}
                 <div>
-                  <label className="block text-xs font-bold text-on-surface mb-xs">Select Recipient User *</label>
-                  <select 
-                    value={targetUserId} 
+                  <label className="block text-[12px] font-bold text-on-surface mb-1.5">
+                    Select Recipient User <span className="text-error">*</span>
+                  </label>
+                  <select
+                    value={targetUserId}
                     onChange={e => setTargetUserId(e.target.value)}
                     required
-                    className="w-full bg-surface-container rounded-lg border border-outline-variant px-sm py-xs text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    className="w-full bg-surface-container-low rounded-xl border border-outline-variant/60 px-3 py-2 text-[12.5px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   >
-                    <option value="">-- Choose User --</option>
+                    <option value="">— Choose User —</option>
                     {users.map(u => (
                       <option key={u.id} value={u.id}>{u.full_name} ({u.role})</option>
                     ))}
                   </select>
                 </div>
 
-                {/* Target Vehicle */}
                 <div>
-                  <label className="block text-xs font-bold text-on-surface mb-xs">Select Vehicle (Optional)</label>
-                  <select 
-                    value={targetVehicleId} 
+                  <label className="block text-[12px] font-bold text-on-surface mb-1.5">Select Vehicle (Optional)</label>
+                  <select
+                    value={targetVehicleId}
                     onChange={e => setTargetVehicleId(e.target.value)}
-                    className="w-full bg-surface-container rounded-lg border border-outline-variant px-sm py-xs text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                    className="w-full bg-surface-container-low rounded-xl border border-outline-variant/60 px-3 py-2 text-[12.5px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                   >
-                    <option value="">-- Choose Vehicle --</option>
+                    <option value="">— Choose Vehicle —</option>
                     {vehicles.map(v => (
-                      <option key={v.id} value={v.id}>{v.vehicle_number} - {v.model}</option>
+                      <option key={v.id} value={v.id}>{v.vehicle_number} — {v.model}</option>
                     ))}
                   </select>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-sm">
-                  {/* Alert Type */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-on-surface mb-xs">Notification Type</label>
-                    <select 
-                      value={alertType} 
+                    <label className="block text-[12px] font-bold text-on-surface mb-1.5">Type</label>
+                    <select
+                      value={alertType}
                       onChange={e => setAlertType(e.target.value)}
-                      className="w-full bg-surface-container rounded-lg border border-outline-variant px-sm py-xs text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      className="w-full bg-surface-container-low rounded-xl border border-outline-variant/60 px-3 py-2 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     >
-                      <option value="Compliance Alert">Compliance Alert</option>
-                      <option value="Maintenance Alert">Maintenance Alert</option>
+                      <option value="Compliance Alert">Compliance</option>
+                      <option value="Maintenance Alert">Maintenance</option>
                     </select>
                   </div>
-
-                  {/* Expiry Days */}
                   <div>
-                    <label className="block text-xs font-bold text-on-surface mb-xs">Expiry Days</label>
-                    <select 
-                      value={expiryDays} 
+                    <label className="block text-[12px] font-bold text-on-surface mb-1.5">Expiry Days</label>
+                    <select
+                      value={expiryDays}
                       onChange={e => setExpiryDays(e.target.value)}
-                      className="w-full bg-surface-container rounded-lg border border-outline-variant px-sm py-xs text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                      className="w-full bg-surface-container-low rounded-xl border border-outline-variant/60 px-3 py-2 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                     >
-                      <option value="10">10 Days Due</option>
-                      <option value="7">7 Days Due</option>
-                      <option value="5">5 Days Due</option>
+                      <option value="10">10 Days</option>
+                      <option value="7">7 Days</option>
+                      <option value="5">5 Days</option>
                     </select>
                   </div>
                 </div>
 
-                {/* Custom message content */}
                 <div>
-                  <label className="block text-xs font-bold text-on-surface mb-xs">Custom Message (Optional)</label>
-                  <textarea 
-                    placeholder="Leave empty to send default auto-generated message templates..."
+                  <label className="block text-[12px] font-bold text-on-surface mb-1.5">Custom Message (Optional)</label>
+                  <textarea
+                    placeholder="Leave empty to use auto-generated template..."
                     value={customMsg}
                     onChange={e => setCustomMsg(e.target.value)}
                     rows={3}
-                    className="w-full bg-surface-container rounded-lg border border-outline-variant px-sm py-xs text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+                    className="w-full bg-surface-container-low rounded-xl border border-outline-variant/60 px-3 py-2 text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                   />
                 </div>
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={sendingAlert}
-                  className="w-full bg-primary hover:opacity-90 active:opacity-85 text-on-primary text-xs font-semibold py-xs rounded-lg flex items-center justify-center gap-xs shadow-sm cursor-pointer disabled:opacity-50"
+                  className="w-full text-white text-[13px] font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-md cursor-pointer btn-scale border-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  style={{ background: sendingAlert ? '#6b7280' : 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)' }}
                 >
                   {sendingAlert ? (
-                    <div className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin"></div>
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+                      Sending...
+                    </>
                   ) : (
                     <>
-                      <span className="material-symbols-outlined text-[18px]">send</span>
-                      <span>Dispatch In-App Alert</span>
+                      <span className="material-symbols-outlined text-[17px]" aria-hidden="true">send</span>
+                      Dispatch In-App Alert
                     </>
                   )}
                 </button>
               </form>
             </div>
 
-            {/* Upcoming Services List */}
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] p-lg flex flex-col h-[300px]">
-              <div className="flex justify-between items-center mb-md pb-sm border-b border-outline-variant">
+            {/* Upcoming Services */}
+            <div className="bg-white rounded-2xl border border-outline-variant/60 shadow-sm p-6 animate-fade-in-up">
+              <div className="flex justify-between items-center mb-4 pb-3 border-b border-outline-variant/40">
                 <div>
-                  <h3 className="font-headline-sm text-headline-sm text-on-surface">Upcoming Scheduled Services</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant">Active scheduled dates</p>
+                  <h3 className="font-bold text-[15px] text-on-surface">Upcoming Services</h3>
+                  <p className="text-[12px] text-on-surface-variant mt-0.5">Scheduled service dates</p>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-xs space-y-md">
+              <div className="space-y-3 max-h-[260px] overflow-y-auto custom-scrollbar">
                 {upcomingServices.length > 0 ? (
                   upcomingServices.map((record) => {
                     const vehicle = vehicles.find((v) => v.id === record.vehicle_id);
                     const nextDate = record.next_service_date ? new Date(record.next_service_date) : null;
                     return (
-                      <div key={record.id} className="flex gap-md group">
-                        <div className="flex flex-col items-center">
-                          <div className="w-10 h-10 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-label-md text-label-md group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                            {nextDate ? nextDate.getDate() : '??'}
-                          </div>
-                          <div className="w-px h-full bg-outline-variant mt-sm"></div>
+                      <div key={record.id} className="flex gap-3 group p-2 rounded-xl hover:bg-surface-container-low transition-colors">
+                        <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex flex-col items-center justify-center font-bold text-[13px] flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
+                          <span className="text-[11px] opacity-70 leading-none">{nextDate ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][nextDate.getMonth()] : ''}</span>
+                          <span className="leading-none">{nextDate ? nextDate.getDate() : '??'}</span>
                         </div>
-                        <div className="flex-1 pb-md">
-                          <div className="bg-surface-container-low p-sm rounded-lg border border-transparent group-hover:border-outline-variant transition-colors">
-                            <div className="flex justify-between items-start mb-xs">
-                              <h4 className="font-label-md text-label-md text-on-surface font-semibold">{record.service_type}</h4>
-                              <span className="font-data-mono text-data-mono text-xs text-on-surface-variant">{vehicle?.vehicle_number || 'N/A'}</span>
-                            </div>
-                            <p className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-xs">
-                              <span className="material-symbols-outlined text-[14px]">calendar_today</span> 
-                              {nextDate ? nextDate.toLocaleDateString() : 'N/A'}
-                            </p>
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-[13px] text-on-surface truncate">{record.service_type}</h4>
+                          <p className="text-[11.5px] text-on-surface-variant">{vehicle?.vehicle_number || 'N/A'}</p>
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <p className="text-center text-xs text-on-surface-variant mt-lg">No upcoming service schedules found.</p>
+                  <div className="text-center py-6">
+                    <span className="material-symbols-outlined text-[32px] text-outline-variant mb-1 block" aria-hidden="true">event_available</span>
+                    <p className="text-[12px] text-on-surface-variant">No upcoming services scheduled.</p>
+                  </div>
                 )}
               </div>
             </div>
-            
           </div>
         </div>
-
       </div>
     </LayoutWrapper>
+      </div>
+    </div>
   );
 }

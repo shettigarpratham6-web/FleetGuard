@@ -1,21 +1,54 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
+import { api } from '@/services/api';
 import { mockHistoricalServices } from '@/data/mockDb';
 
 export default function HistoricalRecordsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [records, setRecords] = useState<any[]>(mockHistoricalServices);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchHistoricalRecords = async () => {
+      try {
+        setLoading(true);
+        const data = await api.historicalServices.getAll();
+        if (data && Array.isArray(data) && data.length > 0) {
+          setRecords(data);
+        }
+      } catch (err) {
+        console.error('Error fetching historical records:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHistoricalRecords();
+  }, []);
 
   // Filtering Logic
-  const filteredRecords = mockHistoricalServices.filter((record) => {
+  const filteredRecords = records.filter((record) => {
     return (
-      record.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.remarks?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.vehicle_id.toLowerCase().includes(searchQuery.toLowerCase())
+      (record.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (record.remarks || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (record.vehicle_id || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
+
+  if (loading) {
+    return (
+      <LayoutWrapper>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-body-md text-on-surface-variant">Loading historical records...</p>
+        </div>
+      </LayoutWrapper>
+    );
+  }
 
   return (
     <LayoutWrapper
@@ -52,6 +85,13 @@ export default function HistoricalRecordsPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
+            <span className="material-symbols-outlined text-[20px]">error</span>
+            {error}
+          </div>
+        )}
+
         {/* Data Table Card */}
         <div className="bg-surface rounded-lg border border-outline-variant shadow-sm overflow-hidden flex-1 flex flex-col">
           <div className="overflow-x-auto flex-1">
@@ -61,7 +101,7 @@ export default function HistoricalRecordsPage() {
                   <th className="py-md px-lg font-medium">Date</th>
                   <th className="py-md px-lg font-medium">Asset ID</th>
                   <th className="py-md px-lg font-medium">Service Description</th>
-                  <th className="py-md px-lg font-medium">Legacy ID / Source</th>
+                  <th className="py-md px-lg font-medium">Entered By</th>
                   <th className="py-md px-lg font-medium text-right">Mileage</th>
                   <th className="py-md px-lg font-medium">Remarks</th>
                   <th className="py-md px-lg font-medium">Status</th>
@@ -75,12 +115,12 @@ export default function HistoricalRecordsPage() {
                       key={record.id}
                       className="hover:bg-surface-container-lowest transition-colors group"
                     >
-                      <td className="py-md px-lg text-on-surface">{record.service_date}</td>
+                      <td className="py-md px-lg text-on-surface">{new Date(record.service_date).toLocaleDateString()}</td>
                       <td className="py-md px-lg">
                         <div className="flex items-center gap-sm">
                           <div className="w-2 h-2 rounded-full bg-primary"></div>
                           <span className="font-body-md font-semibold text-primary">
-                            {record.vehicle_id === 'v1' ? 'TX-8492' : 'NY-1104'}
+                            {record.vehicle_number || record.vehicle_id}
                           </span>
                         </div>
                       </td>
@@ -88,10 +128,10 @@ export default function HistoricalRecordsPage() {
                         {record.description}
                       </td>
                       <td className="py-md px-lg text-on-surface-variant">
-                        {index === 0 ? 'SYS_MIG_001' : index === 1 ? 'PAPER_LOG_42' : 'API_SYNC_7'}
+                        {record.entered_by_username || 'SYS_MIG_001'}
                       </td>
                       <td className="py-md px-lg text-right text-on-surface">
-                        {record.mileage.toLocaleString()} mi
+                        {record.mileage?.toLocaleString() || 0} mi
                       </td>
                       <td className="py-md px-lg text-on-surface-variant font-body-sm">
                         {record.remarks || 'N/A'}
@@ -133,7 +173,7 @@ export default function HistoricalRecordsPage() {
           {/* Pagination Footer */}
           <div className="p-md border-t border-outline-variant bg-surface-container-lowest flex items-center justify-between mt-auto">
             <span className="font-body-sm text-body-sm text-on-surface-variant">
-              Showing {filteredRecords.length} of {mockHistoricalServices.length} records
+              Showing {filteredRecords.length} of {records.length} records
             </span>
             <div className="flex gap-sm">
               <button
