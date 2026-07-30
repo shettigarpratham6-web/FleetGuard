@@ -48,34 +48,62 @@ export default function ServiceRecordsPage() {
     loadData();
   }, [router]);
 
-  // Filters logic
   const filteredRecords = serviceRecords.filter((record) => {
     const vehicle = vehicles.find((v) => v.id === record.vehicle_id);
-
-    // Global Search Matches
     const matchesSearch =
       searchQuery === '' ||
       record.service_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (record.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (vehicle?.vehicle_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (vehicle?.model || '').toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Category Selector Filters
     const matchesVehicle = vehicleFilter === '' || record.vehicle_id === vehicleFilter;
-    const matchesType =
-      typeFilter === '' ||
-      record.service_type.toLowerCase().includes(typeFilter.toLowerCase());
+    const matchesType = typeFilter === '' || record.service_type.toLowerCase().includes(typeFilter.toLowerCase());
     const matchesMechanic = mechanicFilter === '' || record.mechanic_id === mechanicFilter;
-
     return matchesSearch && matchesVehicle && matchesType && matchesMechanic;
   });
 
+  const hasActiveFilters = searchQuery || vehicleFilter || typeFilter || mechanicFilter;
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setVehicleFilter('');
+    setTypeFilter('');
+    setMechanicFilter('');
+  };
+
+  // ── LOADING STATE ─────────────────────────────────────────
   if (loading) {
     return (
       <LayoutWrapper>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="font-body-md text-on-surface-variant">Connecting to service database...</p>
+        <div className="p-lg md:p-margin-desktop space-y-lg max-w-[1600px] mx-auto">
+          <div className="flex justify-between items-end">
+            <div className="space-y-2">
+              <div className="skeleton h-8 w-44 rounded-lg" />
+              <div className="skeleton h-4 w-64 rounded" />
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border border-outline-variant/60 p-4 shadow-sm flex gap-3">
+            {[200, 160, 140, 140].map((w, i) => (
+              <div key={i} className="skeleton h-9 rounded-xl" style={{ width: w }} />
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl border border-outline-variant/60 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-outline-variant/40">
+              <div className="skeleton h-4 w-32 rounded" />
+            </div>
+            {[1,2,3,4,5].map(i => (
+              <div key={i} className="flex items-center gap-4 p-4 border-b border-outline-variant/30">
+                <div className="skeleton h-8 w-8 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="skeleton h-3 w-32 rounded" />
+                  <div className="skeleton h-2 w-20 rounded" />
+                </div>
+                <div className="skeleton h-3 w-24 rounded" />
+                <div className="skeleton h-3 w-16 rounded" />
+                <div className="skeleton h-5 w-20 rounded-full" />
+              </div>
+            ))}
+          </div>
         </div>
       </LayoutWrapper>
     );
@@ -87,213 +115,225 @@ export default function ServiceRecordsPage() {
       searchValue={searchQuery}
       onSearchChange={setSearchQuery}
     >
-      <div className="p-margin-mobile md:p-margin-desktop flex flex-col gap-lg max-w-[1600px] mx-auto w-full">
-        {/* Title Header */}
-        <div className="flex justify-between items-center pb-md border-b border-outline-variant/30">
+      <div className="p-lg md:p-margin-desktop flex flex-col gap-lg max-w-[1600px] mx-auto w-full">
+
+        {/* Header */}
+        <div className="flex justify-between items-start pb-4 border-b border-outline-variant/40 animate-fade-in-up">
           <div>
-            <h2 className="font-display-lg text-display-lg text-primary">Service Records</h2>
-            <p className="font-body-lg text-body-lg text-on-surface-variant mt-xs">
+            <h2 className="font-black text-[26px] md:text-[30px] text-primary leading-tight">Service Records</h2>
+            <p className="text-[13px] text-on-surface-variant mt-1">
               Comprehensive log of fleet maintenance and repairs.
             </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-[13px] text-on-surface-variant font-medium">
+              {filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''}
+            </span>
           </div>
         </div>
 
         {error && (
-          <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-[20px]">error</span>
+          <div className="p-4 rounded-xl bg-error-container/10 border border-error/20 text-error text-[13px] flex items-center gap-2 animate-fade-in">
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">error</span>
             {error}
           </div>
         )}
 
-        {/* Controls Toolbar: Filters & Actions */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm flex flex-col xl:flex-row gap-md items-start xl:items-center justify-between">
-          <div className="flex flex-col sm:flex-row flex-wrap gap-md w-full xl:w-auto">
-            {/* Search Input (In toolbar too) */}
+        {/* Toolbar */}
+        <div className="bg-white border border-outline-variant/60 rounded-2xl p-4 shadow-sm flex flex-col xl:flex-row gap-3 items-start xl:items-center justify-between animate-fade-in-up">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 w-full xl:w-auto">
+            {/* Search */}
             <div className="relative w-full sm:w-64">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-                search
-              </span>
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[17px]" aria-hidden="true">search</span>
               <input
-                className="w-full pl-10 pr-4 py-2 bg-surface rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary transition-all outline-none font-body-md text-body-md placeholder:text-on-surface-variant"
+                className="w-full pl-9 pr-4 py-2.5 bg-surface-container-low rounded-xl border border-outline-variant/60 focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all outline-none text-[13px] text-on-surface placeholder:text-on-surface-variant/60"
                 placeholder="Search records, VIN..."
-                type="text"
+                type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search service records"
               />
             </div>
 
-            {/* Selects */}
-            <div className="flex flex-wrap gap-sm w-full sm:w-auto">
+            {/* Filter selects */}
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto">
               <select
-                className="py-2 pl-3 pr-8 bg-surface rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-md text-on-surface outline-none cursor-pointer min-w-[140px]"
+                className="py-2.5 pl-3 pr-8 bg-surface-container-low rounded-xl border border-outline-variant/60 focus:border-primary focus:ring-2 focus:ring-primary/15 text-[12.5px] text-on-surface outline-none cursor-pointer min-w-[140px] transition-all"
                 value={vehicleFilter}
                 onChange={(e) => setVehicleFilter(e.target.value)}
+                aria-label="Filter by vehicle"
               >
                 <option value="">All Vehicles</option>
                 {vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.vehicle_number} ({v.model})
-                  </option>
+                  <option key={v.id} value={v.id}>{v.vehicle_number} ({v.model})</option>
                 ))}
               </select>
 
               <select
-                className="py-2 pl-3 pr-8 bg-surface rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-md text-on-surface outline-none cursor-pointer min-w-[130px]"
+                className="py-2.5 pl-3 pr-8 bg-surface-container-low rounded-xl border border-outline-variant/60 focus:border-primary focus:ring-2 focus:ring-primary/15 text-[12.5px] text-on-surface outline-none cursor-pointer min-w-[130px] transition-all"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
+                aria-label="Filter by service type"
               >
                 <option value="">All Types</option>
                 <option value="Brake">Brake Pads & Rotors</option>
                 <option value="Oil">Oil & Filters</option>
                 <option value="Transmission">Transmission</option>
+                <option value="Routine">Routine Maintenance</option>
+                <option value="Emergency">Emergency Repair</option>
+                <option value="Inspection">Inspection</option>
               </select>
 
               <select
-                className="py-2 pl-3 pr-8 bg-surface rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-md text-on-surface outline-none cursor-pointer min-w-[140px]"
+                className="py-2.5 pl-3 pr-8 bg-surface-container-low rounded-xl border border-outline-variant/60 focus:border-primary focus:ring-2 focus:ring-primary/15 text-[12.5px] text-on-surface outline-none cursor-pointer min-w-[140px] transition-all"
                 value={mechanicFilter}
                 onChange={(e) => setMechanicFilter(e.target.value)}
+                aria-label="Filter by mechanic"
               >
                 <option value="">All Mechanics</option>
                 {users
                   .filter((u) => u.role === 'Service Center' || u.role === 'Driver')
                   .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name}
-                    </option>
+                    <option key={u.id} value={u.id}>{u.full_name}</option>
                   ))}
               </select>
+
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="py-2.5 px-3 bg-error-container/20 text-error rounded-xl border border-error/20 text-[12px] font-semibold hover:bg-error-container/40 transition-colors cursor-pointer flex items-center gap-1 focus-ring btn-scale border-0"
+                  aria-label="Clear all filters"
+                >
+                  <span className="material-symbols-outlined text-[15px]" aria-hidden="true">filter_alt_off</span>
+                  Clear
+                </button>
+              )}
             </div>
           </div>
 
           {/* Primary Actions */}
-          <div className="flex items-center gap-sm w-full xl:w-auto justify-end shrink-0">
+          <div className="flex items-center gap-2 w-full xl:w-auto justify-end flex-shrink-0">
             <button
-              onClick={() => alert('Exporting record spreadsheet...')}
-              className="p-2 bg-surface rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors cursor-pointer border-none"
-              title="Download Report"
+              onClick={() => {
+                const data = filteredRecords.map(r => {
+                  const v = vehicles.find(v => v.id === r.vehicle_id);
+                  return `${v?.vehicle_number || ''},${r.service_type},${r.service_date},$${r.total_cost}`;
+                }).join('\n');
+                const blob = new Blob([`Vehicle,Type,Date,Cost\n${data}`], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'service-records.csv'; a.click();
+              }}
+              className="p-2.5 bg-surface-container-low rounded-xl border border-outline-variant/60 text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer btn-scale focus-ring"
+              title="Export as CSV"
+              aria-label="Export records as CSV"
             >
-              <span className="material-symbols-outlined text-md">download</span>
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">download</span>
             </button>
             <Link href="/service-records/create">
-              <button className="bg-primary hover:opacity-95 text-on-primary font-label-md text-label-md py-2 px-md rounded-lg flex items-center justify-center gap-xs transition-colors shadow-sm whitespace-nowrap cursor-pointer active:opacity-80 border-none">
-                <span className="material-symbols-outlined text-sm">add</span>
+              <button className="text-white font-semibold text-[13px] py-2.5 px-4 rounded-xl flex items-center gap-1.5 shadow-md cursor-pointer btn-scale border-0 focus-ring whitespace-nowrap hover:opacity-90 transition-all" style={{ background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)' }}>
+                <span className="material-symbols-outlined text-[17px]" aria-hidden="true">add</span>
                 Create Service Record
               </button>
             </Link>
           </div>
         </div>
 
-        {/* Data Density Table Area */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] overflow-hidden flex-1 flex flex-col">
-          <div className="overflow-x-auto relative">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-surface-container-low border-b border-outline-variant sticky top-0 z-20">
+        {/* Table */}
+        <div className="bg-white border border-outline-variant/60 rounded-2xl shadow-sm overflow-hidden flex-1 flex flex-col animate-fade-in-up">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse" role="table" aria-label="Service records">
+              <thead className="bg-surface-container-low border-b border-outline-variant/40 sticky top-0 z-10">
                 <tr>
-                  <th className="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider w-[15%]">
-                    Vehicle #
-                  </th>
-                  <th className="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider w-[15%]">
-                    Date
-                  </th>
-                  <th className="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right w-[12%]">
-                    Mileage
-                  </th>
-                  <th className="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider w-[20%]">
-                    Service Type
-                  </th>
-                  <th className="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider w-[18%]">
-                    Mechanic/Shop
-                  </th>
-                  <th className="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right w-[10%]">
-                    Cost
-                  </th>
-                  <th className="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider w-[10%]">
-                    Status
-                  </th>
-                  <th className="py-3 px-4 font-label-md text-label-md text-on-surface-variant uppercase tracking-wider text-right w-[10%]">
-                    Actions
-                  </th>
+                  {['Vehicle #','Date','Mileage','Service Type','Mechanic/Shop','Cost','Status','Actions'].map((col, i) => (
+                    <th
+                      key={col}
+                      className={`py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant ${i === 2 || i === 5 ? 'text-right' : ''} ${i === 7 ? 'text-right' : ''}`}
+                      scope="col"
+                    >
+                      {col}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/50 font-data-mono text-data-mono bg-surface-container-lowest">
+              <tbody className="divide-y divide-outline-variant/30">
                 {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => {
+                  filteredRecords.map((record, idx) => {
                     const vehicle = vehicles.find((v) => v.id === record.vehicle_id);
                     const mechanic = users.find((u) => u.id === record.mechanic_id);
-                    const isCompleted = true; // For database-backed systems
-
                     return (
-                      <tr key={record.id} className="hover:bg-surface/50 transition-colors group">
-                        <td className="py-3 px-4">
-                          <Link href={`/vehicles/${vehicle?.id}`} className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded bg-surface-container flex items-center justify-center shrink-0 border border-outline-variant">
-                              <span className="material-symbols-outlined text-sm text-on-surface-variant">
-                                {vehicle?.vehicle_type === 'Light Van'
-                                  ? 'directions_car'
-                                  : 'local_shipping'}
+                      <tr
+                        key={record.id}
+                        className={`hover:bg-primary-fixed/10 transition-colors group cursor-pointer ${idx % 2 === 0 ? 'bg-white' : 'bg-surface-container-low/30'}`}
+                        style={{ animationDelay: `${idx * 30}ms` }}
+                      >
+                        {/* Vehicle */}
+                        <td className="py-3.5 px-4">
+                          <Link href={`/vehicles/${vehicle?.id}`} className="flex items-center gap-2.5" aria-label={`Vehicle ${vehicle?.vehicle_number}`}>
+                            <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center border border-outline-variant/40 flex-shrink-0 group-hover:bg-primary-fixed transition-colors">
+                              <span className="material-symbols-outlined text-[15px] text-on-surface-variant" aria-hidden="true">
+                                {vehicle?.vehicle_type === 'Light Van' ? 'directions_car' : 'local_shipping'}
                               </span>
                             </div>
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-primary hover:underline">
-                                {vehicle?.vehicle_number}
-                              </span>
-                              <span className="text-xs text-on-surface-variant font-body-sm">
-                                {vehicle?.manufacturer} {vehicle?.model}
-                              </span>
+                            <div>
+                              <span className="font-mono font-bold text-[13px] text-primary hover:underline block leading-none">{vehicle?.vehicle_number || 'N/A'}</span>
+                              <span className="text-[11px] text-on-surface-variant">{vehicle?.manufacturer} {vehicle?.model}</span>
                             </div>
                           </Link>
                         </td>
-                        <td className="py-3 px-4 text-on-surface whitespace-nowrap">
+                        {/* Date */}
+                        <td className="py-3.5 px-4 text-[13px] text-on-surface whitespace-nowrap">
                           {new Date(record.service_date).toLocaleDateString()}
                         </td>
-                        <td className="py-3 px-4 text-on-surface text-right whitespace-nowrap">
+                        {/* Mileage */}
+                        <td className="py-3.5 px-4 font-mono text-[13px] text-on-surface text-right whitespace-nowrap">
                           {record.current_mileage.toLocaleString()} mi
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex flex-col">
-                            <Link href={`/service-records/${record.id}`} className="text-on-surface font-semibold hover:underline">
-                              {record.service_type}
-                            </Link>
-                            <span className="text-xs text-on-surface-variant truncate max-w-[200px]" title={record.description}>
+                        {/* Service Type */}
+                        <td className="py-3.5 px-4">
+                          <Link href={`/service-records/${record.id}`} className="hover:underline">
+                            <span className="font-semibold text-[13px] text-on-surface block">{record.service_type}</span>
+                          </Link>
+                          {record.description && (
+                            <span className="text-[11px] text-on-surface-variant truncate max-w-[180px] block" title={record.description}>
                               {record.description}
                             </span>
-                          </div>
+                          )}
                         </td>
-                        <td className="py-3 px-4 text-on-surface">
-                          {mechanic?.full_name || 'N/A'}
-                          <br />
-                          <span className="text-xs text-on-surface-variant font-body-sm capitalize">
-                            {mechanic?.role}
-                          </span>
+                        {/* Mechanic */}
+                        <td className="py-3.5 px-4">
+                          <span className="text-[13px] text-on-surface block">{mechanic?.full_name || '—'}</span>
+                          <span className="text-[11px] text-on-surface-variant capitalize">{mechanic?.role}</span>
                         </td>
-                        <td className="py-3 px-4 text-on-surface text-right font-medium">
+                        {/* Cost */}
+                        <td className="py-3.5 px-4 font-mono font-bold text-[13px] text-on-surface text-right whitespace-nowrap">
                           ${Number(record.total_cost).toFixed(2)}
                         </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-label-md border bg-tertiary-container/10 text-tertiary-container border-tertiary-container/20`}
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full bg-tertiary-container"></span>
+                        {/* Status */}
+                        <td className="py-3.5 px-4">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-green-50 text-green-700 border border-green-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
                             Completed
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Link
                               href={`/service-records/${record.id}`}
-                              className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded transition-colors"
+                              className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg transition-colors focus-ring"
                               title="View Details"
+                              aria-label="View service record details"
                             >
-                              <span className="material-symbols-outlined text-[20px]">
-                                visibility
-                              </span>
+                              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">visibility</span>
                             </Link>
-                            <button
-                              className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container rounded transition-colors cursor-pointer border-none bg-transparent"
+                            <Link
+                              href={`/service-records/${record.id}`}
+                              className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-surface-container-high rounded-lg transition-colors focus-ring"
                               title="Edit Record"
+                              aria-label="Edit service record"
                             >
-                              <span className="material-symbols-outlined text-[20px]">edit</span>
-                            </button>
+                              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">edit</span>
+                            </Link>
                           </div>
                         </td>
                       </tr>
@@ -301,8 +341,27 @@ export default function ServiceRecordsPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={8} className="p-lg text-center text-on-surface-variant">
-                      No service records match your filters.
+                    <td colSpan={8} className="py-16 text-center">
+                      <span className="material-symbols-outlined text-[48px] text-outline-variant mb-3 block animate-float" aria-hidden="true">
+                        {hasActiveFilters ? 'search_off' : 'description'}
+                      </span>
+                      <h3 className="font-semibold text-[15px] text-on-surface mb-1">
+                        {hasActiveFilters ? 'No records match your filters' : 'No service records yet'}
+                      </h3>
+                      <p className="text-[12px] text-on-surface-variant mb-4">
+                        {hasActiveFilters ? 'Try adjusting or clearing filters.' : 'Create your first service record to get started.'}
+                      </p>
+                      {hasActiveFilters ? (
+                        <button onClick={clearFilters} className="text-[13px] text-primary font-semibold hover:underline focus-ring cursor-pointer border-0 bg-transparent">
+                          Clear all filters
+                        </button>
+                      ) : (
+                        <Link href="/service-records/create">
+                          <button className="text-white px-5 py-2.5 rounded-xl text-[13px] font-semibold cursor-pointer btn-scale border-0 shadow-md focus-ring" style={{ background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)' }}>
+                            Create Service Record
+                          </button>
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 )}
@@ -310,28 +369,19 @@ export default function ServiceRecordsPage() {
             </table>
           </div>
 
-          {/* Pagination Footer */}
-          <div className="bg-surface border-t border-outline-variant p-sm flex items-center justify-between mt-auto">
-            <span className="text-body-sm font-body-sm text-on-surface-variant pl-2">
-              Showing {filteredRecords.length} of {serviceRecords.length} records
+          {/* Footer */}
+          <div className="bg-surface-container-low/50 border-t border-outline-variant/40 px-4 py-3 flex items-center justify-between mt-auto">
+            <span className="text-[12px] text-on-surface-variant">
+              Showing <strong>{filteredRecords.length}</strong> of <strong>{serviceRecords.length}</strong> records
+              {hasActiveFilters && <span className="text-primary"> (filtered)</span>}
             </span>
-            <div className="flex items-center gap-xs">
-              <button
-                className="p-1 rounded text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50 border-none bg-transparent"
-                disabled
-              >
-                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+            <div className="flex items-center gap-1">
+              <button className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-40 border-0 bg-transparent cursor-not-allowed" disabled aria-label="Previous page">
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">chevron_left</span>
               </button>
-              <div className="flex gap-1">
-                <button className="w-7 h-7 rounded bg-primary-container text-on-primary-container font-label-md text-label-md flex items-center justify-center border-none">
-                  1
-                </button>
-              </div>
-              <button
-                className="p-1 rounded text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50 border-none bg-transparent"
-                disabled
-              >
-                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+              <button className="w-7 h-7 rounded-lg bg-primary text-white text-[12px] font-bold flex items-center justify-center border-0" aria-current="page">1</button>
+              <button className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-40 border-0 bg-transparent cursor-not-allowed" disabled aria-label="Next page">
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">chevron_right</span>
               </button>
             </div>
           </div>

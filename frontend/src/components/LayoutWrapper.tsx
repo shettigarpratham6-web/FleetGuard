@@ -34,8 +34,11 @@ export default function LayoutWrapper({
           onSearchChange={onSearchChange}
         />
 
-        {/* Dynamic Content Canvas */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar bg-transparent">
+        {/* Dynamic Content Canvas — with page-enter animation */}
+        <main
+          className="flex-1 overflow-y-auto custom-scrollbar bg-background page-enter"
+          role="main"
+        >
           {children}
         </main>
       </div>
