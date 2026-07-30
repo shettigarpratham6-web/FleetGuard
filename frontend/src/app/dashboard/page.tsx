@@ -34,16 +34,20 @@ export default function DashboardPage() {
       return;
     }
     const currentUser = api.auth.getLocalUser();
-    if (
-      currentUser &&
-      currentUser.role !== 'Admin' &&
-      currentUser.role !== 'Fleet Manager' &&
-      currentUser.role !== 'Manager'
-    ) {
-      router.push('/register');
-      return;
-    }
 
+if (!currentUser) {
+  router.push('/login');
+  return;
+}
+
+   const role = currentUser.role?.trim().toLowerCase();
+    if (
+     currentUser &&
+     !['Admin', 'Fleet Manager', 'Manager'].includes(currentUser.role)
+      ) {
+    router.push('/dashboard');   // or '/dashboard' or '/home'
+    return;
+    }
     const fetchData = async () => {
       try {
         setLoading(true);

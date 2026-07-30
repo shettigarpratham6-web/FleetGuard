@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
@@ -11,45 +11,73 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  // Helper function to handle role-based navigation
+  const redirectBasedOnRole = useCallback((role?: string) => {
+  if (!role) {
+    router.replace('/login');
+    return;
+  }
+
+  if (
+    role === 'Admin' ||
+    role === 'Fleet Manager' ||
+    role === 'Manager'
+  ) {
+    router.replace('/dashboard');
+  } else {
+    router.replace('/driver');   // or your driver page
+  }
+}, [router]);
 
   useEffect(() => {
-    // If already authenticated, redirect immediately based on role
+    // If already authenticated, redirect immediately based on stored user role
     if (api.auth.isAuthenticated()) {
       const user = api.auth.getLocalUser();
-      if (user?.role === 'Admin' || user?.role === 'Fleet Manager' || user?.role === 'Manager') {
-        router.push('/dashboard');
-      } else {
-        router.push('/register');
-      }
+      redirectBasedOnRole(user?.role);
+    } else {
+      setCheckingAuth(false);
     }
-  }, [router]);
+  }, [redirectBasedOnRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  e.preventDefault();
+  setError('');
 
-    if (!email || !password) {
-      setError('Please enter both email and password.');
-      return;
-    }
+  if (!email || !password) {
+    setError('Please enter both email and password.');
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const data = await api.auth.login(email, password);
-      const user = data.user;
-      
-      if (user?.role === 'Admin' || user?.role === 'Fleet Manager' || user?.role === 'Manager') {
-        router.push('/dashboard');
-      } else {
-        router.push('/register');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Invalid email or password. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    await api.auth.login(email, password);
+
+// Always use the stored user
+const user = api.auth.getLocalUser();
+
+if (!user) {
+  throw new Error("User information not found after login.");
+}
+
+redirectBasedOnRole(user.role);
+  } catch (err: any) {
+    setError(err?.message || 'Invalid email or password.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // Spinner fallback to prevent UI flash during authentication verification
+  if (checkingAuth) {
+    return (
+      <div className="flex min-h-screen w-screen items-center justify-center bg-surface-container-lowest">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-screen bg-background overflow-y-auto">

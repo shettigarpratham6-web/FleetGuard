@@ -1,3 +1,4 @@
+// src/app/page.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -8,17 +9,19 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!api.auth.isAuthenticated()) {
-      router.push('/login');
-    } else {
-      const user = api.auth.getLocalUser();
-      if (user?.role === 'Admin' || user?.role === 'Fleet Manager' || user?.role === 'Manager') {
-        router.push('/dashboard');
-      } else {
-        router.push('/register');
-      }
-    }
-  }, [router]);
+  if (!api.auth.isAuthenticated()) {
+    router.replace('/login');
+    return;
+  }
+
+  const user = api.auth.getLocalUser();
+
+  if (user?.role) {
+    router.replace('/dashboard');
+  } else {
+    router.replace('/login');
+  }
+}, [router]);
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-background">

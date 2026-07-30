@@ -17,10 +17,7 @@ const sendSMS = async (to, body) => {
   return { simulated: true, success: true };
 };
 
-/**
- * Scans database for compliance documents expiring in exactly 10, 5, or 2 days,
- * and service records with next service date in exactly 10, 5, or 2 days.
- */
+
 const checkAndSendExpiryAlerts = async () => {
   console.log('⏳ Running scheduled compliance and service expiry alert scan...');
 
@@ -28,7 +25,6 @@ const checkAndSendExpiryAlerts = async () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 1. Fetch compliance documents expiring in 10, 7, or 5 days using local PostgreSQL
     const docQuery = `
       SELECT 
         cd.id AS document_id,
