@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #091426;
+  --color-primary-container: #1e293b;
+  --color-on-primary-container: #8590a6;
+  --color-secondary: #5c5f61;
+  --color-secondary-container: #e0e3e5;
+  --color-tertiary: #001815;
+  --color-tertiary-container: #002f2a;
+  --color-background: #fbf8fa;
+  --color-on-background: #1b1b1d;
+  --color-surface: #fbf8fa;
+  --color-on-surface: #1b1b1d;
+  --color-on-surface-variant: #45474c;
+  --color-inverse-surface: #303032;
+  --color-inverse-on-surface: #f3f0f2;
+  --color-outline: #75777d;
+  --color-outline-variant: #c5c6cd;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-surface-container: #f0edef;
+  --color-surface-container-low: #f5f3f4;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-high: #eae7e9;
+  --color-surface-container-highest: #e4e2e3;
+  --color-surface-dim: #dcd9db;
+  --color-surface-bright: #fbf8fa;
+  --color-surface-tint: #545f73;
+
+  --color-primary-fixed: #d8e3fb;
+  --color-primary-fixed-dim: #bcc7de;
+  --color-on-primary-fixed: #111c2d;
+  --color-on-primary-fixed-variant: #3c475a;
+  --color-secondary-fixed: #e0e3e5;
+  --color-secondary-fixed-dim: #c4c7c9;
+  --color-on-secondary-fixed: #191c1e;
+  --color-on-secondary-fixed-variant: #444749;
+  --color-tertiary-fixed: #89f5e7;
+  --color-tertiary-fixed-dim: #6bd8cb;
+  --color-on-tertiary-fixed: #00201d;
+  --color-on-tertiary-fixed-variant: #005049;
+
+  --spacing-gutter: 24px;
+  --spacing-sm: 8px;
+  --spacing-lg: 24px;
+  --spacing-xs: 4px;
+  --spacing-xl: 32px;
+  --spacing-margin-mobile: 16px;
+  --spacing-sidebar-width: 280px;
+  --spacing-base: 4px;
+  --spacing-margin-desktop: 32px;
+  --spacing-md: 16px;
+
+  --radius-DEFAULT: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  --font-sans: var(--font-inter);
+}
+
+/* Material symbols configurations */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+}
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Custom scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-outline-variant);
+  border-radius: var(--radius-full);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-outline);
+}
+
+/* Chart Conic Gradient */
+.pie-chart {
+  background: conic-gradient(
+    var(--color-error) 0% 15%, 
+    var(--color-surface-tint) 15% 45%, 
+    var(--color-secondary-container) 45% 100%
+  );
+  border-radius: 50%;
+}
