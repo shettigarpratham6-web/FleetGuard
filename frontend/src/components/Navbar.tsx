@@ -67,7 +67,7 @@ export default function Navbar({
   };
 
   return (
-    <header className="flex justify-between items-center px-lg py-sm w-full z-45 bg-surface border-b border-outline-variant sticky top-0 flex-shrink-0 bg-surface/90 backdrop-blur-md">
+    <header className="flex justify-between items-center px-lg py-sm w-full z-45 bg-[#0a0e17]/80 border-b border-white/10 sticky top-0 flex-shrink-0 backdrop-blur-md">
       {/* Mobile Toggle & Brand */}
       <div className="flex items-center gap-md md:hidden">
         <button

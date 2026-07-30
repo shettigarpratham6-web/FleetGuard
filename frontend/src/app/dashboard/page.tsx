@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
+import HeroBackground from '@/components/HeroBackground';
 import { api } from '@/services/api';
 import { User, Vehicle, ServiceRecord, MaintenanceRisk } from '@/types';
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -203,6 +205,14 @@ if (!currentUser) {
   }
 
   return (
+    <div className="relative min-h-screen">
+      {/* Animated CSS Hero Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <HeroBackground />
+      </div>
+
+      {/* Dashboard content rendered above background */}
+      <div className="relative z-10">
     <LayoutWrapper
       searchPlaceholder="Search vehicles, VINs, or records..."
       searchValue={searchQuery}
@@ -681,5 +691,7 @@ if (!currentUser) {
 
       </div>
     </LayoutWrapper>
+      </div>
+    </div>
   );
 }

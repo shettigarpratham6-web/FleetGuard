@@ -41,7 +41,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
       {/* Sidebar Panel */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-sidebar-width py-lg bg-surface-container-low border-r border-outline-variant flex flex-col flex-shrink-0 transition-transform duration-300 z-50 md:translate-x-0 ${
+        className={`fixed md:sticky top-0 left-0 h-screen w-sidebar-width py-lg bg-[#0a0e17]/90 border-r border-white/10 backdrop-blur-md flex flex-col flex-shrink-0 transition-transform duration-300 z-50 md:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

@@ -20,7 +20,7 @@ export default function LayoutWrapper({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background">
+    <div className="flex h-screen w-screen overflow-hidden bg-transparent">
       {/* Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
@@ -35,7 +35,7 @@ export default function LayoutWrapper({
         />
 
         {/* Dynamic Content Canvas */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar bg-background">
+        <main className="flex-1 overflow-y-auto custom-scrollbar bg-transparent">
           {children}
         </main>
       </div>
