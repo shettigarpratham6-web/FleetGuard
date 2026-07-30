@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
-
+import GoogleButton from "@/components/GoogleButton";
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -15,6 +15,25 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
+
+  // Helper function to handle role-based navigation
+  const redirectBasedOnRole = useCallback((role?: string) => {
+    if (!role) {
+      router.replace('/login');
+      return;
+    }
+
+    if (
+      role === 'Admin' ||
+      role === 'Fleet Manager' ||
+      role === 'Manager'
+    ) {
+      router.replace('/dashboard');
+    } else {
+      router.replace('/driver');   // or your driver page
+    }
+  }, [router]);
+=======
   const redirectBasedOnRole = useCallback(
     (role?: string) => {
       if (!role) {
@@ -33,16 +52,48 @@ export default function LoginPage() {
   useEffect(() => {
     if (api.auth.isAuthenticated()) {
       const user = api.auth.getLocalUser();
-      redirectBasedOnRole(user?.role);
+      if (user?.role) {
+        // Valid user data - proceed with role-based redirect
+        redirectBasedOnRole(user.role);
+      } else {
+        // Invalid auth state - clear and show login form
+        api.auth.logout();
+        setCheckingAuth(false);
+      }
     } else {
       setCheckingAuth(false);
     }
-  }, [redirectBasedOnRole]);
+  }, [redirectBasedOnRole, redirectBasedOnRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await api.auth.login(email, password);
+
+      // Always use the stored user
+      const user = api.auth.getLocalUser();
+
+      if (!user) {
+        throw new Error("User information not found after login.");
+      }
+
+      redirectBasedOnRole(user.role);
+    } catch (err: any) {
+      setError(err?.message || 'Invalid email or password.');
+    } finally {
+      setLoading(false);
+    }
+  };
     if (!email || !password) {
       setError('Please enter both email and password.');
       return;
@@ -70,13 +121,123 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 font-sans flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#0a0e17] font-sans selection:bg-[#ff2a2a] selection:text-white">
 
-      {/* ================= 1. SEPARATE TOP HEADER ================= */}
-      <header className="w-full bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 sm:px-12 py-4 flex items-center justify-between sticky top-0 z-20 shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-blue-600 text-white font-black text-xs px-2.5 py-1.5 rounded-xl shadow-md shadow-blue-500/20">
-            SF
+      {/* === CSS-only Animated Background === */}
+
+      {/* Base radial gradient foundation */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 60% at 15% 40%, rgba(220,38,38,0.13) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 50% at 80% 75%, rgba(30,58,138,0.16) 0%, transparent 60%),
+            radial-gradient(ellipse 100% 80% at 50% 0%, rgba(15,23,42,0.95) 0%, #0a0e17 80%)
+          `,
+        }}
+      />
+
+      {/* Animated red glowing orb — top-left */}
+      <div
+        className="absolute rounded-full blur-3xl opacity-25 animate-pulse"
+        style={{
+          width: '500px',
+          height: '500px',
+          top: '-120px',
+          left: '-80px',
+          background: 'radial-gradient(circle, rgba(239,68,68,0.5) 0%, rgba(185,28,28,0.2) 50%, transparent 70%)',
+          animationDuration: '4s',
+        }}
+      />
+
+      {/* Animated blue orb — bottom-right */}
+      <div
+        className="absolute rounded-full blur-3xl opacity-20 animate-pulse"
+        style={{
+          width: '580px',
+          height: '580px',
+          bottom: '-140px',
+          right: '-140px',
+          background: 'radial-gradient(circle, rgba(59,130,246,0.35) 0%, rgba(29,78,216,0.15) 50%, transparent 70%)',
+          animationDuration: '6s',
+          animationDelay: '2s',
+        }}
+      />
+
+
+      {/* Dot-matrix grid overlay */}
+      <div
+        className="absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }}
+      />
+
+  return (
+    <div className="flex min-h-screen w-screen bg-background overflow-y-auto">
+      {/* Visual Showcase Panel (Left - Hidden on Mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden flex-col justify-between p-xl text-on-primary">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,#1e293b,transparent)] opacity-60"></div>
+        <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-primary-container rounded-full filter blur-3xl opacity-30"></div>
+
+        {/* Top Header */}
+        <div className="z-10 flex items-center gap-md">
+          <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xl border border-white/20">
+            FG
+          </div>
+          <div>
+            <h1 className="font-headline-sm text-headline-sm font-black tracking-tight text-white">
+              FleetGuard
+            </h1>
+            <p className="font-body-sm text-[12px] text-on-primary-container">
+              LOGISTICS ENTERPRISE
+            </p>
+          </div>
+        </div>
+      {/* Vignette */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.65) 100%)' }}
+      />
+
+      {/* Soft arc overlay — left edge */}
+      <div className="pointer-events-none absolute -left-20 top-0 h-full w-1/2 rounded-r-full bg-white/[0.025] border-r border-white/5 backdrop-blur-[2px]" />
+
+      {/* Top Navigation Bar */}
+      <nav className="relative z-20 flex items-center justify-between px-8 md:px-16 py-6">
+        {/* Nav Links */}
+        <div className="hidden md:flex items-center gap-10 text-white/80 text-sm font-semibold tracking-wide">
+          <a href="#" className="hover:text-white transition-colors">Home</a>
+          <a href="#" className="hover:text-white transition-colors">About Us</a>
+          <a href="#" className="hover:text-white transition-colors">Listings</a>
+          <a href="#" className="hover:text-white transition-colors">Services</a>
+          <a href="#" className="hover:text-white transition-colors">Contact</a>
+        </div>
+
+
+        {/* Footer info */}
+        <div className="z-10 border-t border-white/10 pt-md flex items-center justify-between text-body-sm text-on-primary-container">
+          <span id="current-year">© 2026 FleetGuard Logistics</span>
+          <div className="flex gap-md">
+            <a href="#" className="hover:underline">Privacy Policy</a>
+            <a href="#" className="hover:underline">Terms of Service</a>
+        {/* Right Auth Section */}
+        <div className="flex items-center gap-6 ml-auto">
+          <Link
+            href="/register"
+            className="text-white/80 hover:text-white text-sm font-bold tracking-wide transition-colors"
+          >
+            Sign Up
+          </Link>
+
+          {/* Red Pill Log In Badge */}
+          <div className="flex items-center bg-[#ff2a2a] text-white text-sm font-black tracking-wider pl-2 pr-6 py-1.5 rounded-full shadow-lg shadow-[#ff2a2a]/30">
+            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center mr-3 text-[#ff2a2a]">
+              <span className="material-symbols-outlined text-lg">person</span>
+            </div>
+            <span>Log In</span>
+
           </div>
           <span className="text-xl font-black tracking-tight text-slate-900">
             Simply<span className="text-blue-600">Fleet</span>
@@ -142,16 +303,31 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Login Form Inputs */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+            </button>
+          </form>
 
-                {/* Email Input */}
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-                    </svg>
-                  </span>
+          {/* Divider */}
+          <div className="flex items-center my-md">
+            <div className="flex-grow border-t border-outline-variant opacity-50"></div>
+            <span className="px-md text-xs font-medium text-on-surface-variant uppercase tracking-wider">or</span>
+            <div className="flex-grow border-t border-outline-variant opacity-50"></div>
+          </div>
+
+          {/* Google Sign-in */}
+          <GoogleButton
+            onSuccess={() => redirectBasedOnRole(api.auth.getLocalUser()?.role || 'Admin')}
+            onError={(err: any) => setError(err?.message || 'Google sign in failed.')}
+          />
+
+          {/* Quick Credential Hint */}
+          <div className="p-sm rounded-lg bg-surface-container-low border border-outline-variant text-xs text-on-surface-variant space-y-1">
+            <p className="font-semibold">Demo Credentials:</p>
+            <p>• Admin: <code className="bg-surface-container px-1 py-0.5 rounded font-mono">admin@fleetguard.com</code> / <code className="bg-surface-container px-1 py-0.5 rounded font-mono">admin123</code></p>
+            <p>• Manager: <code className="bg-surface-container px-1 py-0.5 rounded font-mono">manager@fleetguard.com</code> / <code className="bg-surface-container px-1 py-0.5 rounded font-mono">manager123</code></p>
+
+              <form onSubmit={handleSubmit} className="space-y-3">
+                {/* Email Input Field */}
+                <div >
                   <input
                     required
                     type="email"
@@ -222,6 +398,7 @@ export default function LoginPage() {
                 Create an account
               </Link>
             </div>
+
 
           </div>
 
