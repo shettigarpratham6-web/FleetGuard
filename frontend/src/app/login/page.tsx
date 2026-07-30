@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
-
+import GoogleButton from "@/components/GoogleButton";
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -15,60 +15,67 @@ export default function LoginPage() {
 
   // Helper function to handle role-based navigation
   const redirectBasedOnRole = useCallback((role?: string) => {
-  if (!role) {
-    router.replace('/login');
-    return;
-  }
+    if (!role) {
+      router.replace('/login');
+      return;
+    }
 
-  if (
-    role === 'Admin' ||
-    role === 'Fleet Manager' ||
-    role === 'Manager'
-  ) {
-    router.replace('/dashboard');
-  } else {
-    router.replace('/driver');   // or your driver page
-  }
-}, [router]);
+    if (
+      role === 'Admin' ||
+      role === 'Fleet Manager' ||
+      role === 'Manager'
+    ) {
+      router.replace('/dashboard');
+    } else {
+      router.replace('/driver');   // or your driver page
+    }
+  }, [router]);
 
   useEffect(() => {
     // If already authenticated, redirect immediately based on stored user role
     if (api.auth.isAuthenticated()) {
       const user = api.auth.getLocalUser();
-      redirectBasedOnRole(user?.role);
+      if (user?.role) {
+        // Valid user data - proceed with role-based redirect
+        redirectBasedOnRole(user.role);
+      } else {
+        // Invalid auth state - clear and show login form
+        api.auth.logout();
+        setCheckingAuth(false);
+      }
     } else {
       setCheckingAuth(false);
     }
-  }, [redirectBasedOnRole]);
+  }, [redirectBasedOnRole, redirectBasedOnRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
+    e.preventDefault();
+    setError('');
 
-  if (!email || !password) {
-    setError('Please enter both email and password.');
-    return;
-  }
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    await api.auth.login(email, password);
+    try {
+      await api.auth.login(email, password);
 
-// Always use the stored user
-const user = api.auth.getLocalUser();
+      // Always use the stored user
+      const user = api.auth.getLocalUser();
 
-if (!user) {
-  throw new Error("User information not found after login.");
-}
+      if (!user) {
+        throw new Error("User information not found after login.");
+      }
 
-redirectBasedOnRole(user.role);
-  } catch (err: any) {
-    setError(err?.message || 'Invalid email or password.');
-  } finally {
-    setLoading(false);
-  }
-};
+      redirectBasedOnRole(user.role);
+    } catch (err: any) {
+      setError(err?.message || 'Invalid email or password.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Spinner fallback to prevent UI flash during authentication verification
   if (checkingAuth) {
@@ -85,7 +92,7 @@ redirectBasedOnRole(user.role);
       <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden flex-col justify-between p-xl text-on-primary">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,#1e293b,transparent)] opacity-60"></div>
         <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-primary-container rounded-full filter blur-3xl opacity-30"></div>
-        
+
         {/* Top Header */}
         <div className="z-10 flex items-center gap-md">
           <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xl border border-white/20">
@@ -116,7 +123,7 @@ redirectBasedOnRole(user.role);
 
         {/* Footer info */}
         <div className="z-10 border-t border-white/10 pt-md flex items-center justify-between text-body-sm text-on-primary-container">
-          <span>&copy; {new Date().getFullYear()} FleetGuard Logistics</span>
+          <span id="current-year">© 2026 FleetGuard Logistics</span>
           <div className="flex gap-md">
             <a href="#" className="hover:underline">Privacy Policy</a>
             <a href="#" className="hover:underline">Terms of Service</a>
@@ -212,6 +219,19 @@ redirectBasedOnRole(user.role);
               )}
             </button>
           </form>
+
+          {/* Divider */}
+          <div className="flex items-center my-md">
+            <div className="flex-grow border-t border-outline-variant opacity-50"></div>
+            <span className="px-md text-xs font-medium text-on-surface-variant uppercase tracking-wider">or</span>
+            <div className="flex-grow border-t border-outline-variant opacity-50"></div>
+          </div>
+
+          {/* Google Sign-in */}
+          <GoogleButton
+            onSuccess={() => redirectBasedOnRole(api.auth.getLocalUser()?.role || 'Admin')}
+            onError={(err: any) => setError(err?.message || 'Google sign in failed.')}
+          />
 
           {/* Quick Credential Hint */}
           <div className="p-sm rounded-lg bg-surface-container-low border border-outline-variant text-xs text-on-surface-variant space-y-1">
