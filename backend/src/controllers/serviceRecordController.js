@@ -268,7 +268,7 @@ exports.updateServiceRecord = async (req, res, next) => {
         const diffTime = nextDate - today;
         const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if ([10, 5, 2].includes(daysRemaining)) {
+        if ([10, 7, 5].includes(daysRemaining)) {
           const title = `Scheduled Maintenance in ${daysRemaining} Days`;
           const message = `Vehicle is due for ${updatedRecord.service_type || 'Routine Maintenance'} on ${nextDate.toLocaleDateString()} (${daysRemaining} days remaining). Please prepare the vehicle for maintenance.`;
 

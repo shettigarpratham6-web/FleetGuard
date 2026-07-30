@@ -1,15 +1,45 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
-import { db } from '@/data/mockDb';
+import { api } from '@/services/api';
+import { Vehicle, MaintenanceRisk } from '@/types';
 
 export default function MaintenanceQueuePage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [risks, setRisks] = useState<MaintenanceRisk[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const vehicles = db.getVehicles();
-  const risks = db.getMaintenanceRisks();
+  useEffect(() => {
+    if (!api.auth.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [vehiclesData, risksData] = await Promise.all([
+          api.vehicles.getAll(),
+          api.risks.getAll(),
+        ]);
+        setVehicles(vehiclesData || []);
+        setRisks(risksData || []);
+      } catch (err: any) {
+        console.error('Error fetching maintenance queue details:', err);
+        setError(err.message || 'Failed to load maintenance queue.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [router]);
 
   // Helper to get risk details for a vehicle
   const getVehicleRisk = (vehicleId: string) => {
@@ -39,6 +69,17 @@ export default function MaintenanceQueuePage() {
        v.model.toLowerCase().includes(searchQuery.toLowerCase()));
   });
 
+  if (loading) {
+    return (
+      <LayoutWrapper>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-body-md text-on-surface-variant">Loading maintenance queue lanes...</p>
+        </div>
+      </LayoutWrapper>
+    );
+  }
+
   return (
     <LayoutWrapper
       searchPlaceholder="Search vehicle ID..."
@@ -58,6 +99,13 @@ export default function MaintenanceQueuePage() {
             </p>
           </div>
         </div>
+
+        {error && (
+          <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
+            <span className="material-symbols-outlined text-[20px]">error</span>
+            {error}
+          </div>
+        )}
 
         {/* Lanes Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter items-start">
@@ -129,6 +177,11 @@ export default function MaintenanceQueuePage() {
                   </div>
                 );
               })}
+              {overdueVehicles.length === 0 && (
+                <div className="p-md text-center bg-surface-container-lowest border border-outline-variant text-on-surface-variant rounded-lg font-body-sm">
+                  No vehicles in overdue queue.
+                </div>
+              )}
             </div>
           </section>
 
@@ -199,6 +252,11 @@ export default function MaintenanceQueuePage() {
                   </div>
                 );
               })}
+              {dueSoonVehicles.length === 0 && (
+                <div className="p-md text-center bg-surface-container-lowest border border-outline-variant text-on-surface-variant rounded-lg font-body-sm">
+                  No vehicles in due soon queue.
+                </div>
+              )}
             </div>
           </section>
 
@@ -269,6 +327,11 @@ export default function MaintenanceQueuePage() {
                   </div>
                 );
               })}
+              {upcomingVehicles.length === 0 && (
+                <div className="p-md text-center bg-surface-container-lowest border border-outline-variant text-on-surface-variant rounded-lg font-body-sm">
+                  No upcoming scheduled maintenance.
+                </div>
+              )}
             </div>
           </section>
 

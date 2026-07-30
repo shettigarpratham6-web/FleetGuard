@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
-import { db } from '@/data/mockDb';
+import { api } from '@/services/api';
+import { Vehicle, User } from '@/types';
 
 interface PartItem {
   name: string;
@@ -13,8 +14,12 @@ interface PartItem {
 
 export default function CreateServiceRecordPage() {
   const router = useRouter();
-  const vehicles = db.getVehicles();
-  const users = db.getUsers().filter((u) => u.role === 'Service Center');
+
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Form State
   const [vehicleId, setVehicleId] = useState('');
@@ -30,6 +35,33 @@ export default function CreateServiceRecordPage() {
     { name: 'Oil Filter (OF-192)', qty: 1, unitCost: 40.50 },
     { name: 'Synthetic Engine Oil 5W-30', qty: 4, unitCost: 36.12 }
   ]);
+
+  useEffect(() => {
+    if (!api.auth.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [vehiclesData, usersData] = await Promise.all([
+          api.vehicles.getAll(),
+          api.auth.getUsers()
+        ]);
+        setVehicles(vehiclesData || []);
+        // filter mechanics or show all service center/staff
+        setUsers(usersData ? usersData.filter(u => u.role === 'Service Center' || u.role === 'Admin') : []);
+      } catch (err: any) {
+        console.error('Error fetching creation details:', err);
+        setError(err.message || 'Failed to retrieve options from database.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [router]);
 
   // Handle adding new part row
   const addPartRow = () => {
@@ -59,11 +91,12 @@ export default function CreateServiceRecordPage() {
   const totalCost = partsTotal + Number(laborCost || 0);
 
   // Form submit handler
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
     if (!vehicleId || !mechanicId || !serviceType || !currentMileage) {
-      alert('Please fill out all required fields marked with *');
+      setError('Please fill out all required fields marked with *');
       return;
     }
 
@@ -72,24 +105,45 @@ export default function CreateServiceRecordPage() {
       .map((p) => `${p.name} (x${p.qty})`)
       .join(', ');
 
-    db.createServiceRecord({
-      vehicle_id: vehicleId,
-      mechanic_id: mechanicId,
-      service_date: serviceDate,
-      current_mileage: Number(currentMileage),
-      service_type: serviceType,
-      description,
-      parts_changed: partsString || 'None',
-      labour_cost: Number(laborCost),
-      parts_cost: partsTotal,
-      next_service_mileage: Number(currentMileage) + 10000,
-      next_service_date: new Date(new Date().setMonth(new Date().getMonth() + 6))
-        .toISOString()
-        .split('T')[0]
-    });
+    setSubmitting(true);
 
-    router.push('/service-records');
+    try {
+      await api.services.create({
+        vehicle_id: vehicleId,
+        mechanic_id: mechanicId,
+        service_date: serviceDate,
+        current_mileage: Number(currentMileage),
+        service_type: serviceType,
+        description,
+        parts_changed: partsString || 'None',
+        labour_cost: Number(laborCost),
+        parts_cost: partsTotal,
+        total_cost: totalCost,
+        next_service_mileage: Number(currentMileage) + 10000,
+        next_service_date: new Date(new Date().setMonth(new Date().getMonth() + 6))
+          .toISOString()
+          .split('T')[0]
+      });
+
+      router.push('/service-records');
+    } catch (err: any) {
+      console.error('Error creating service record:', err);
+      setError(err.message || 'Failed to submit service record to database.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <LayoutWrapper>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-body-md text-on-surface-variant">Preparing service records form...</p>
+        </div>
+      </LayoutWrapper>
+    );
+  }
 
   return (
     <LayoutWrapper searchPlaceholder="Search forms...">
@@ -103,6 +157,13 @@ export default function CreateServiceRecordPage() {
             </p>
           </div>
         </div>
+
+        {error && (
+          <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
+            <span className="material-symbols-outlined text-[20px]">error</span>
+            {error}
+          </div>
+        )}
 
         {/* Form Container */}
         <div className="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.05)] overflow-hidden">
@@ -120,7 +181,7 @@ export default function CreateServiceRecordPage() {
                     required
                     value={vehicleId}
                     onChange={(e) => setVehicleId(e.target.value)}
-                    className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-colors"
+                    className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-colors outline-none"
                   >
                     <option value="" disabled>Select an asset</option>
                     {vehicles.map((v) => (
@@ -138,7 +199,7 @@ export default function CreateServiceRecordPage() {
                     required
                     value={mechanicId}
                     onChange={(e) => setMechanicId(e.target.value)}
-                    className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-colors"
+                    className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-colors outline-none"
                   >
                     <option value="" disabled>Select personnel</option>
                     {users.map((u) => (
@@ -160,7 +221,7 @@ export default function CreateServiceRecordPage() {
                     Date of Service *
                   </label>
                   <div className="relative">
-                    <span className="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">
+                    <span className="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">
                       calendar_today
                     </span>
                     <input
@@ -168,7 +229,7 @@ export default function CreateServiceRecordPage() {
                       type="date"
                       value={serviceDate}
                       onChange={(e) => setServiceDate(e.target.value)}
-                      className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary pl-[40px] pr-md py-sm text-body-md font-body-md text-on-surface transition-colors"
+                      className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary pl-[40px] pr-md py-sm text-body-md font-body-md text-on-surface transition-colors outline-none"
                     />
                   </div>
                 </div>
@@ -183,7 +244,7 @@ export default function CreateServiceRecordPage() {
                       placeholder="0"
                       value={currentMileage}
                       onChange={(e) => setCurrentMileage(e.target.value)}
-                      className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-data-mono font-data-mono text-on-surface transition-colors text-right"
+                      className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-data-mono font-data-mono text-on-surface transition-colors text-right outline-none"
                     />
                     <span className="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant font-body-sm text-body-sm pointer-events-none">
                       mi
@@ -198,7 +259,7 @@ export default function CreateServiceRecordPage() {
                     required
                     value={serviceType}
                     onChange={(e) => setServiceType(e.target.value)}
-                    className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-colors"
+                    className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-colors outline-none"
                   >
                     <option value="" disabled>Select type</option>
                     <option value="Routine Maintenance">Routine Maintenance</option>
@@ -217,7 +278,7 @@ export default function CreateServiceRecordPage() {
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-colors resize-none"
+                  className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-colors resize-none outline-none"
                 />
               </div>
             </div>
@@ -284,7 +345,7 @@ export default function CreateServiceRecordPage() {
                           <button
                             type="button"
                             onClick={() => removePartRow(index)}
-                            className="text-on-surface-variant hover:text-error transition-colors cursor-pointer"
+                            className="text-on-surface-variant hover:text-error transition-colors cursor-pointer border-none bg-transparent"
                           >
                             <span className="material-symbols-outlined text-sm">close</span>
                           </button>
@@ -297,7 +358,7 @@ export default function CreateServiceRecordPage() {
                   <button
                     type="button"
                     onClick={addPartRow}
-                    className="font-label-md text-label-md text-primary flex items-center gap-xs hover:underline cursor-pointer"
+                    className="font-label-md text-label-md text-primary flex items-center gap-xs hover:underline cursor-pointer border-none bg-transparent"
                   >
                     <span className="material-symbols-outlined text-sm">add</span> Add Part
                   </button>
@@ -326,7 +387,7 @@ export default function CreateServiceRecordPage() {
                         step="1"
                         value={laborCost}
                         onChange={(e) => setLaborCost(e.target.value)}
-                        className="w-full bg-surface-container rounded-md border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary pl-[20px] pr-sm py-1 text-data-mono font-data-mono text-on-surface text-right transition-colors"
+                        className="w-full bg-surface-container rounded-md border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary pl-[20px] pr-sm py-1 text-data-mono font-data-mono text-on-surface text-right transition-colors outline-none"
                       />
                     </div>
                   </div>
@@ -346,7 +407,7 @@ export default function CreateServiceRecordPage() {
                     type="button"
                     className="px-md py-sm border border-outline-variant rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md flex items-center gap-sm hover:bg-surface-container transition-colors shadow-sm cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-on-surface-variant">
+                    <span className="material-symbols-outlined text-on-surface-variant text-[18px]">
                       upload_file
                     </span>
                     Upload Invoice PDF
@@ -363,18 +424,25 @@ export default function CreateServiceRecordPage() {
               <button
                 type="button"
                 onClick={() => router.push('/service-records')}
-                className="px-lg py-sm rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
+                className="px-lg py-sm rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer border-none bg-transparent"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-lg py-sm rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-colors shadow-sm flex items-center gap-sm cursor-pointer active:opacity-85"
+                disabled={submitting}
+                className="px-lg py-sm rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-colors shadow-sm flex items-center gap-sm cursor-pointer active:opacity-85 border-none"
               >
-                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  save
-                </span>
-                Save Service Record
+                {submitting ? (
+                  <div className="w-5 h-5 border-2 border-on-primary border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      save
+                    </span>
+                    <span>Save Service Record</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

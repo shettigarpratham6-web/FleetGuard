@@ -28,7 +28,7 @@ const checkAndSendExpiryAlerts = async () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 1. Fetch compliance documents expiring in 10, 5, or 2 days using local PostgreSQL
+    // 1. Fetch compliance documents expiring in 10, 7, or 5 days using local PostgreSQL
     const docQuery = `
       SELECT 
         cd.id AS document_id,
@@ -46,8 +46,8 @@ const checkAndSendExpiryAlerts = async () => {
       WHERE cd.status = 'Valid'
         AND (
           cd.expiry_date = CURRENT_DATE + INTERVAL '10 days' OR
-          cd.expiry_date = CURRENT_DATE + INTERVAL '5 days' OR
-          cd.expiry_date = CURRENT_DATE + INTERVAL '2 days'
+          cd.expiry_date = CURRENT_DATE + INTERVAL '7 days' OR
+          cd.expiry_date = CURRENT_DATE + INTERVAL '5 days'
         )
     `;
 
@@ -76,7 +76,7 @@ const checkAndSendExpiryAlerts = async () => {
       }
     }
 
-    // 2. Fetch service records where next_service_date is in 10, 5, or 2 days using local PostgreSQL
+    // 2. Fetch service records where next_service_date is in 10, 7, or 5 days using local PostgreSQL
     const serviceQuery = `
       SELECT 
         sr.id AS service_id,
@@ -93,8 +93,8 @@ const checkAndSendExpiryAlerts = async () => {
       WHERE sr.next_service_date IS NOT NULL
         AND (
           sr.next_service_date = CURRENT_DATE + INTERVAL '10 days' OR
-          sr.next_service_date = CURRENT_DATE + INTERVAL '5 days' OR
-          sr.next_service_date = CURRENT_DATE + INTERVAL '2 days'
+          sr.next_service_date = CURRENT_DATE + INTERVAL '7 days' OR
+          sr.next_service_date = CURRENT_DATE + INTERVAL '5 days'
         )
     `;
 

@@ -1,4 +1,135 @@
 const db = require('../config/db');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const env = require('../config/env');
+
+/**
+ * POST /api/auth/register
+ * Register a new user in PostgreSQL and return a JWT.
+ */
+exports.register = async (req, res, next) => {
+  try {
+    const { username, email, password, full_name, role, phone_number, profile_picture } = req.body;
+
+    if (!email || !password || !full_name) {
+      return res.status(400).json({ error: 'Email, password, and full name are required.' });
+    }
+
+    // Check if email or username already exists
+    const checkUser = await db.query(
+      'SELECT id FROM users WHERE email = $1 OR (username = $2 AND username IS NOT NULL) LIMIT 1',
+      [email.toLowerCase(), username || null]
+    );
+
+    if (checkUser.rows.length > 0) {
+      return res.status(400).json({ error: 'User with this email or username already exists.' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // Default profile picture if none provided
+    const finalProfilePicture = profile_picture || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAyNWRLx_E1OWgPi7aT-s7keymJamS_sAULSOKC77sBamBVVEH8asmCa3f4NYOaE3mG3geTNRGrCEk9EHHGtRbopLaZ52J0biD4pjdRExkF4tELoYtoq-zasE6so0CeaGSIAvvheeL2qrq5EGlYXYnXy2LFAAHWpIX7MRS7rUU0FgN3ulrekGF7ncrztv17tLcE_3HUrNuSMCnC1wGiBZ6Az6Q7ajamDg6nZkmfN3G0rW9Vloo_heFU';
+
+    // Save to Postgres
+    const insertQuery = `
+      INSERT INTO users (username, email, password_hash, full_name, role, phone_number, profile_picture, status, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active', NOW(), NOW())
+      RETURNING id, username, email, full_name, role, phone_number, profile_picture, created_at, updated_at
+    `;
+    
+    const validRoles = ['Admin', 'Fleet Manager', 'Driver', 'Service Center', 'Manager', 'User'];
+    const finalRole = role && validRoles.includes(role) ? role : 'Driver';
+
+    const insertResult = await db.query(insertQuery, [
+      username || null,
+      email.toLowerCase(),
+      passwordHash,
+      full_name,
+      finalRole,
+      phone_number || null,
+      finalProfilePicture
+    ]);
+
+    const user = insertResult.rows[0];
+
+    // Sign JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      env.JWT_SECRET || 'supersecretkeyreplaceinproduction',
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
+      user
+    });
+  } catch (error) {
+    console.error('Error registering user:', error);
+    next(error);
+  }
+};
+
+/**
+ * POST /api/auth/login
+ * Log in using email and password and return a JWT.
+ */
+exports.login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    // Find user
+    const result = await db.query(
+      'SELECT id, username, email, password_hash, full_name, role, phone_number, profile_picture, status FROM users WHERE email = $1 LIMIT 1',
+      [email.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid email or password.' });
+    }
+
+    const user = result.rows[0];
+
+    if (!user.password_hash) {
+      return res.status(400).json({ error: 'This user is registered via an external service (e.g. Firebase). Please log in using that service.' });
+    }
+
+    // Compare passwords
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Invalid email or password.' });
+    }
+
+    if (user.status !== 'Active') {
+      return res.status(403).json({ error: 'Your account is inactive. Please contact support.' });
+    }
+
+    // Sign JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      env.JWT_SECRET || 'supersecretkeyreplaceinproduction',
+      { expiresIn: '24h' }
+    );
+
+    // Don't send back password_hash
+    delete user.password_hash;
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user
+    });
+  } catch (error) {
+    console.error('Error logging in user:', error);
+    next(error);
+  }
+};
 
 /**
  * POST /api/auth/sync
@@ -104,7 +235,7 @@ exports.getMe = async (req, res, next) => {
     const email = req.user.email || req.firebaseUser?.email;
 
     const queryText = `
-      SELECT id, firebase_uid, email, full_name, profile_picture, role, branch_id, status, created_at, updated_at
+      SELECT id, firebase_uid, username, email, full_name, profile_picture, role, branch_id, status, created_at, updated_at
       FROM users
       WHERE firebase_uid = $1 OR id = $2 OR email = $3
       LIMIT 1
@@ -118,6 +249,29 @@ exports.getMe = async (req, res, next) => {
     res.status(200).json({ user: result.rows[0] });
   } catch (error) {
     console.error('Error fetching user profile:', error);
+    next(error);
+  }
+};
+
+/**
+ * GET /api/auth/users
+ * Returns a list of all users, optionally filtered by role.
+ */
+exports.getUsers = async (req, res, next) => {
+  try {
+    const { role } = req.query;
+    let queryText = 'SELECT id, username, email, full_name, role, phone_number, profile_picture, status, created_at FROM users';
+    const params = [];
+
+    if (role) {
+      queryText += ' WHERE role = $1';
+      params.push(role);
+    }
+
+    const result = await db.query(queryText, params);
+    res.status(200).json({ users: result.rows });
+  } catch (error) {
+    console.error('Error fetching users:', error);
     next(error);
   }
 };

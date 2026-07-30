@@ -1,0 +1,198 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { api } from '@/services/api';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // If already authenticated, redirect immediately based on role
+    if (api.auth.isAuthenticated()) {
+      const user = api.auth.getLocalUser();
+      if (user?.role === 'Admin' || user?.role === 'Fleet Manager' || user?.role === 'Manager') {
+        router.push('/dashboard');
+      } else {
+        router.push('/register');
+      }
+    }
+  }, [router]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const data = await api.auth.login(email, password);
+      const user = data.user;
+      
+      if (user?.role === 'Admin' || user?.role === 'Fleet Manager' || user?.role === 'Manager') {
+        router.push('/dashboard');
+      } else {
+        router.push('/register');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Invalid email or password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen w-screen bg-background overflow-y-auto">
+      {/* Visual Showcase Panel (Left - Hidden on Mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden flex-col justify-between p-xl text-on-primary">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,#1e293b,transparent)] opacity-60"></div>
+        <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-primary-container rounded-full filter blur-3xl opacity-30"></div>
+        
+        {/* Top Header */}
+        <div className="z-10 flex items-center gap-md">
+          <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xl border border-white/20">
+            FG
+          </div>
+          <div>
+            <h1 className="font-headline-sm text-headline-sm font-black tracking-tight text-white">
+              FleetGuard
+            </h1>
+            <p className="font-body-sm text-[12px] text-on-primary-container">
+              LOGISTICS ENTERPRISE
+            </p>
+          </div>
+        </div>
+
+        {/* Message */}
+        <div className="z-10 max-w-md my-auto space-y-md">
+          <span className="inline-block px-sm py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold border border-white/15">
+            Enterprise Fleet Management
+          </span>
+          <h2 className="font-display-lg text-display-lg font-black tracking-tight text-white leading-tight">
+            Advanced Fleet Operations & Maintenance
+          </h2>
+          <p className="font-body-lg text-body-lg text-on-primary-container leading-relaxed">
+            Monitor real-time vehicle compliance, schedule repairs, check predictive risk analysis, and receive automatic alerts on service intervals.
+          </p>
+        </div>
+
+        {/* Footer info */}
+        <div className="z-10 border-t border-white/10 pt-md flex items-center justify-between text-body-sm text-on-primary-container">
+          <span>&copy; {new Date().getFullYear()} FleetGuard Logistics</span>
+          <div className="flex gap-md">
+            <a href="#" className="hover:underline">Privacy Policy</a>
+            <a href="#" className="hover:underline">Terms of Service</a>
+          </div>
+        </div>
+      </div>
+
+      {/* Login Form Panel (Right) */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-md md:p-xl bg-surface-container-lowest">
+        <div className="w-full max-w-[420px] space-y-lg">
+          {/* Header */}
+          <div className="space-y-xs">
+            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">
+              Welcome Back
+            </h2>
+            <p className="font-body-md text-body-md text-on-surface-variant">
+              Don't have an account?{' '}
+              <Link href="/register" className="text-primary font-semibold hover:underline">
+                Sign Up
+              </Link>
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-md">
+            {error && (
+              <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
+                <span className="material-symbols-outlined text-[20px]">error</span>
+                {error}
+              </div>
+            )}
+
+            {/* Email */}
+            <div>
+              <label className="block font-label-md text-label-md text-on-surface mb-xs">
+                Email Address
+              </label>
+              <input
+                required
+                type="email"
+                placeholder="admin@fleetguard.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none"
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="flex justify-between items-center mb-xs">
+                <label className="block font-label-md text-label-md text-on-surface">
+                  Password
+                </label>
+                <a href="#" className="text-xs text-primary hover:underline">
+                  Forgot Password?
+                </a>
+              </div>
+              <input
+                required
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none"
+              />
+            </div>
+
+            {/* Remember me checkbox */}
+            <div className="flex items-center gap-sm pt-xs">
+              <input
+                id="remember"
+                type="checkbox"
+                className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer"
+              />
+              <label htmlFor="remember" className="font-body-sm text-body-sm text-on-surface-variant cursor-pointer select-none">
+                Keep me signed in on this device
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-primary hover:opacity-90 active:opacity-80 text-on-primary font-semibold py-sm rounded-lg flex items-center justify-center gap-xs shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed pt-2.5 pb-2.5 mt-md"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-on-primary border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-[20px]">login</span>
+                  <span>Sign In</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Quick Credential Hint */}
+          <div className="p-sm rounded-lg bg-surface-container-low border border-outline-variant text-xs text-on-surface-variant space-y-1">
+            <p className="font-semibold">Demo Credentials:</p>
+            <p>• Admin: <code className="bg-surface-container px-1 py-0.5 rounded font-mono">admin@fleetguard.com</code> / <code className="bg-surface-container px-1 py-0.5 rounded font-mono">admin123</code></p>
+            <p>• Manager: <code className="bg-surface-container px-1 py-0.5 rounded font-mono">manager@fleetguard.com</code> / <code className="bg-surface-container px-1 py-0.5 rounded font-mono">manager123</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

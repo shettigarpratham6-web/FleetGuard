@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { api } from '@/services/api';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -19,6 +20,14 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { name: 'Predictive Risk', icon: 'analytics', href: '/predictive-risk' },
     { name: 'Historical Records', icon: 'history', href: '/historical-records' },
   ];
+
+  const router = useRouter();
+
+  const handleLogout = (e: React.MouseEvent) => {
+    e.preventDefault();
+    api.auth.logout();
+    router.push('/login');
+  };
 
   return (
     <>
@@ -100,13 +109,13 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
               <span className="material-symbols-outlined text-[18px]">help</span>
               Support
             </a>
-            <a
-              href="#"
-              className="flex items-center gap-md text-on-surface-variant px-sm py-sm hover:bg-surface-container-high rounded-lg transition-colors font-label-md text-label-md"
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-md text-error px-sm py-sm hover:bg-error-container/10 rounded-lg transition-colors font-label-md text-label-md text-left cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">settings</span>
-              Settings
-            </a>
+              <span className="material-symbols-outlined text-[18px] text-error">logout</span>
+              Sign Out
+            </button>
           </nav>
         </div>
       </aside>
