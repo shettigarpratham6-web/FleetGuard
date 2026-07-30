@@ -38,37 +38,6 @@ exports.createNotification = async (req, res, next) => {
     ]);
 
     const createdNotification = result.rows[0];
-    const targetUser = userCheck.rows[0];
-
-    // Build standard premium notification template
-    const emailHtml = `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px; margin: auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-        <div style="text-align: center; margin-bottom: 25px;">
-          <h1 style="color: #0f172a; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: -0.025em;">FleetGuard 🚛</h1>
-          <p style="color: #64748b; font-size: 14px; margin: 5px 0 0 0;">Unified Fleet Compliance & Management</p>
-        </div>
-        <div style="border-top: 1px solid #f1f5f9; padding-top: 25px;">
-          <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">Hello <strong>${targetUser.full_name}</strong>,</p>
-          <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">You have received a new administrative update on your FleetGuard account:</p>
-          
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 25px;">
-            <h3 style="margin: 0 0 10px 0; color: #1e293b; font-size: 16px; font-weight: 600;">${title}</h3>
-            <p style="margin: 0; color: #475569; font-size: 14px; line-height: 1.6; font-style: italic;">"${message}"</p>
-          </div>
-
-          <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0;">Please log in to your dashboard to view or resolve this notification.</p>
-        </div>
-        <div style="border-top: 1px solid #f1f5f9; margin-top: 30px; padding-top: 20px; text-align: center;">
-          <p style="font-size: 11px; color: #94a3b8; margin: 0;">This is an automated system alert from FleetGuard. Please do not reply directly to this message.</p>
-        </div>
-      </div>
-    `;
-
-    // Send email asynchronously so API response time is not blocked
-    sendEmail(targetUser.email, `[FleetGuard Alert] ${title}`, message, emailHtml).catch(err => {
-      console.error('⚠️ Failed to send email alert:', err);
-    });
-
     res.status(201).json({
       message: 'Notification created successfully',
       notification: createdNotification

@@ -2,9 +2,8 @@ require('dotenv').config();
 const app = require('./app');
 const initDb = require('./config/initDb');
 const startExpiryAlertJob = require('./jobs/expiryAlertJob');
-const { initExpiryCron } = require('./services/expiryCron');
+// initExpiryCron disabled to remove google notification flow
 const PORT = process.env.PORT || 5000;
-initExpiryCron();
 const startServer = async () => {
     try {
         if (typeof initDb === 'function') {
