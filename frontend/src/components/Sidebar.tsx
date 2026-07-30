@@ -20,6 +20,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
     { name: 'Predictive Risk', icon: 'analytics', href: '/predictive-risk' },
     { name: 'Historical Records', icon: 'history', href: '/historical-records' },
+    { name: 'About Us', icon: 'phone', href:'/about'}
   ];
 
   const handleLogout = (e: React.MouseEvent) => {
@@ -27,6 +28,15 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     api.auth.logout();
     router.push('/login');
   };
+return (
+  <>
+    {/* Mobile Backdrop */}
+    {isOpen && (
+      <div
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-45 md:hidden transition-opacity"
+        onClick={() => setIsOpen(false)}
+      />
+    )}
 
   return (
     <>
@@ -77,6 +87,13 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
+        <button
+          className="md:hidden text-slate-500 p-1.5 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
+          onClick={() => setIsOpen(false)}
+        >
+          <span className="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
 
         {/* Section Label */}
         <div className="px-lg mb-xs">

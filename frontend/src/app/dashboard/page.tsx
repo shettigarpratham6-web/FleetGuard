@@ -242,9 +242,13 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </LayoutWrapper>
-    );
-  }
+        <p className="font-semibold text-sm text-slate-600 tracking-wide">
+          Connecting to live PostgreSQL database...
+        </p>
+      </div>
+    </LayoutWrapper>
+  );
+}
 
   return (
     <div className="relative min-h-screen">
@@ -305,6 +309,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+      </div>
 
         {error && (
           <div className="p-4 rounded-xl bg-error-container/10 border border-error/20 text-error text-[13px] flex items-center gap-2 animate-fade-in">
@@ -331,6 +336,13 @@ export default function DashboardPage() {
               <div className="h-full bg-primary rounded-full transition-all duration-700" style={{ width: '100%' }} />
             </div>
           </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">{vehicles.length}</span>
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-[12px]">arrow_upward</span> Live
+            </span>
+          </div>
+        </div>
 
           {/* Due for Service */}
           <Link href="/maintenance-queue" className="block animate-fade-in-up">
@@ -364,7 +376,17 @@ export default function DashboardPage() {
                 <span className="text-[12px] text-on-surface-variant">vehicles</span>
               </div>
             </div>
-          </Link>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl md:text-4xl font-extrabold text-rose-600 tracking-tight">
+                {highRiskCount}
+              </span>
+              <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                Immediate Action
+              </span>
+            </div>
+          </div>
+        </Link>
+      </div>
 
           {/* High Risk */}
           <Link href="/predictive-risk" className="block animate-fade-in-up">
@@ -379,6 +401,9 @@ export default function DashboardPage() {
                 <span className="text-[36px] font-black text-error leading-none">{highRiskCount}</span>
                 <span className="text-[12px] text-error/80 font-semibold">immediate</span>
               </div>
+              <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+                USD ($)
+              </span>
             </div>
           </Link>
         </div>
@@ -418,6 +443,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+          </div>
 
             {/* Recent Service Records Table */}
             <div className="bg-white rounded-2xl border border-outline-variant/60 shadow-sm overflow-hidden animate-fade-in-up">
@@ -475,6 +501,9 @@ export default function DashboardPage() {
                   </tbody>
                 </table>
               </div>
+              <Link href="/service-records" className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 hover:underline">
+                View All <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </Link>
             </div>
 
             {/* Users Directory Table */}
@@ -530,12 +559,19 @@ export default function DashboardPage() {
                       <tr>
                         <td colSpan={4} className="py-8 text-center text-[13px] text-on-surface-variant">No users registered.</td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="p-8 text-center text-xs text-slate-500">
+                        No registered users found in directory.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
+        </div>
 
           {/* Right Column */}
           <div className="space-y-lg">
@@ -578,6 +614,14 @@ export default function DashboardPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Expiry Alerts Form */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6">
+            <div className="pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-lg font-bold text-slate-900">Dispatch Expiry Alerts</h3>
+              <p className="text-xs font-medium text-slate-500">Send direct 10/7/5 days expiry notices to driver in-app bar</p>
             </div>
 
             {/* Expiry Dispatcher Form */}
@@ -631,6 +675,7 @@ export default function DashboardPage() {
                     ))}
                   </select>
                 </div>
+              </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>

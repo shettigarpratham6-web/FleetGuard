@@ -61,10 +61,10 @@ export default function Home() {
             <Link href="/login" className="text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors px-3 py-2">
               Log In
             </Link>
-            <Link href="/signup" className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+            <Link href="/register" className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
               Sign Up
             </Link>
-            <Link href="#demo" className="hidden sm:inline-block border border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-100 text-sm font-semibold px-4 py-2.5 rounded-lg transition-all duration-300">
+            <Link href="/register" className="hidden sm:inline-block border border-slate-300 text-slate-700 hover:border-slate-400 hover:bg-slate-100 text-sm font-semibold px-4 py-2.5 rounded-lg transition-all duration-300">
               Book A Demo
             </Link>
           </div>
@@ -102,10 +102,10 @@ export default function Home() {
       </p>
 
       <div className="flex flex-wrap items-center gap-4 pt-2">
-        <Link href="/signup" className="bg-slate-900 hover:bg-blue-600 text-white font-semibold px-6 py-3.5 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+        <Link href="/register" className="bg-slate-900 hover:bg-blue-600 text-white font-semibold px-6 py-3.5 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           Get Started
         </Link>
-        <Link href="#demo" className="border border-slate-300 hover:border-slate-400 text-slate-900 hover:bg-slate-100 font-semibold px-6 py-3.5 rounded-lg transition-all duration-300">
+        <Link href="/register" className="border border-slate-300 hover:border-slate-400 text-slate-900 hover:bg-slate-100 font-semibold px-6 py-3.5 rounded-lg transition-all duration-300">
           Book Demo
         </Link>
       </div>
