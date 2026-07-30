@@ -14,7 +14,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const pathname = usePathname();
 
   const navItems = [
-    { name: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
+    { name: 'Dashboard', icon: 'dashboard', href: '/driver' },
     { name: 'Service Records', icon: 'description', href: '/service-records' },
     { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
     { name: 'Predictive Risk', icon: 'analytics', href: '/predictive-risk' },
