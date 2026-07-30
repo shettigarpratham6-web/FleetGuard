@@ -36,11 +36,13 @@ export default function RegisterPage() {
         password,
         role: role as any,
         phone_number: phoneNumber || undefined,
-        profile_picture: profilePicture || undefined
+        profile_picture: profilePicture || undefined,
       });
+
+      // Navigate safely to dashboard upon successful registration
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError(err?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -186,7 +188,7 @@ export default function RegisterPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none"
+                  className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none cursor-pointer"
                 >
                   <option value="Fleet Manager">Fleet Manager</option>
                   <option value="Admin">Administrator</option>
@@ -232,7 +234,7 @@ export default function RegisterPage() {
                 type="checkbox"
                 className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer mt-0.5"
               />
-              <label htmlFor="terms" className="font-body-sm text-body-sm text-on-surface-variant cursor-pointer">
+              <label htmlFor="terms" className="font-body-sm text-body-sm text-on-surface-variant cursor-pointer select-none">
                 I agree to the Terms of Service and Privacy Policy.
               </label>
             </div>
