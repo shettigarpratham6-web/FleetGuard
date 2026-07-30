@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 
@@ -73,6 +74,7 @@ const defaultRiskData: RiskItem[] = [
 ];
 
 export default function PredictiveRiskPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [riskFilter, setRiskFilter] = useState('All Risk Levels');
   const [branchFilter, setBranchFilter] = useState('All Branches');
@@ -126,6 +128,17 @@ export default function PredictiveRiskPage() {
   const highRiskInterventions = filteredData.filter((item) => item.risk === 'High');
   const watchlistItems = filteredData.filter((item) => item.risk !== 'High');
 
+  if (loading) {
+    return (
+      <LayoutWrapper>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md bg-[#0f172a] text-white">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-body-md text-slate-400 mt-4">Analyzing fleet telemetry...</p>
+        </div>
+      </LayoutWrapper>
+    );
+  }
+
   return (
     <LayoutWrapper
       searchPlaceholder="Search vehicles, alerts..."
@@ -176,6 +189,13 @@ export default function PredictiveRiskPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
+            <span className="material-symbols-outlined text-[20px]">error</span>
+            {error}
+          </div>
+        )}
+
         {/* Bento Grid layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg">
           
@@ -201,7 +221,7 @@ export default function PredictiveRiskPage() {
             <div className="mt-lg">
               <button
                 className="w-full bg-error text-white font-label-md py-sm rounded-lg hover:bg-error/90 transition-colors cursor-pointer active:opacity-85 shadow-sm"
-                onClick={() => alert('Mobile mechanics dispatched to Central Depot and Northwest Hub.')}
+                onClick={() => alert('Mobile mechanics dispatched to affected locations.')}
               >
                 Dispatch Mobile Mechanics
               </button>
