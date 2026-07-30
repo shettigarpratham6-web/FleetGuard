@@ -12,6 +12,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     { name: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
@@ -21,8 +22,6 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { name: 'Historical Records', icon: 'history', href: '/historical-records' },
     { name: 'About Us', icon: 'phone', href:'/about'}
   ];
-
-  const router = useRouter();
 
   const handleLogout = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -39,26 +38,54 @@ return (
       />
     )}
 
-    {/* Sidebar Panel */}
-    <aside
-      className={`fixed md:sticky top-0 left-0 h-screen w-64 py-6 bg-slate-50 border-r border-slate-200/90 flex flex-col flex-shrink-0 transition-transform duration-300 z-50 md:translate-x-0 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
-    >
-      {/* Brand Header */}
-      <div className="px-5 mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-extrabold text-base shadow-sm shadow-blue-500/20">
-            FG
+  return (
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-45 md:hidden transition-opacity duration-300"
+          onClick={() => setIsOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar Panel */}
+      <aside
+        className={`fixed md:sticky top-0 left-0 h-screen w-sidebar-width py-lg border-r border-outline-variant flex flex-col flex-shrink-0 z-50 md:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{
+          background: 'linear-gradient(180deg, #f8f6f8 0%, #f3f1f3 100%)',
+          transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+        }}
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        {/* Brand Header */}
+        <div className="px-lg mb-xl flex items-center justify-between">
+          <div className="flex items-center gap-sm">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-base shadow-md"
+              style={{ background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)' }}
+            >
+              FG
+            </div>
+            <div>
+              <h1 className="font-sans font-black text-[16px] leading-tight text-primary">
+                FleetGuard
+              </h1>
+              <p className="text-[11px] text-on-surface-variant leading-tight">
+                Logistics Enterprise
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-base font-extrabold text-slate-900 tracking-tight leading-none">
-              FleetGuard
-            </h1>
-            <p className="text-[11px] font-semibold text-slate-500 mt-1">
-              Logistics Enterprise
-            </p>
-          </div>
+          <button
+            className="md:hidden text-on-surface-variant p-1.5 hover:bg-surface-container-high rounded-full transition-colors focus-ring cursor-pointer"
+            onClick={() => setIsOpen(false)}
+            aria-label="Close sidebar"
+          >
+            <span className="material-symbols-outlined text-[20px]">close</span>
+          </button>
         </div>
         <button
           className="md:hidden text-slate-500 p-1.5 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
@@ -68,60 +95,97 @@ return (
         </button>
       </div>
 
-      {/* Navigation List */}
-      <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 space-y-1">
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-bold ${
-                isActive
-                  ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600 rounded-l-none'
-                  : 'text-slate-600 hover:bg-slate-200/50 hover:text-slate-900'
-              }`}
-              onClick={() => setIsOpen(false)}
-            >
-              <span
-                className={`material-symbols-outlined text-[20px] ${
-                  isActive ? 'fill text-blue-600' : 'text-slate-400'
-                }`}
-              >
-                {item.icon}
-              </span>
-              {item.name}
-            </Link>
-          );
-        })}
-      </nav>
+        {/* Section Label */}
+        <div className="px-lg mb-xs">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">
+            Navigation
+          </span>
+        </div>
 
-      {/* Footer Quick Actions */}
-      <div className="px-4 mt-auto pt-4 border-t border-slate-200/90 space-y-3">
-        <Link href="/service-records/create" onClick={() => setIsOpen(false)} className="block">
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-4 rounded-xl text-xs font-bold transition-all shadow-sm shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-98">
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            New Service Entry
-          </button>
-        </Link>
-        <nav className="space-y-1 pt-1">
-          <a
-            href="#"
-            className="flex items-center gap-3 text-slate-600 px-3 py-2 hover:bg-slate-200/50 hover:text-slate-900 rounded-xl transition-colors text-xs font-bold"
-          >
-            <span className="material-symbols-outlined text-[18px] text-slate-400">help</span>
-            Support
-          </a>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 text-rose-600 px-3 py-2 hover:bg-rose-50 rounded-xl transition-colors text-xs font-bold text-left cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px] text-rose-600">logout</span>
-            Sign Out
-          </button>
+        {/* Navigation list */}
+        <nav className="flex-1 overflow-y-auto custom-scrollbar px-sm space-y-xs" aria-label="Sidebar">
+          {navItems.map((item, index) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-md py-[10px] rounded-xl transition-all duration-200 ease-out font-medium text-[13.5px] group relative focus-ring ${
+                  isActive
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+                }`}
+                style={{
+                  animationDelay: `${index * 40}ms`,
+                }}
+                onClick={() => setIsOpen(false)}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {/* Active indicator bar */}
+                {isActive && (
+                  <span
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-l-full bg-white/40"
+                    aria-hidden="true"
+                  />
+                )}
+                <span
+                  className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${
+                    isActive ? 'fill scale-110' : 'group-hover:scale-110'
+                  }`}
+                  aria-hidden="true"
+                >
+                  {item.icon}
+                </span>
+                <span className="truncate">{item.name}</span>
+              </Link>
+            );
+          })}
         </nav>
-      </div>
-    </aside>
-  </>
-);
+
+        {/* Divider */}
+        <div className="mx-lg my-md h-px bg-outline-variant/50" />
+
+        {/* Footer Quick Actions */}
+        <div className="px-sm space-y-xs pb-sm">
+          <Link
+            href="/service-records/create"
+            onClick={() => setIsOpen(false)}
+            className="focus-ring block rounded-xl"
+          >
+            <button
+              className="w-full py-[10px] px-md rounded-xl font-semibold text-[13px] flex items-center justify-center gap-2 cursor-pointer shadow-md active:shadow-sm btn-scale border-0 transition-all duration-200"
+              style={{
+                background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)',
+                color: 'white',
+              }}
+            >
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">add</span>
+              New Service Entry
+            </button>
+          </Link>
+
+          <nav className="mt-xs space-y-xs" aria-label="Secondary navigation">
+            <a
+              href="#"
+              className="flex items-center gap-3 text-on-surface-variant px-md py-[10px] hover:bg-surface-container-high rounded-xl transition-colors text-[13px] font-medium focus-ring group"
+            >
+              <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform" aria-hidden="true">
+                help
+              </span>
+              Support
+            </a>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 text-error px-md py-[10px] hover:bg-error-container/15 rounded-xl transition-colors text-[13px] font-medium text-left cursor-pointer focus-ring group border-0 bg-transparent"
+            >
+              <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform" aria-hidden="true">
+                logout
+              </span>
+              Sign Out
+            </button>
+          </nav>
+        </div>
+      </aside>
+    </>
+  );
 }

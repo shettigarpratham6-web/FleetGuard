@@ -154,6 +154,15 @@ export const api = {
       return data.records;
     },
 
+    getByVehicle: async (vehicleId: string) => {
+      const res = await fetch(`${API_BASE_URL}/services/vehicle/${vehicleId}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ records: ServiceRecord[] }>(res);
+      return data.records;
+    },
+
     create: async (recordData: Partial<ServiceRecord>) => {
       const res = await fetch(`${API_BASE_URL}/services`, {
         method: 'POST',
@@ -169,6 +178,15 @@ export const api = {
   risks: {
     getAll: async () => {
       const res = await fetch(`${API_BASE_URL}/maintenance-risks`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ risks: MaintenanceRisk[] }>(res);
+      return data.risks;
+    },
+
+    getByVehicle: async (vehicleId: string) => {
+      const res = await fetch(`${API_BASE_URL}/maintenance-risks/vehicle/${vehicleId}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -205,27 +223,26 @@ export const api = {
     }
   },
 
-  // Branches API
-  branches: {
-    getAll: async () => {
-      const res = await fetch(`${API_BASE_URL}/branches`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      const data = await handleResponse<{ branches: any[] }>(res);
-      return data.branches;
-    }
-  },
-
-  // Historical Services API
   historicalServices: {
     getAll: async () => {
       const res = await fetch(`${API_BASE_URL}/historical-services`, {
-        method: 'GET',
         headers: getAuthHeaders(),
       });
-      const data = await handleResponse<{ records: HistoricalService[] }>(res);
-      return data.records;
-    }
-  }
+      return handleResponse(res);
+    },
+    getByVehicle: async (vehicleId: string) => {
+      const res = await fetch(`${API_BASE_URL}/historical-services/vehicle/${vehicleId}`, {
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(res);
+    },
+    create: async (data: any) => {
+      const res = await fetch(`${API_BASE_URL}/historical-services`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return handleResponse(res);
+    },
+  },
 };

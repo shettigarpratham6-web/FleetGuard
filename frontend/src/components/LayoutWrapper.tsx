@@ -20,7 +20,7 @@ export default function LayoutWrapper({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background">
+    <div className="flex h-screen w-screen overflow-hidden bg-transparent">
       {/* Sidebar Navigation */}
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
@@ -34,8 +34,11 @@ export default function LayoutWrapper({
           onSearchChange={onSearchChange}
         />
 
-        {/* Dynamic Content Canvas */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar bg-background">
+        {/* Dynamic Content Canvas — with page-enter animation */}
+        <main
+          className="flex-1 overflow-y-auto custom-scrollbar bg-background page-enter"
+          role="main"
+        >
           {children}
         </main>
       </div>

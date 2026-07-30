@@ -5,48 +5,37 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
-import { HistoricalService } from '@/types';
-
-// Extend the type to include joined fields from backend
-interface ExtendedHistoricalService extends HistoricalService {
-  vehicle_number?: string;
-  entered_by_username?: string;
-}
+import { mockHistoricalServices } from '@/data/mockDb';
 
 export default function HistoricalRecordsPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [records, setRecords] = useState<ExtendedHistoricalService[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [records, setRecords] = useState<any[]>(mockHistoricalServices);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!api.auth.isAuthenticated()) {
-      router.push('/login');
-      return;
-    }
-
-    const fetchRecords = async () => {
+    const fetchHistoricalRecords = async () => {
       try {
         setLoading(true);
         const data = await api.historicalServices.getAll();
-        setRecords(data || []);
-      } catch (err: any) {
+        if (data && Array.isArray(data) && data.length > 0) {
+          setRecords(data);
+        }
+      } catch (err) {
         console.error('Error fetching historical records:', err);
-        setError(err.message || 'Failed to load historical records.');
       } finally {
         setLoading(false);
       }
     };
-    fetchRecords();
-  }, [router]);
+    fetchHistoricalRecords();
+  }, []);
 
   // Filtering Logic
   const filteredRecords = records.filter((record) => {
     return (
       (record.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (record.remarks || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (record.vehicle_number || record.vehicle_id).toLowerCase().includes(searchQuery.toLowerCase())
+      (record.vehicle_id || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 

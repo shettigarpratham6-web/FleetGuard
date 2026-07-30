@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
 
+
+
+
 export default function RegisterPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
@@ -51,10 +54,96 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen w-screen bg-background overflow-y-auto">
       {/* Visual Showcase Panel (Left - Hidden on Mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden flex-col justify-between p-xl text-on-primary">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,#1e293b,transparent)] opacity-60"></div>
-        <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-primary-container rounded-full filter blur-3xl opacity-30"></div>
-        
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-xl text-on-primary bg-[#0a0e17]">
+
+        {/* Base radial gradient foundation */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(ellipse 80% 60% at 20% 40%, rgba(220,38,38,0.15) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 50% at 75% 75%, rgba(30,58,138,0.18) 0%, transparent 60%),
+              radial-gradient(ellipse 100% 80% at 50% 0%, rgba(15,23,42,0.98) 0%, #0a0e17 80%)
+            `,
+          }}
+        />
+
+        {/* Animated red glowing orb — top-left */}
+        <div
+          className="absolute rounded-full blur-3xl opacity-30 animate-pulse pointer-events-none"
+          style={{
+            width: '480px',
+            height: '480px',
+            top: '-100px',
+            left: '-80px',
+            background: 'radial-gradient(circle, rgba(239,68,68,0.55) 0%, rgba(185,28,28,0.22) 50%, transparent 70%)',
+            animationDuration: '4s',
+          }}
+        />
+
+        {/* Animated blue orb — bottom-right */}
+        <div
+          className="absolute rounded-full blur-3xl opacity-20 animate-pulse pointer-events-none"
+          style={{
+            width: '540px',
+            height: '540px',
+            bottom: '-120px',
+            right: '-120px',
+            background: 'radial-gradient(circle, rgba(59,130,246,0.4) 0%, rgba(29,78,216,0.18) 50%, transparent 70%)',
+            animationDuration: '6s',
+            animationDelay: '2s',
+          }}
+        />
+
+        {/* Subtle mid orb (center) */}
+        <div
+          className="absolute rounded-full blur-2xl opacity-10 animate-pulse pointer-events-none"
+          style={{
+            width: '300px',
+            height: '300px',
+            top: '45%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%)',
+            animationDuration: '8s',
+            animationDelay: '1s',
+          }}
+        />
+
+        {/* Dot-matrix grid overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.07] pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+
+        {/* Scanline texture */}
+        <div
+          className="absolute inset-0 opacity-[0.025] pointer-events-none"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.5) 2px, rgba(255,255,255,0.5) 3px)',
+          }}
+        />
+
+        {/* Vignette edges */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.6) 100%)' }}
+        />
+
+        {/* Left arc edge decoration */}
+        <div
+          className="pointer-events-none absolute -left-16 top-0 h-full border-r border-white/10 backdrop-blur-[1px]"
+          style={{
+            width: '40%',
+            borderRadius: '0 100% 100% 0',
+            background: 'linear-gradient(to right, rgba(255,255,255,0.02), transparent)',
+          }}
+        />
+
+
         {/* Top Header */}
         <div className="z-10 flex items-center gap-md">
           <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xl border border-white/20">
