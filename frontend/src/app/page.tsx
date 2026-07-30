@@ -21,6 +21,32 @@ export default function Home() {
   // Cursor position state for interactive parallax animations
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+
+  useEffect(() => {
+    if (!api.auth.isAuthenticated()) {
+      router.replace('/login');
+      return;
+    }
+
+    const user = api.auth.getLocalUser();
+
+    if (user?.role) {
+      if (
+        user.role === 'Admin' ||
+        user.role === 'Fleet Manager' ||
+        user.role === 'Manager'
+      ) {
+        router.replace('/dashboard');
+      } else {
+        router.replace('/driver');
+      }
+    } else {
+      // Invalid auth state - clear and redirect to login
+      api.auth.logout();
+      router.replace('/login');
+    }
+  }, [router]);
+=======
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const { clientX, clientY } = e;
     // Calculate cursor movement offset relative to screen center
@@ -534,6 +560,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
 
     </div>
   );

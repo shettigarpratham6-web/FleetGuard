@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
-
+import GoogleButton from "@/components/GoogleButton";
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -15,6 +15,25 @@ export default function LoginPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [mounted, setMounted] = useState(false);
 
+
+  // Helper function to handle role-based navigation
+  const redirectBasedOnRole = useCallback((role?: string) => {
+    if (!role) {
+      router.replace('/login');
+      return;
+    }
+
+    if (
+      role === 'Admin' ||
+      role === 'Fleet Manager' ||
+      role === 'Manager'
+    ) {
+      router.replace('/dashboard');
+    } else {
+      router.replace('/driver');   // or your driver page
+    }
+  }, [router]);
+=======
   const redirectBasedOnRole = useCallback(
     (role?: string) => {
       if (!role) {
@@ -34,15 +53,49 @@ export default function LoginPage() {
     setMounted(true);
     if (api.auth.isAuthenticated()) {
       const user = api.auth.getLocalUser();
-      redirectBasedOnRole(user?.role);
+      if (user?.role) {
+        // Valid user data - proceed with role-based redirect
+        redirectBasedOnRole(user.role);
+      } else {
+        // Invalid auth state - clear and show login form
+        api.auth.logout();
+        setCheckingAuth(false);
+      }
     } else {
       setCheckingAuth(false);
     }
-  }, [redirectBasedOnRole]);
+  }, [redirectBasedOnRole, redirectBasedOnRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await api.auth.login(email, password);
+
+      // Always use the stored user
+      const user = api.auth.getLocalUser();
+
+      if (!user) {
+        throw new Error("User information not found after login.");
+      }
+
+      redirectBasedOnRole(user.role);
+    } catch (err: any) {
+      setError(err?.message || 'Invalid email or password.');
+    } finally {
+      setLoading(false);
+    }
+  };
+=======
     if (!email || !password) {
       setError('Please enter both email and password.');
       return;
@@ -112,6 +165,7 @@ export default function LoginPage() {
         }}
       />
 
+
       {/* Dot-matrix grid overlay */}
       <div
         className="absolute inset-0 opacity-[0.06]"
@@ -121,6 +175,28 @@ export default function LoginPage() {
         }}
       />
 
+  return (
+    <div className="flex min-h-screen w-screen bg-background overflow-y-auto">
+      {/* Visual Showcase Panel (Left - Hidden on Mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden flex-col justify-between p-xl text-on-primary">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,#1e293b,transparent)] opacity-60"></div>
+        <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-primary-container rounded-full filter blur-3xl opacity-30"></div>
+
+        {/* Top Header */}
+        <div className="z-10 flex items-center gap-md">
+          <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xl border border-white/20">
+            FG
+          </div>
+          <div>
+            <h1 className="font-headline-sm text-headline-sm font-black tracking-tight text-white">
+              FleetGuard
+            </h1>
+            <p className="font-body-sm text-[12px] text-on-primary-container">
+              LOGISTICS ENTERPRISE
+            </p>
+          </div>
+        </div>
+=======
       {/* Vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
@@ -141,6 +217,14 @@ export default function LoginPage() {
           <a href="#" className="hover:text-white transition-colors">Contact</a>
         </div>
 
+
+        {/* Footer info */}
+        <div className="z-10 border-t border-white/10 pt-md flex items-center justify-between text-body-sm text-on-primary-container">
+          <span id="current-year">© 2026 FleetGuard Logistics</span>
+          <div className="flex gap-md">
+            <a href="#" className="hover:underline">Privacy Policy</a>
+            <a href="#" className="hover:underline">Terms of Service</a>
+=======
         {/* Right Auth Section */}
         <div className="flex items-center gap-6 ml-auto">
           <Link
@@ -156,6 +240,7 @@ export default function LoginPage() {
               <span className="material-symbols-outlined text-lg">person</span>
             </div>
             <span>Log In</span>
+
           </div>
         </div>
       </nav>
@@ -221,6 +306,29 @@ export default function LoginPage() {
                   <span>{error}</span>
                 </div>
               )}
+
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="flex items-center my-md">
+            <div className="flex-grow border-t border-outline-variant opacity-50"></div>
+            <span className="px-md text-xs font-medium text-on-surface-variant uppercase tracking-wider">or</span>
+            <div className="flex-grow border-t border-outline-variant opacity-50"></div>
+          </div>
+
+          {/* Google Sign-in */}
+          <GoogleButton
+            onSuccess={() => redirectBasedOnRole(api.auth.getLocalUser()?.role || 'Admin')}
+            onError={(err: any) => setError(err?.message || 'Google sign in failed.')}
+          />
+
+          {/* Quick Credential Hint */}
+          <div className="p-sm rounded-lg bg-surface-container-low border border-outline-variant text-xs text-on-surface-variant space-y-1">
+            <p className="font-semibold">Demo Credentials:</p>
+            <p>• Admin: <code className="bg-surface-container px-1 py-0.5 rounded font-mono">admin@fleetguard.com</code> / <code className="bg-surface-container px-1 py-0.5 rounded font-mono">admin123</code></p>
+            <p>• Manager: <code className="bg-surface-container px-1 py-0.5 rounded font-mono">manager@fleetguard.com</code> / <code className="bg-surface-container px-1 py-0.5 rounded font-mono">manager123</code></p>
+=======
 
               <form onSubmit={handleSubmit} className="space-y-3">
                 {/* Email Input Field */}
@@ -294,6 +402,7 @@ export default function LoginPage() {
                 © {new Date().getFullYear()} FleetGuard Logistics Enterprise
               </p>
             </div>
+
 
           </div>
         </div>
