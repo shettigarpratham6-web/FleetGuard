@@ -1,18 +1,82 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
+import { api } from '@/services/api';
 import { db } from '@/data/mockDb';
+import { Vehicle, ServiceRecord, MaintenanceRisk } from '@/types';
 
 export default function VehicleDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const vehicle = db.getVehicle(id) || db.getVehicles()[0]; // fallback to first vehicle
-  const serviceRecords = db.getServiceRecords().filter((sr) => sr.vehicle_id === vehicle.id);
-  const risks = db.getMaintenanceRisks().find((r) => r.vehicle_id === vehicle.id);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
+  const [risks, setRisks] = useState<MaintenanceRisk | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadVehicleData = async () => {
+      try {
+        setLoading(true);
+        // Try fetching from backend API
+        let foundVehicle: Vehicle | null = null;
+        try {
+          foundVehicle = await api.vehicles.getById(id);
+        } catch {
+          const allVehicles = await api.vehicles.getAll();
+          foundVehicle = allVehicles.find(v => v.id === id) || null;
+        }
+
+        if (foundVehicle) {
+          setVehicle(foundVehicle);
+          try {
+            const records = await api.services.getByVehicle(id);
+            setServiceRecords(records || []);
+          } catch {
+            setServiceRecords(db.getServiceRecords().filter(sr => sr.vehicle_id === id));
+          }
+          try {
+            const riskList = await api.risks.getAll();
+            setRisks(riskList.find(r => r.vehicle_id === id) || null);
+          } catch {
+            setRisks(db.getMaintenanceRisks().find(r => r.vehicle_id === id) || null);
+          }
+        } else {
+          // Fallback to mock db
+          const mockV = db.getVehicle(id) || db.getVehicles()[0];
+          setVehicle(mockV);
+          setServiceRecords(db.getServiceRecords().filter(sr => sr.vehicle_id === mockV.id));
+          setRisks(db.getMaintenanceRisks().find(r => r.vehicle_id === mockV.id) || null);
+        }
+      } catch (err) {
+        console.error('Error loading vehicle details from API:', err);
+        const mockV = db.getVehicle(id) || db.getVehicles()[0];
+        setVehicle(mockV);
+        setServiceRecords(db.getServiceRecords().filter(sr => sr.vehicle_id === mockV.id));
+        setRisks(db.getMaintenanceRisks().find(r => r.vehicle_id === mockV.id) || null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadVehicleData();
+    }
+  }, [id]);
+
+  if (loading || !vehicle) {
+    return (
+      <LayoutWrapper>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-body-md text-on-surface-variant">Loading vehicle details...</p>
+        </div>
+      </LayoutWrapper>
+    );
+  }
 
   // Compute status color classes
   const statusColorClass =
