@@ -202,7 +202,7 @@ exports.updateDocument = async (req, res, next) => {
 
     const updatedDoc = result.rows[0];
 
-    // Check if the updated expiry_date is exactly 2 days from now
+    // Check if the updated expiry_date is exactly 10, 5, or 2 days from now
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -211,11 +211,10 @@ exports.updateDocument = async (req, res, next) => {
       const diffTime = expDate - today;
       const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (daysRemaining === 2) {
-        const { sendEmail } = require('../services/notificationService');
-        const title = `${updatedDoc.document_type} Expiring in 2 Days`;
-        const message = `The ${updatedDoc.document_type} (No: ${updatedDoc.document_number || 'N/A'}) is expiring on ${expDate.toLocaleDateString()} (2 days remaining). Please renew it immediately.`;
-        
+      if ([10, 5, 2].includes(daysRemaining)) {
+        const title = `${updatedDoc.document_type} Expiring in ${daysRemaining} Days`;
+        const message = `The ${updatedDoc.document_type} (No: ${updatedDoc.document_number || 'N/A'}) is expiring on ${expDate.toLocaleDateString()} (${daysRemaining} days remaining). Please renew it immediately.`;
+
         // 1. Fetch uploader details
         const uploaderRes = await db.query('SELECT id, email, full_name FROM users WHERE id = $1', [updatedDoc.uploaded_by]);
         const uploader = uploaderRes.rows[0];
@@ -234,44 +233,6 @@ exports.updateDocument = async (req, res, next) => {
         const adminRes = await db.query("SELECT id, email, full_name FROM users WHERE role = 'Admin'");
         const admins = adminRes.rows;
 
-        // Collect all distinct recipients to notify
-        const recipients = new Map(); // email -> full_name
-        admins.forEach(a => recipients.set(a.email, a.full_name));
-        if (uploader) recipients.set(uploader.email, uploader.full_name);
-        if (driver) recipients.set(driver.email, driver.full_name);
-
-        const emailHtmlTemplate = (name) => `
-          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px; margin: auto; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            <div style="text-align: center; margin-bottom: 25px;">
-              <h1 style="color: #0f172a; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: -0.025em;">FleetGuard 🚛</h1>
-              <p style="color: #64748b; font-size: 14px; margin: 5px 0 0 0;">Unified Fleet Compliance & Management</p>
-            </div>
-            <div style="border-top: 1px solid #f1f5f9; padding-top: 25px;">
-              <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;">Hello <strong>${name}</strong>,</p>
-              <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 20px 0;">This is an urgent reminder that a compliance document is expiring in 2 days:</p>
-              
-              <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-bottom: 25px;">
-                <h3 style="margin: 0 0 10px 0; color: #78350f; font-size: 16px; font-weight: 600;">${updatedDoc.document_type} Expiry Warning</h3>
-                <p style="margin: 0 0 5px 0; color: #475569; font-size: 14px;"><strong>Document Number:</strong> ${updatedDoc.document_number || 'N/A'}</p>
-                <p style="margin: 0 0 5px 0; color: #475569; font-size: 14px;"><strong>Expiry Date:</strong> ${expDate.toLocaleDateString()}</p>
-                <p style="margin: 0; color: #b45309; font-size: 14px; font-weight: 600;">Time Remaining: 2 days</p>
-              </div>
-
-              <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0;">Please take necessary actions to renew this document immediately to avoid compliance penalties.</p>
-            </div>
-            <div style="border-top: 1px solid #f1f5f9; margin-top: 30px; padding-top: 20px; text-align: center;">
-              <p style="font-size: 11px; color: #94a3b8; margin: 0;">This is an automated system alert from FleetGuard. Please do not reply directly to this message.</p>
-            </div>
-          </div>
-        `;
-
-        // Send to each recipient
-        for (const [email, name] of recipients.entries()) {
-          sendEmail(email, `[FleetGuard Alert] ${title}`, message, emailHtmlTemplate(name)).catch(err => {
-            console.error(`Failed to send email alert to ${email}:`, err);
-          });
-        }
-
         // Insert in-app notifications
         const userIds = new Set();
         admins.forEach(a => userIds.add(a.id));
@@ -284,9 +245,10 @@ exports.updateDocument = async (req, res, next) => {
             VALUES ($1, $2, $3, $4, $5)
           `, [userId, updatedDoc.vehicle_id, title, message, 'Compliance Alert']);
         }
+        console.log(`[Compliance Update Alert] In-app notifications generated for ${daysRemaining} days remaining.`);
       }
     } catch (err) {
-      console.error('⚠️ Could not process instant 2-day alert on update:', err.message);
+      console.error('⚠️ Could not process instant alert on update:', err.message);
     }
 
     res.status(200).json({
