@@ -1,9 +1,10 @@
-const db = require('../config/db');
+const supabase = require('../config/supabase');
 
 /**
  * POST /api/auth/sync
- * Syncs authenticated Firebase user with Supabase PostgreSQL users table.
+ * Syncs authenticated Firebase user with the Supabase PostgreSQL users table.
  * Creates a new user record if one does not exist, or updates existing profile details.
+ * Firebase token verification is handled upstream in the auth middleware.
  */
 exports.syncUser = async (req, res, next) => {
   try {
@@ -22,61 +23,61 @@ exports.syncUser = async (req, res, next) => {
       return res.status(400).json({ error: 'User email is required for sync.' });
     }
 
-    // Valid roles check
+    // Valid roles for the application
     const validRoles = ['Admin', 'Fleet Manager', 'Driver', 'Service Center', 'Manager', 'User'];
-    const finalRole = role && validRoles.includes(role) ? role : null;
-    const finalFullName = full_name || firebaseUser.name || email.split('@')[0] || 'User';
-    const finalProfilePicture = profile_picture || firebaseUser.picture || null;
-    const finalBranchId = branch_id || null;
+    const finalRole      = role && validRoles.includes(role) ? role : null;
+    const finalFullName  = full_name || firebaseUser.name || email.split('@')[0] || 'User';
+    const finalPicture   = profile_picture || firebaseUser.picture || null;
+    const finalBranchId  = branch_id || null;
 
-    // Check if user exists by firebase_uid or email
-    const existingUserQuery = 'SELECT * FROM users WHERE firebase_uid = $1 OR email = $2 LIMIT 1';
-    const existingResult = await db.query(existingUserQuery, [firebaseUid, email]);
+    // Check if this Firebase UID or email already has a record
+    const { data: existing, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .or(`firebase_uid.eq.${firebaseUid},email.eq.${email}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
 
     let user;
 
-    if (existingResult.rows.length > 0) {
-      // User exists -> Update profile
-      const existingUser = existingResult.rows[0];
-      const updateQuery = `
-        UPDATE users
-        SET 
-          firebase_uid = $1,
-          email = $2,
-          full_name = COALESCE($3, full_name),
-          profile_picture = COALESCE($4, profile_picture),
-          role = COALESCE($5, role),
-          branch_id = COALESCE($6, branch_id),
-          updated_at = NOW()
-        WHERE id = $7
-        RETURNING id, firebase_uid, email, full_name, profile_picture, role, branch_id, created_at, updated_at
-      `;
-      const updateResult = await db.query(updateQuery, [
-        firebaseUid,
-        email,
-        full_name || null,
-        finalProfilePicture,
-        finalRole,
-        finalBranchId,
-        existingUser.id
-      ]);
-      user = updateResult.rows[0];
+    if (existing) {
+      // User exists → update profile fields (only non-null values overwrite existing)
+      const { data: updated, error: updateError } = await supabase
+        .from('users')
+        .update({
+          firebase_uid:    firebaseUid,
+          email:           email,
+          full_name:       full_name       || existing.full_name,
+          profile_picture: finalPicture    || existing.profile_picture,
+          role:            finalRole       || existing.role,
+          branch_id:       finalBranchId   ?? existing.branch_id,
+          updated_at:      new Date().toISOString()
+        })
+        .eq('id', existing.id)
+        .select('id, firebase_uid, email, full_name, profile_picture, role, branch_id, created_at, updated_at')
+        .single();
+
+      if (updateError) throw updateError;
+      user = updated;
     } else {
-      // New user -> Insert record
-      const insertQuery = `
-        INSERT INTO users (firebase_uid, email, full_name, profile_picture, role, branch_id, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        RETURNING id, firebase_uid, email, full_name, profile_picture, role, branch_id, created_at, updated_at
-      `;
-      const insertResult = await db.query(insertQuery, [
-        firebaseUid,
-        email,
-        finalFullName,
-        finalProfilePicture,
-        finalRole || 'Driver',
-        finalBranchId
-      ]);
-      user = insertResult.rows[0];
+      // New user → insert record
+      const { data: inserted, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          firebase_uid:    firebaseUid,
+          email:           email,
+          full_name:       finalFullName,
+          profile_picture: finalPicture,
+          role:            finalRole || 'Driver',
+          branch_id:       finalBranchId
+        })
+        .select('id, firebase_uid, email, full_name, profile_picture, role, branch_id, created_at, updated_at')
+        .single();
+
+      if (insertError) throw insertError;
+      user = inserted;
     }
 
     res.status(200).json({
@@ -91,9 +92,8 @@ exports.syncUser = async (req, res, next) => {
 
 /**
  * GET /api/auth/me
- * Returns the authenticated user's profile from PostgreSQL database.
+ * Returns the authenticated user's profile from the Supabase users table.
  */
-
 exports.getMe = async (req, res, next) => {
   try {
     if (!req.user) {
@@ -101,22 +101,34 @@ exports.getMe = async (req, res, next) => {
     }
 
     const firebaseUid = req.user.firebase_uid || req.firebaseUser?.uid;
-    const userId = req.user.id;
-    const email = req.user.email || req.firebaseUser?.email;
+    const userId      = req.user.id;
+    const email       = req.user.email || req.firebaseUser?.email;
 
-    const queryText = `
-      SELECT id, firebase_uid, email, full_name, profile_picture, role, branch_id, status, created_at, updated_at
-      FROM users
-      WHERE firebase_uid = $1 OR id = $2 OR email = $3
-      LIMIT 1
-    `;
-    const result = await db.query(queryText, [firebaseUid || null, userId || null, email || null]);
+    // Build OR filter — at least one identifier must be present
+    const orFilters = [
+      firebaseUid ? `firebase_uid.eq.${firebaseUid}` : null,
+      userId      ? `id.eq.${userId}`                : null,
+      email       ? `email.eq.${email}`              : null
+    ].filter(Boolean).join(',');
 
-    if (result.rows.length === 0) {
+    if (!orFilters) {
+      return res.status(400).json({ error: 'No valid user identifier available.' });
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, firebase_uid, email, full_name, profile_picture, role, branch_id, status, created_at, updated_at')
+      .or(orFilters)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!user) {
       return res.status(404).json({ error: 'User profile not found.' });
     }
 
-    res.status(200).json({ user: result.rows[0] });
+    res.status(200).json({ user });
   } catch (error) {
     console.error('Error fetching user profile:', error);
     next(error);

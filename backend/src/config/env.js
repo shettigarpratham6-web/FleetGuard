@@ -2,7 +2,9 @@ require('dotenv').config();
 
 const requiredEnv = [
   'DATABASE_URL',
-  'JWT_SECRET'
+  'JWT_SECRET',
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY'
 ];
 
 const missingEnv = requiredEnv.filter((envName) => !process.env[envName]);
@@ -22,6 +24,6 @@ module.exports = {
   DB_HOST: process.env.DB_HOST,
   DB_PORT: process.env.DB_PORT,
   DB_DATABASE: process.env.DB_DATABASE,
-  SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  SUPABASE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  SUPABASE_URL: process.env.SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY
 };
