@@ -62,18 +62,23 @@
   --font-sans: var(--font-inter);
 }
 
-/* Material symbols configurations */
+/* ============================================================
+   MATERIAL SYMBOLS
+   ============================================================ */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   display: inline-block;
   vertical-align: middle;
   line-height: 1;
+  transition: font-variation-settings 0.2s ease;
 }
 .material-symbols-outlined.fill {
   font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Custom scrollbars */
+/* ============================================================
+   CUSTOM SCROLLBARS
+   ============================================================ */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -84,12 +89,15 @@
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: var(--color-outline-variant);
   border-radius: var(--radius-full);
+  transition: background-color 0.2s ease;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: var(--color-outline);
 }
 
-/* Chart Conic Gradient */
+/* ============================================================
+   CHART CONIC GRADIENT
+   ============================================================ */
 .pie-chart {
   background: conic-gradient(
     var(--color-error) 0% 15%, 
@@ -97,4 +105,195 @@
     var(--color-secondary-container) 45% 100%
   );
   border-radius: 50%;
+}
+
+/* ============================================================
+   ANIMATION KEYFRAMES
+   ============================================================ */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 1; }
+  70%  { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+@keyframes bar-grow {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to   { transform: scaleY(1); transform-origin: bottom; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-4px); }
+}
+
+/* ============================================================
+   ANIMATION UTILITY CLASSES
+   ============================================================ */
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease forwards;
+}
+.animate-fade-in {
+  animation: fadeIn 0.35s ease forwards;
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.35s ease forwards;
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.35s ease forwards;
+}
+.animate-scale-in {
+  animation: scaleIn 0.25s ease forwards;
+}
+.animate-bar-grow {
+  animation: bar-grow 0.6s ease forwards;
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Staggered children */
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
+
+/* ============================================================
+   SKELETON LOADER
+   ============================================================ */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-container-high) 25%,
+    var(--color-surface-container-highest) 50%,
+    var(--color-surface-container-high) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   CARD HOVER EFFECTS
+   ============================================================ */
+.card-hover {
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 8px 24px -4px rgba(9, 20, 38, 0.12), 0 4px 8px -2px rgba(9, 20, 38, 0.08);
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   BUTTON EFFECTS
+   ============================================================ */
+.btn-scale {
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-scale:hover  { transform: scale(1.02); }
+.btn-scale:active { transform: scale(0.97); }
+
+/* ============================================================
+   TABLE IMPROVEMENTS
+   ============================================================ */
+.table-row-hover tr:hover td {
+  background-color: var(--color-surface-container-low);
+}
+
+/* ============================================================
+   FOCUS RING
+   ============================================================ */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   PULSE NOTIFICATION BADGE
+   ============================================================ */
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--color-error);
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* ============================================================
+   SIDEBAR ACTIVE GLOW
+   ============================================================ */
+.nav-active {
+  background: linear-gradient(135deg, rgba(9,20,38,0.08) 0%, rgba(9,20,38,0.04) 100%);
+  box-shadow: inset 0 0 0 1px rgba(9,20,38,0.10);
+}
+
+/* ============================================================
+   PAGE TRANSITION
+   ============================================================ */
+.page-enter {
+  animation: fadeInUp 0.3s ease forwards;
 }
