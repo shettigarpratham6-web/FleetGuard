@@ -20,7 +20,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
     { name: 'Predictive Risk', icon: 'analytics', href: '/predictive-risk' },
     { name: 'Historical Records', icon: 'history', href: '/historical-records' },
-    { name: 'About Us', icon: 'phone', href:'/about'}
+    { name: 'About Us', icon: 'info', href: '/about' },
+    { name: 'Blog', icon: 'article', href: '/blog' },
   ];
 
   const handleLogout = (e: React.MouseEvent) => {
@@ -28,15 +29,12 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     api.auth.logout();
     router.push('/login');
   };
-return (
-  <>
-    {/* Mobile Backdrop */}
-    {isOpen && (
-      <div
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-45 md:hidden transition-opacity"
-        onClick={() => setIsOpen(false)}
-      />
-    )}
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    setIsOpen(false);
+    router.push(href);
+  };
 
   return (
     <>
@@ -51,9 +49,8 @@ return (
 
       {/* Sidebar Panel */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-sidebar-width py-lg border-r border-outline-variant flex flex-col flex-shrink-0 z-50 md:translate-x-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed md:sticky top-0 left-0 h-screen w-sidebar-width py-lg border-r border-outline-variant flex flex-col flex-shrink-0 z-50 md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         style={{
           background: 'linear-gradient(180deg, #f8f6f8 0%, #f3f1f3 100%)',
           transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
@@ -87,13 +84,6 @@ return (
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
-        <button
-          className="md:hidden text-slate-500 p-1.5 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
-          onClick={() => setIsOpen(false)}
-        >
-          <span className="material-symbols-outlined text-[20px]">close</span>
-        </button>
-      </div>
 
         {/* Section Label */}
         <div className="px-lg mb-xs">
@@ -105,20 +95,19 @@ return (
         {/* Navigation list */}
         <nav className="flex-1 overflow-y-auto custom-scrollbar px-sm space-y-xs" aria-label="Sidebar">
           {navItems.map((item, index) => {
-            const isActive = pathname.startsWith(item.href);
+            const isActive = pathname?.startsWith(item.href) || false;
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-md py-[10px] rounded-xl transition-all duration-200 ease-out font-medium text-[13.5px] group relative focus-ring ${
-                  isActive
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
-                }`}
+                className={`flex items-center gap-3 px-md py-[10px] rounded-xl transition-all duration-200 ease-out font-medium text-[13.5px] group relative focus-ring ${isActive
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+                  }`}
                 style={{
                   animationDelay: `${index * 40}ms`,
                 }}
-                onClick={() => setIsOpen(false)}
+                onClick={(e) => handleNavClick(e, item.href)}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {/* Active indicator bar */}
@@ -129,9 +118,8 @@ return (
                   />
                 )}
                 <span
-                  className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${
-                    isActive ? 'fill scale-110' : 'group-hover:scale-110'
-                  }`}
+                  className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${isActive ? 'fill scale-110' : 'group-hover:scale-110'
+                    }`}
                   aria-hidden="true"
                 >
                   {item.icon}
@@ -149,7 +137,7 @@ return (
         <div className="px-sm space-y-xs pb-sm">
           <Link
             href="/service-records/create"
-            onClick={() => setIsOpen(false)}
+            onClick={(e) => handleNavClick(e, '/service-records/create')}
             className="focus-ring block rounded-xl"
           >
             <button
@@ -159,7 +147,9 @@ return (
                 color: 'white',
               }}
             >
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">add</span>
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                add
+              </span>
               New Service Entry
             </button>
           </Link>
