@@ -81,18 +81,7 @@ return (
     </div>
 
     {/* Search Bar (Desktop) */}
-    <div className="hidden md:flex items-center flex-1 max-w-md bg-slate-50 rounded-xl px-3.5 py-2 border border-slate-200 focus-within:border-blue-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-      <span className="material-symbols-outlined text-slate-400 mr-2.5 text-[20px]">
-        search
-      </span>
-      <input
-        className="bg-transparent border-none focus:ring-0 w-full text-xs font-semibold text-slate-800 placeholder:text-slate-400 outline-none"
-        placeholder={searchPlaceholder}
-        type="text"
-        value={searchValue}
-        onChange={(e) => onSearchChange?.(e.target.value)}
-      />
-    </div>
+    
 
     {/* Utility Actions & User Info */}
     <div className="flex items-center gap-2 ml-auto relative">

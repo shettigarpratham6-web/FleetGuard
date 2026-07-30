@@ -1,4 +1,4 @@
-import { User, Vehicle, ServiceRecord, MaintenanceRisk, Notification } from '@/types';
+import { User, Vehicle, ServiceRecord, MaintenanceRisk, Notification, HistoricalService } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -130,6 +130,16 @@ export const api = {
       });
       const data = await handleResponse<{ vehicle: Vehicle & { compliance_documents?: any[] } }>(res);
       return data.vehicle;
+    },
+
+    create: async (vehicleData: Partial<Vehicle>) => {
+      const res = await fetch(`${API_BASE_URL}/vehicles`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(vehicleData),
+      });
+      const data = await handleResponse<{ message: string; vehicle: Vehicle }>(res);
+      return data.vehicle;
     }
   },
 
@@ -192,6 +202,30 @@ export const api = {
       });
       const data = await handleResponse<{ message: string; notification: Notification }>(res);
       return data.notification;
+    }
+  },
+
+  // Branches API
+  branches: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/branches`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ branches: any[] }>(res);
+      return data.branches;
+    }
+  },
+
+  // Historical Services API
+  historicalServices: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/historical-services`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ records: HistoricalService[] }>(res);
+      return data.records;
     }
   }
 };
