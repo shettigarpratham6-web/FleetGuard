@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
 import { User, Notification } from '@/types';
 import Link from 'next/link';
@@ -18,7 +19,8 @@ export default function Navbar({
   searchValue = '',
   onSearchChange,
 }: NavbarProps) {
-  const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<UserType | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -43,7 +45,7 @@ export default function Navbar({
     return () => clearInterval(interval);
   }, []);
 
-  // Close dropdown on click outside
+  // Close notifications dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -52,6 +54,17 @@ export default function Navbar({
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Close profile dropdown on click outside
+  useEffect(() => {
+    function handleClickOutsideProfile(event: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutsideProfile);
+    return () => document.removeEventListener('mousedown', handleClickOutsideProfile);
   }, []);
 
   const unreadNotifications = notifications.filter(n => !n.is_read);
@@ -65,6 +78,12 @@ export default function Navbar({
     } catch (err) {
       console.error('Failed to mark read:', err);
     }
+  };
+
+  const handleLogout = () => {
+    setProfileOpen(false);
+    api.auth.logout();
+    router.push('/login');
   };
 
   const getNotifIcon = (type?: string) => {
@@ -244,27 +263,28 @@ export default function Navbar({
         </div>
         {/* User Profile */}
         {user && (
-          <div className="ml-2 pl-3 border-l border-slate-200 flex items-center gap-2.5 cursor-pointer group">
-            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden ring-2 ring-slate-200 group-hover:ring-blue-600 transition-all">
-              <img
-                alt={user.full_name}
-                className="w-full h-full object-cover"
-                src={user.profile_picture || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAyNWRLx_E1OWgPi7aT-s7keymJamS_sAULSOKC77sBamBVVEH8asmCa3f4NYOaE3mG3geTNRGrCEk9EHHGtRbopLaZ52J0biD4pjdRExkF4tELoYtoq-zasE6so0CeaGSIAvvheeL2qrq5EGlYXYnXy2LFAAHWpIX7MRS7rUU0FgN3ulrekGF7ncrztv17tLcE_3HUrNuSMCnC1wGiBZ6Az6Q7ajamDg6nZkmfN3G0rW9Vloo_heFU'}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=091426&color=fff&size=64`;
-                }}
-              />
-            </div>
-            <div className="hidden lg:block text-left">
-              <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                {user.full_name}
-              </p>
-              <p className="text-[10px] font-semibold text-slate-500 capitalize">
-                {user.role}
-              </p>
-            </div>
-          </div>
-        )}
+          <div className="relative ml-2" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="pl-3 border-l border-slate-200 flex items-center gap-2.5 group cursor-pointer border-0 bg-transparent"
+            >
+              <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden ring-2 ring-slate-200 group-hover:ring-blue-600 transition">
+                <img
+                  src={
+                    user.profile_picture ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      user.full_name
+                    )}&background=091426&color=fff&size=64`
+                  }
+                  alt={user.full_name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      user.full_name
+                    )}&background=091426&color=fff&size=64`;
+                  }}
+                />
+              </div>
 
       </div>
     </header>
