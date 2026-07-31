@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { mockHistoricalServices } from '@/data/mockDb';
-import Footer from '@/components/footer';
+import Footer from '@/components/Footer';
 
 export default function HistoricalRecordsPage() {
   const router = useRouter();

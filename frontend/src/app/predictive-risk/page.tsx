@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
-import Footer from "@/components/footer";
+import Footer from "@/components/Footer";
 
 interface RiskItem {
   id: string;
@@ -330,8 +330,8 @@ export default function PredictiveRiskPage() {
                       </div>
                       <span
                         className={`border rounded px-sm py-xs text-xs font-bold uppercase ${isMedium
-                            ? 'bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/30'
-                            : 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30'
+                          ? 'bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/30'
+                          : 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30'
                           }`}
                       >
                         {item.risk}
