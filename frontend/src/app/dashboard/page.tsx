@@ -154,42 +154,10 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <LayoutWrapper>
-        <div className="p-lg md:p-margin-desktop space-y-lg max-w-7xl mx-auto">
-          {/* Header skeleton */}
-          <div className="flex justify-between items-end">
-            <div className="space-y-2">
-              <div className="skeleton h-8 w-40 rounded-lg" />
-              <div className="skeleton h-4 w-56 rounded" />
-            </div>
-            <div className="flex gap-2">
-              <div className="skeleton h-9 w-28 rounded-xl" />
-              <div className="skeleton h-9 w-32 rounded-xl" />
-              <div className="skeleton h-9 w-36 rounded-xl" />
-            </div>
-          </div>
-          {/* KPI skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
-            {[1, 2, 3, 4].map(i => <StatSkeleton key={i} />)}
-          </div>
-          {/* Chart skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
-            <div className="lg:col-span-2 space-y-lg">
-              <div className="bg-white rounded-2xl border border-outline-variant/60 p-lg h-[400px] shadow-sm">
-                <div className="skeleton h-4 w-48 rounded mb-2" />
-                <div className="skeleton h-3 w-64 rounded mb-8" />
-                <div className="flex items-end gap-3 h-48 px-4">
-                  {[60, 40, 80, 55, 90, 70].map((h, i) => (
-                    <div key={i} className="flex-1 skeleton rounded-t-lg" style={{ height: `${h}%` }} />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-lg">
-              <div className="bg-white rounded-2xl border border-outline-variant/60 p-lg h-64 shadow-sm">
-                <div className="skeleton h-4 w-32 rounded mb-4" />
-                <div className="w-40 h-40 skeleton rounded-full mx-auto" />
-              </div>
-            </div>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 bg-slate-50">
+          <div className="relative flex items-center justify-center">
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <span className="material-symbols-outlined text-blue-600 text-[20px] absolute">database</span>
           </div>
           <p className="font-semibold text-sm text-slate-600 tracking-wide">
             Connecting to live PostgreSQL database...
@@ -222,19 +190,14 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
-            {/* Wrapped in Link to route to /vehicle/create */}
-            <Link href="/vehicles/create">
-              <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-blue-600">directions_car</span>
-                New Vehicle
-              </button>
-            </Link>
-
+            <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-blue-600">directions_car</span>
+              New Vehicle
+            </button>
             <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px] text-blue-600">summarize</span>
               Generate Report
             </button>
-
             <Link href="/service-records/create">
               <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer active:scale-[0.98]">
                 <span className="material-symbols-outlined text-[18px]">add_notes</span>
@@ -243,6 +206,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
         {error && (
           <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center gap-3 shadow-sm">
             <span className="material-symbols-outlined text-[20px] text-rose-600">error</span>
@@ -311,7 +275,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </Link>
-        </div>
 
           {/* High Risk */}
           <Link href="/predictive-risk" className="block group">
@@ -372,8 +335,8 @@ export default function DashboardPage() {
                         <div
                           style={{ height: `${heightPct}%` }}
                           className={`w-full rounded-t-xl transition-all duration-300 relative ${isLast
-                            ? 'bg-blue-600 shadow-md shadow-blue-500/20'
-                            : 'bg-blue-100 group-hover:bg-blue-400'
+                              ? 'bg-blue-600 shadow-md shadow-blue-500/20'
+                              : 'bg-blue-100 group-hover:bg-blue-400'
                             }`}
                         >
                           {/* Tooltip */}
@@ -490,8 +453,8 @@ export default function DashboardPage() {
                           </td>
                           <td className="p-4 pr-6">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${u.status === 'Active'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
                               }`}>
                               {u.status}
                             </span>
@@ -504,10 +467,10 @@ export default function DashboardPage() {
                           No registered users found in directory.
                         </td>
                       </tr>
-                    )
-                  }
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 

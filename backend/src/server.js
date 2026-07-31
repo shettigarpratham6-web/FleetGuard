@@ -1,4 +1,17 @@
-require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
+
+const envPaths = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../../.env.local'),
+  path.resolve(__dirname, '../../.env')
+];
+
+for (const envPath of envPaths) {
+  if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+  }
+}
 const app = require('./app');
 const initDb = require('./config/initDb');
 const startExpiryAlertJob = require('./jobs/expiryAlertJob');
