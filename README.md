@@ -207,27 +207,6 @@ npm install
 
 Create a `backend/.env` file with the following variables:
 
-```env
-# Server
-PORT=5000
-NODE_ENV=development
-
-# Database — Option A: Connection string (recommended for Supabase/cloud)
-DATABASE_URL=postgresql://user:password@host:port/database
-
-# Database — Option B: Individual credentials (for local PostgreSQL)
-# DB_HOST=localhost
-# DB_PORT=5432
-# DB_USER=postgres
-# DB_PASSWORD=your_password
-# DB_DATABASE=fleetguard
-
-# SSL (set to 'true' for Supabase/cloud databases)
-# DB_SSL=true
-
-# Auth
-JWT_SECRET=your_secure_jwt_secret_here
-```
 
 > **Note:** If `DATABASE_URL` is provided, it takes precedence over individual `DB_*` variables. SSL is automatically enabled in production mode or when the connection string contains `supabase`.
 
