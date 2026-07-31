@@ -28,15 +28,6 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     api.auth.logout();
     router.push('/login');
   };
-return (
-  <>
-    {/* Mobile Backdrop */}
-    {isOpen && (
-      <div
-        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-45 md:hidden transition-opacity"
-        onClick={() => setIsOpen(false)}
-      />
-    )}
 
   return (
     <>
@@ -93,7 +84,6 @@ return (
         >
           <span className="material-symbols-outlined text-[20px]">close</span>
         </button>
-      </div>
 
         {/* Section Label */}
         <div className="px-lg mb-xs">

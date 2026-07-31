@@ -219,7 +219,7 @@ export default function DashboardPage() {
           </div>
           {/* KPI skeleton */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
-            {[1,2,3,4].map(i => <StatSkeleton key={i} />)}
+            {[1, 2, 3, 4].map(i => <StatSkeleton key={i} />)}
           </div>
           {/* Chart skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
@@ -228,7 +228,7 @@ export default function DashboardPage() {
                 <div className="skeleton h-4 w-48 rounded mb-2" />
                 <div className="skeleton h-3 w-64 rounded mb-8" />
                 <div className="flex items-end gap-3 h-48 px-4">
-                  {[60,40,80,55,90,70].map((h, i) => (
+                  {[60, 40, 80, 55, 90, 70].map((h, i) => (
                     <div key={i} className="flex-1 skeleton rounded-t-lg" style={{ height: `${h}%` }} />
                   ))}
                 </div>
@@ -241,14 +241,13 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          <p className="font-semibold text-sm text-slate-600 tracking-wide">
+            Connecting to live PostgreSQL database...
+          </p>
         </div>
-        <p className="font-semibold text-sm text-slate-600 tracking-wide">
-          Connecting to live PostgreSQL database...
-        </p>
-      </div>
-    </LayoutWrapper>
-  );
-}
+      </LayoutWrapper>
+    );
+  }
 
   return (
     <div className="relative min-h-screen">
@@ -336,13 +335,6 @@ export default function DashboardPage() {
               <div className="h-full bg-primary rounded-full transition-all duration-700" style={{ width: '100%' }} />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">{vehicles.length}</span>
-            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-0.5">
-              <span className="material-symbols-outlined text-[12px]">arrow_upward</span> Live
-            </span>
-          </div>
-        </div>
 
           {/* Due for Service */}
           <Link href="/maintenance-queue" className="block animate-fade-in-up">
@@ -376,17 +368,8 @@ export default function DashboardPage() {
                 <span className="text-[12px] text-on-surface-variant">vehicles</span>
               </div>
             </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl md:text-4xl font-extrabold text-rose-600 tracking-tight">
-                {highRiskCount}
-              </span>
-              <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
-                Immediate Action
-              </span>
-            </div>
-          </div>
-        </Link>
-      </div>
+          </Link>
+        </div>
 
           {/* High Risk */}
           <Link href="/predictive-risk" className="block animate-fade-in-up">
@@ -559,14 +542,8 @@ export default function DashboardPage() {
                       <tr>
                         <td colSpan={4} className="py-8 text-center text-[13px] text-on-surface-variant">No users registered.</td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="p-8 text-center text-xs text-slate-500">
-                        No registered users found in directory.
-                      </td>
-                    </tr>
-                  )}
+                    )
+                  }
                 </tbody>
               </table>
             </div>
@@ -675,7 +652,6 @@ export default function DashboardPage() {
                     ))}
                   </select>
                 </div>
-              </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
