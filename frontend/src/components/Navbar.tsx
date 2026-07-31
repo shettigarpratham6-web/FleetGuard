@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
-import { User, Notification } from '@/types';
+import { User as UserType, Notification } from '@/types';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+
 interface NavbarProps {
   onMenuClick: () => void;
   searchPlaceholder?: string;
@@ -19,13 +19,21 @@ export default function Navbar({
   searchValue = '',
   onSearchChange,
 }: NavbarProps) {
-  const router = useRouter();
   const [user, setUser] = useState<UserType | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // Dropdown states
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Refs for click outside detection
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
   const router = useRouter();
+
   useEffect(() => {
     setUser(api.auth.getLocalUser());
 
@@ -67,6 +75,17 @@ export default function Navbar({
     return () => document.removeEventListener('mousedown', handleClickOutsideProfile);
   }, []);
 
+  // Close settings dropdown on click outside
+  useEffect(() => {
+    function handleClickOutsideSettings(event: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setIsSettingsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutsideSettings);
+    return () => document.removeEventListener('mousedown', handleClickOutsideSettings);
+  }, []);
+
   const unreadNotifications = notifications.filter(n => !n.is_read);
 
   const handleMarkAsRead = async (id: string) => {
@@ -82,6 +101,7 @@ export default function Navbar({
 
   const handleLogout = () => {
     setProfileOpen(false);
+    setIsSettingsOpen(false);
     api.auth.logout();
     router.push('/login');
   };
@@ -106,7 +126,6 @@ export default function Navbar({
           FleetGuard
         </span>
       </div>
-
 
       {/* Utility Actions & User Info Container */}
       <div className="flex items-center gap-2 ml-auto">
@@ -222,9 +241,8 @@ export default function Navbar({
           )}
         </div>
 
-        {/* Settings Button */}
         {/* Settings Dropdown Container */}
-        <div className="relative">
+        <div className="relative" ref={settingsRef}>
           <button
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
             className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer active:scale-95 hidden md:block"
@@ -236,6 +254,16 @@ export default function Navbar({
           {/* Settings Dropdown Menu */}
           {isSettingsOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              {/* Home Route at the Beginning */}
+              <Link
+                href="/"
+                onClick={() => setIsSettingsOpen(false)}
+                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg text-slate-500">home</span>
+                Home
+              </Link>
+
               <Link
                 href="/profile"
                 onClick={() => setIsSettingsOpen(false)}
@@ -248,11 +276,7 @@ export default function Navbar({
               <div className="border-t border-slate-100 my-1"></div>
 
               <button
-                onClick={() => {
-                  setIsSettingsOpen(false);
-                  api.auth.logout();
-                  router.push('/login');
-                }}
+                onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left"
               >
                 <span className="material-symbols-outlined text-lg text-rose-600">logout</span>
@@ -261,6 +285,7 @@ export default function Navbar({
             </div>
           )}
         </div>
+
         {/* User Profile */}
         {user && (
           <div className="relative ml-2" ref={profileRef}>
@@ -285,7 +310,9 @@ export default function Navbar({
                   }}
                 />
               </div>
-
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
