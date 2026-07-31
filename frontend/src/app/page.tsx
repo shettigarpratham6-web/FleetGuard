@@ -1,11 +1,9 @@
 // src/app/page.tsx
 'use client';
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { api } from "@/services/api";
-
 export default function Home() {
+  // Cursor position state for interactive parallax animations
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const router = useRouter();
 
   useEffect(() => {

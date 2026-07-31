@@ -25,6 +25,13 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { name: 'Blog', icon: 'article', href: '/blog' },
   ];
 
+  // Close sidebar on mobile when navigating
+  const handleNavClick = () => {
+    if (isOpen) {
+      setIsOpen(false);
+    }
+  };
+
   const handleLogout = (e: React.MouseEvent) => {
     e.preventDefault();
     api.auth.logout();
@@ -102,10 +109,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                   ? 'bg-primary text-white shadow-md'
                   : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                   }`}
-                style={{
-                  animationDelay: `${index * 40}ms`,
-                }}
-                onClick={(e) => handleNavClick(e, item.href)}
+                onClick={handleNavClick}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {/* Active indicator bar */}
@@ -135,33 +139,26 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         <div className="px-3 space-y-2 pb-2">
           <Link
             href="/service-records/create"
-            onClick={(e) => handleNavClick(e, '/service-records/create')}
-            className="focus-ring block rounded-xl"
+            onClick={handleNavClick}
+            className="w-full py-2.5 px-4 rounded-xl font-extrabold text-[13px] flex items-center justify-center gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 active:scale-98 transition-all border-0"
           >
-            <button
-              className="w-full py-[10px] px-md rounded-xl font-semibold text-[13px] flex items-center justify-center gap-2 cursor-pointer shadow-md active:shadow-sm btn-scale border-0 transition-all duration-200"
-              style={{
-                background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)',
-                color: 'white',
-              }}
-            >
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                add
-              </span>
-              New Service Entry
-            </button>
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+              add
+            </span>
+            New Service Entry
           </Link>
 
           <nav className="mt-2 space-y-1" aria-label="Secondary navigation">
-            <a
-              href="#"
+            <Link
+              href="/support"
+              onClick={handleNavClick}
               className="flex items-center gap-3 text-slate-600 px-3.5 py-2.5 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition-colors text-[13px] font-bold group"
             >
               <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform" aria-hidden="true">
                 help
               </span>
               Support
-            </a>
+            </Link>
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 text-rose-600 px-3.5 py-2.5 hover:bg-rose-50 rounded-xl transition-colors text-[13px] font-bold text-left cursor-pointer group border-0 bg-transparent"

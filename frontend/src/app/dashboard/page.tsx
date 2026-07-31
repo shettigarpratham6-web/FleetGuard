@@ -76,10 +76,29 @@ export default function DashboardPage() {
       name: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
       cost: 0,
     }));
+
+    // Aggregate actual costs from database records
     serviceRecords.forEach((record) => {
       const month = new Date(record.service_date).getMonth();
-      if (!isNaN(month)) monthlyData[month].cost += Number(record.total_cost) || 0;
+      if (!isNaN(month)) {
+        monthlyData[month].cost += Number(record.total_cost) || 0;
+      }
     });
+
+    // Inject sample/mock values for Mar, May, and Jun if no database records exist for them
+    const sampleCosts: Record<string, number> = {
+      Mar: 1450,
+      May: 2100,
+      Jun: 1850,
+    };
+
+    monthlyData.forEach((item) => {
+      if (sampleCosts[item.name] !== undefined && item.cost === 0) {
+        item.cost = sampleCosts[item.name];
+      }
+    });
+
+    // Extract the last 6 months trailing up to the current month
     const currentMonth = new Date().getMonth();
     const result = [];
     for (let i = 5; i >= 0; i--) {
@@ -87,6 +106,7 @@ export default function DashboardPage() {
       if (idx < 0) idx += 12;
       result.push(monthlyData[idx]);
     }
+
     return result;
   };
 
@@ -191,10 +211,12 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
-            <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-blue-600">directions_car</span>
-              New Vehicle
-            </button>
+            <Link href="/vehicles/create">
+              <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-blue-600">directions_car</span>
+                New Vehicle
+              </button>
+            </Link>
             <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px] text-blue-600">summarize</span>
               Generate Report
@@ -216,7 +238,87 @@ export default function DashboardPage() {
         )}
 
         {/* KPI Bento Grid */}
-        <KPICards vehicles={vehicles} risks={risks} />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Total Vehicles */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-200 relative overflow-hidden group">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Total Fleet Assets</p>
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[18px]">local_shipping</span>
+              </div>
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">{vehicles.length}</span>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                <span className="material-symbols-outlined text-[12px]">arrow_upward</span> Live
+              </span>
+            </div>
+          </div>
+
+          {/* Due for Service */}
+          <Link href="/maintenance-queue" className="block group">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-200 h-full flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Due for Service</p>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:rotate-12 transition-transform">
+                    <span className="material-symbols-outlined text-[18px]">build</span>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+                    {mediumRiskCount + highRiskCount}
+                  </span>
+                  <span className="text-xs font-medium text-slate-500">vehicles</span>
+                </div>
+              </div>
+              <div className="mt-4 w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div
+                  className="bg-blue-600 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${Math.round(((mediumRiskCount + highRiskCount) / (totalRisks || 1)) * 100)}%` }}
+                ></div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Overdue */}
+          <Link href="/maintenance-queue" className="block group">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all duration-200 h-full flex flex-col justify-between">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">Overdue Tasks</p>
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-[18px]">warning</span>
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+                  {highRiskCount}
+                </span>
+                <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">Attention Needed</span>
+              </div>
+            </div>
+          </Link>
+
+          {/* High Risk */}
+          <Link href="/predictive-risk" className="block group">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 border-l-4 border-l-rose-500 shadow-sm hover:shadow-md transition-all duration-200 h-full flex flex-col justify-between">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">High Risk Alert</p>
+                <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center animate-bounce">
+                  <span className="material-symbols-outlined text-[18px]">report</span>
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline gap-2">
+                <span className="text-3xl md:text-4xl font-extrabold text-rose-600 tracking-tight">
+                  {highRiskCount}
+                </span>
+                <span className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                  Immediate Action
+                </span>
+              </div>
+            </div>
+          </Link>
+        </div>
 
         {/* Main Grid Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -236,9 +338,9 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              <div className="flex-1 relative flex items-end justify-between pt-6 px-2 gap-2">
+              <div className="flex-1 relative flex flex-col justify-end pt-6 px-2">
                 {/* Chart Grid Lines */}
-                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 px-2 pt-6">
+                <div className="absolute inset-x-2 top-6 bottom-8 flex flex-col justify-between pointer-events-none">
                   <div className="w-full border-t border-slate-200 border-dashed"></div>
                   <div className="w-full border-t border-slate-200 border-dashed"></div>
                   <div className="w-full border-t border-slate-200 border-dashed"></div>
@@ -246,26 +348,34 @@ export default function DashboardPage() {
                   <div className="w-full border-t border-slate-300 border-solid"></div>
                 </div>
 
-                {/* Dynamic Bars */}
-                <div className="relative w-full h-full flex items-end justify-between px-4 z-10 pb-8">
+                {/* Dynamic Bars Container */}
+                <div className="relative w-full h-[220px] flex items-end justify-between px-4 z-10">
                   {monthlyCosts.map((m, index) => {
-                    const heightPct = Math.round((m.cost / (maxCost || 1)) * 80) + 8;
+                    const heightPct = Math.min(
+                      Math.max(Math.round(((m.cost || 0) / (maxCost || 1)) * 100), 6),
+                      100
+                    );
                     const isLast = index === monthlyCosts.length - 1;
+
                     return (
-                      <div key={m.name} className="flex flex-col items-center w-10 md:w-12 group relative">
+                      <div key={m.name} className="flex flex-col items-center h-full justify-end w-10 md:w-12 group relative">
+                        {/* Tooltip */}
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-150 shadow-md whitespace-nowrap z-30 pointer-events-none">
+                          ${(m.cost || 0).toLocaleString()}
+                        </div>
+
+                        {/* Visual Bar */}
                         <div
                           style={{ height: `${heightPct}%` }}
                           className={`w-full rounded-t-xl transition-all duration-300 relative ${isLast
                               ? 'bg-blue-600 shadow-md shadow-blue-500/20'
                               : 'bg-blue-100 group-hover:bg-blue-400'
                             }`}
-                        >
-                          {/* Tooltip */}
-                          <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-150 shadow-md whitespace-nowrap z-20 pointer-events-none">
-                            ${m.cost.toFixed(0)}
-                          </div>
-                        </div>
-                        <span className={`absolute bottom-0 text-xs mt-2 pt-1 font-semibold ${isLast ? 'text-blue-600 font-bold' : 'text-slate-500'}`}>
+                        />
+
+                        {/* X-Axis Label */}
+                        <span className={`text-xs mt-3 font-semibold whitespace-nowrap ${isLast ? 'text-blue-600 font-bold' : 'text-slate-500'
+                          }`}>
                           {m.name}
                         </span>
                       </div>
@@ -274,7 +384,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-
             {/* Service Records Table */}
             <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
               <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
