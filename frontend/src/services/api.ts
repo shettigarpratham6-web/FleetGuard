@@ -142,7 +142,28 @@ export const api = {
       return data.vehicle;
     }
   },
+  // Branches API
+  branches: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/branches`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
 
+      const data = await handleResponse<{ branches: any[] }>(res);
+      return data.branches;
+    },
+
+    getById: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/branches/${id}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      const data = await handleResponse<{ branch: any }>(res);
+      return data.branch;
+    },
+  },
   // Services API
   services: {
     getAll: async () => {

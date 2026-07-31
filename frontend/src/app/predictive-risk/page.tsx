@@ -79,6 +79,8 @@ export default function PredictiveRiskPage() {
   const [riskFilter, setRiskFilter] = useState('All Risk Levels');
   const [branchFilter, setBranchFilter] = useState('All Branches');
   const [riskData, setRiskData] = useState<RiskItem[]>(defaultRiskData);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchRiskData = async () => {
@@ -102,8 +104,11 @@ export default function PredictiveRiskPage() {
           });
           setRiskData(mapped);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading predictive risks from API:', err);
+        setError(err.message || 'Failed to load predictive risks');
+      } finally {
+        setLoading(false);
       }
     };
     fetchRiskData();
