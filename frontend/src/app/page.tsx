@@ -1,8 +1,8 @@
 'use client';
-import { useEffect } from 'react';
-import { api } from '@/services/api'
+
+import { useEffect, useState } from 'react';
+import { api } from '@/services/api';
 import { useRouter } from 'next/navigation';
-import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Scan,
@@ -20,9 +20,11 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
+  // 1. Initialize the router hook here
+  const router = useRouter();
+
   // Cursor position state for interactive parallax animations
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-
 
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
@@ -62,13 +64,11 @@ export default function Home() {
       onMouseMove={handleMouseMove}
       className="min-h-screen w-full bg-slate-50 text-slate-700 font-sans overflow-x-hidden"
     >
-
       {/* ==========================================
           HEADER / NAVBAR
       ========================================== */}
       <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-
           <div className="flex items-center gap-2 group cursor-pointer">
             <div className="bg-blue-600 text-white font-bold text-xl flex items-center justify-center w-10 h-10 rounded-lg transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3 shadow-md shadow-blue-500/20">
               SF
@@ -100,11 +100,10 @@ export default function Home() {
       </header>
 
       {/* ==========================================
-    SECTION 1: HERO SECTION (Guaranteed Render + Parallax)
-========================================== */}
+          SECTION 1: HERO SECTION (Guaranteed Render + Parallax)
+      ========================================== */}
       <section className="pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-
           {/* Left Text Content */}
           <div
             style={{
@@ -140,8 +139,7 @@ export default function Home() {
             <span className="text-xs text-slate-500 font-medium">No credit card required</span>
           </div>
 
-          {/* Right Hero Visual Card - Fixed Width Flex Wrapper */}
-          {/* Right Hero Visual */}
+          {/* Right Hero Visual Card */}
           <div className="lg:col-span-5 flex justify-center">
             <div className="relative w-[430px]">
 
@@ -169,18 +167,14 @@ export default function Home() {
 
                   {/* Dashboard Content */}
                   <div className="p-5 space-y-4">
-
                     <div className="grid grid-cols-2 gap-4">
-
                       <div className="rounded-xl bg-slate-800 p-4">
                         <p className="text-slate-400 text-xs uppercase">
                           Active Fleet
                         </p>
-
                         <h2 className="text-3xl font-black text-white mt-2">
                           142
                         </h2>
-
                         <p className="text-emerald-400 text-xs mt-1">
                           ↑ 98.4% Operational
                         </p>
@@ -190,27 +184,22 @@ export default function Home() {
                         <p className="text-slate-400 text-xs uppercase">
                           PM Compliance
                         </p>
-
                         <h2 className="text-3xl font-black text-blue-400 mt-2">
                           96.8%
                         </h2>
-
                         <p className="text-blue-300 text-xs mt-1">
                           On Schedule
                         </p>
                       </div>
-
                     </div>
 
-                    {/* Fake Graph */}
+                    {/* Maintenance Graph */}
                     <div className="rounded-xl bg-slate-800 p-4">
-
                       <p className="text-slate-400 text-xs mb-4">
                         Monthly Maintenance
                       </p>
 
                       <div className="flex items-end gap-2 h-32">
-
                         <div className="bg-blue-500 rounded w-5 h-12"></div>
                         <div className="bg-blue-500 rounded w-5 h-20"></div>
                         <div className="bg-blue-500 rounded w-5 h-16"></div>
@@ -218,19 +207,15 @@ export default function Home() {
                         <div className="bg-blue-500 rounded w-5 h-14"></div>
                         <div className="bg-blue-500 rounded w-5 h-28"></div>
                         <div className="bg-blue-500 rounded w-5 h-20"></div>
-
                       </div>
-
                     </div>
 
                     {/* Vehicles */}
                     <div className="space-y-3">
-
                       <div className="rounded-lg bg-slate-800 p-3 flex justify-between">
                         <span className="text-white">
                           Truck KH01VS8
                         </span>
-
                         <span className="text-emerald-400">
                           Healthy
                         </span>
@@ -240,7 +225,6 @@ export default function Home() {
                         <span className="text-white">
                           Truck MH14TR2
                         </span>
-
                         <span className="text-yellow-400">
                           Service Due
                         </span>
@@ -250,21 +234,16 @@ export default function Home() {
                         <span className="text-white">
                           Truck KA19FG9
                         </span>
-
                         <span className="text-red-400">
                           Inspection
                         </span>
                       </div>
-
                     </div>
-
                   </div>
-
                 </div>
 
                 {/* Rating */}
                 <div className="flex items-center justify-between mt-5">
-
                   <div className="flex gap-1">
                     {[...Array(5)].map((_, i) => (
                       <Star
@@ -286,9 +265,7 @@ export default function Home() {
                   <span className="text-sm font-medium text-slate-500">
                     App Store
                   </span>
-
                 </div>
-
               </div>
 
               {/* Floating Card 1 */}
@@ -296,7 +273,6 @@ export default function Home() {
                 <p className="text-sm font-semibold text-slate-800">
                   🚛 Maintenance Reminder
                 </p>
-
                 <p className="text-xs text-slate-500 mt-2">
                   Oil & Filter service due for KH01VS8
                 </p>
@@ -307,7 +283,6 @@ export default function Home() {
                 <p className="text-sm font-semibold text-red-600">
                   ⚠ Inspection Alert
                 </p>
-
                 <p className="text-xs text-slate-500 mt-2">
                   Rear tyre pressure below threshold.
                 </p>
@@ -317,12 +292,12 @@ export default function Home() {
           </div>
         </div>
       </section>
+
       {/* ==========================================
-          NEW SECTION: MOBILE FLEET WORKFLOWS
+          SECTION 2: MOBILE FLEET WORKFLOWS
       ========================================== */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-200 w-full">
         <div className="max-w-7xl mx-auto">
-
           <div className="text-center max-w-3xl mx-auto mb-16 flex flex-col gap-3">
             <span className="text-xs font-bold tracking-widest text-blue-600 uppercase">
               One Source of Truth
@@ -336,7 +311,6 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
             {/* Drivers Card */}
             <div
               style={{ transform: `translate3d(${mousePos.x * 0.2}px, ${mousePos.y * 0.2}px, 0)` }}
@@ -435,7 +409,6 @@ export default function Home() {
                 ))}
               </ul>
             </div>
-
           </div>
         </div>
       </section>
@@ -445,7 +418,6 @@ export default function Home() {
       ========================================== */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-100/80 border-t border-slate-200 w-full">
         <div className="max-w-7xl mx-auto">
-
           <div className="text-center max-w-3xl mx-auto mb-16 flex flex-col gap-4">
             <div>
               <span className="text-xs font-bold tracking-wider text-blue-600 uppercase bg-blue-100/70 border border-blue-200 px-3.5 py-1.5 rounded-full">
@@ -555,15 +527,11 @@ export default function Home() {
                     </tbody>
                   </table>
                 </div>
-
               </div>
             </div>
-
           </div>
         </div>
       </section>
-
-
     </div>
   );
 }
