@@ -1,16 +1,18 @@
 'use client';
-
+import { useEffect } from 'react';
+import { api } from '@/services/api'
+import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { 
-  Scan, 
-  Calendar, 
-  Mic, 
-  MessageSquare, 
-  Check, 
-  Star, 
-  Bot, 
-  User, 
+import {
+  Scan,
+  Calendar,
+  Mic,
+  MessageSquare,
+  Check,
+  Star,
+  Bot,
+  User,
   BarChart3,
   Wrench,
   ShieldCheck,
@@ -46,7 +48,7 @@ export default function Home() {
       router.replace('/login');
     }
   }, [router]);
-=======
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const { clientX, clientY } = e;
     // Calculate cursor movement offset relative to screen center
@@ -56,17 +58,17 @@ export default function Home() {
   };
 
   return (
-    <div 
+    <div
       onMouseMove={handleMouseMove}
       className="min-h-screen w-full bg-slate-50 text-slate-700 font-sans overflow-x-hidden"
     >
-      
+
       {/* ==========================================
           HEADER / NAVBAR
       ========================================== */}
       <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          
+
           <div className="flex items-center gap-2 group cursor-pointer">
             <div className="bg-blue-600 text-white font-bold text-xl flex items-center justify-center w-10 h-10 rounded-lg transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3 shadow-md shadow-blue-500/20">
               SF
@@ -97,230 +99,230 @@ export default function Home() {
         </div>
       </header>
 
-     {/* ==========================================
+      {/* ==========================================
     SECTION 1: HERO SECTION (Guaranteed Render + Parallax)
 ========================================== */}
-<section className="pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-  <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-    
-    {/* Left Text Content */}
-    <div 
-      style={{ 
-        transform: `translate3d(${-mousePos.x * 0.4}px, ${-mousePos.y * 0.4}px, 0)` 
-      }}
-      className="lg:col-span-7 flex flex-col gap-6 transition-transform duration-100 ease-out"
-    >
-      <div>
-        <span className="text-xs font-bold tracking-wider text-blue-600 uppercase bg-blue-50 border border-blue-100 px-3.5 py-1.5 rounded-full inline-block shadow-sm">
-          AI First Fleet Software for Fleets of All Sizes
-        </span>
-      </div>
-      
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.1]">
-        Complete Fleet Maintenance and Management
-      </h1>
-      
-      <p className="text-lg text-slate-600 leading-relaxed max-w-2xl">
-        Manage vehicles, drivers, fuel, expenses, compliance, preventive maintenance, 
-        inspections and work orders in one connected system. Simply Fleet uses AI to 
-        capture receipts and invoices, reduce manual entry and turn fleet data into 
-        answers your team can act on.
-      </p>
+      <section className="pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
-      <div className="flex flex-wrap items-center gap-4 pt-2">
-        <Link href="/register" className="bg-slate-900 hover:bg-blue-600 text-white font-semibold px-6 py-3.5 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          Get Started
-        </Link>
-        <Link href="/register" className="border border-slate-300 hover:border-slate-400 text-slate-900 hover:bg-slate-100 font-semibold px-6 py-3.5 rounded-lg transition-all duration-300">
-          Book Demo
-        </Link>
-      </div>
-      <span className="text-xs text-slate-500 font-medium">No credit card required</span>
-    </div>
-
-    {/* Right Hero Visual Card - Fixed Width Flex Wrapper */}
-    {/* Right Hero Visual */}
-<div className="lg:col-span-5 flex justify-center">
-  <div className="relative w-[430px]">
-
-    {/* Main Card */}
-    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-5">
-
-      <div className="rounded-2xl bg-slate-900 h-[520px] overflow-hidden relative">
-
-        {/* Glow Effects */}
-        <div className="absolute -top-20 -right-20 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl"></div>
-        <div className="absolute -bottom-20 -left-20 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl"></div>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-          <div className="flex gap-2">
-            <div className="h-3 w-3 rounded-full bg-red-500"></div>
-            <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
-            <div className="h-3 w-3 rounded-full bg-green-500"></div>
-          </div>
-
-          <span className="text-xs text-slate-400 font-semibold">
-            Fleet Dashboard
-          </span>
-        </div>
-
-        {/* Dashboard Content */}
-        <div className="p-5 space-y-4">
-
-          <div className="grid grid-cols-2 gap-4">
-
-            <div className="rounded-xl bg-slate-800 p-4">
-              <p className="text-slate-400 text-xs uppercase">
-                Active Fleet
-              </p>
-
-              <h2 className="text-3xl font-black text-white mt-2">
-                142
-              </h2>
-
-              <p className="text-emerald-400 text-xs mt-1">
-                ↑ 98.4% Operational
-              </p>
+          {/* Left Text Content */}
+          <div
+            style={{
+              transform: `translate3d(${-mousePos.x * 0.4}px, ${-mousePos.y * 0.4}px, 0)`
+            }}
+            className="lg:col-span-7 flex flex-col gap-6 transition-transform duration-100 ease-out"
+          >
+            <div>
+              <span className="text-xs font-bold tracking-wider text-blue-600 uppercase bg-blue-50 border border-blue-100 px-3.5 py-1.5 rounded-full inline-block shadow-sm">
+                AI First Fleet Software for Fleets of All Sizes
+              </span>
             </div>
 
-            <div className="rounded-xl bg-slate-800 p-4">
-              <p className="text-slate-400 text-xs uppercase">
-                PM Compliance
-              </p>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.1]">
+              Complete Fleet Maintenance and Management
+            </h1>
 
-              <h2 className="text-3xl font-black text-blue-400 mt-2">
-                96.8%
-              </h2>
-
-              <p className="text-blue-300 text-xs mt-1">
-                On Schedule
-              </p>
-            </div>
-
-          </div>
-
-          {/* Fake Graph */}
-          <div className="rounded-xl bg-slate-800 p-4">
-
-            <p className="text-slate-400 text-xs mb-4">
-              Monthly Maintenance
+            <p className="text-lg text-slate-600 leading-relaxed max-w-2xl">
+              Manage vehicles, drivers, fuel, expenses, compliance, preventive maintenance,
+              inspections and work orders in one connected system. Simply Fleet uses AI to
+              capture receipts and invoices, reduce manual entry and turn fleet data into
+              answers your team can act on.
             </p>
 
-            <div className="flex items-end gap-2 h-32">
-
-              <div className="bg-blue-500 rounded w-5 h-12"></div>
-              <div className="bg-blue-500 rounded w-5 h-20"></div>
-              <div className="bg-blue-500 rounded w-5 h-16"></div>
-              <div className="bg-blue-500 rounded w-5 h-24"></div>
-              <div className="bg-blue-500 rounded w-5 h-14"></div>
-              <div className="bg-blue-500 rounded w-5 h-28"></div>
-              <div className="bg-blue-500 rounded w-5 h-20"></div>
-
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <Link href="/register" className="bg-slate-900 hover:bg-blue-600 text-white font-semibold px-6 py-3.5 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                Get Started
+              </Link>
+              <Link href="/register" className="border border-slate-300 hover:border-slate-400 text-slate-900 hover:bg-slate-100 font-semibold px-6 py-3.5 rounded-lg transition-all duration-300">
+                Book Demo
+              </Link>
             </div>
-
+            <span className="text-xs text-slate-500 font-medium">No credit card required</span>
           </div>
 
-          {/* Vehicles */}
-          <div className="space-y-3">
+          {/* Right Hero Visual Card - Fixed Width Flex Wrapper */}
+          {/* Right Hero Visual */}
+          <div className="lg:col-span-5 flex justify-center">
+            <div className="relative w-[430px]">
 
-            <div className="rounded-lg bg-slate-800 p-3 flex justify-between">
-              <span className="text-white">
-                Truck KH01VS8
-              </span>
+              {/* Main Card */}
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-5">
 
-              <span className="text-emerald-400">
-                Healthy
-              </span>
+                <div className="rounded-2xl bg-slate-900 h-[520px] overflow-hidden relative">
+
+                  {/* Glow Effects */}
+                  <div className="absolute -top-20 -right-20 h-48 w-48 rounded-full bg-blue-500/20 blur-3xl"></div>
+                  <div className="absolute -bottom-20 -left-20 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl"></div>
+
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+                    <div className="flex gap-2">
+                      <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                      <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+                      <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                    </div>
+
+                    <span className="text-xs text-slate-400 font-semibold">
+                      Fleet Dashboard
+                    </span>
+                  </div>
+
+                  {/* Dashboard Content */}
+                  <div className="p-5 space-y-4">
+
+                    <div className="grid grid-cols-2 gap-4">
+
+                      <div className="rounded-xl bg-slate-800 p-4">
+                        <p className="text-slate-400 text-xs uppercase">
+                          Active Fleet
+                        </p>
+
+                        <h2 className="text-3xl font-black text-white mt-2">
+                          142
+                        </h2>
+
+                        <p className="text-emerald-400 text-xs mt-1">
+                          ↑ 98.4% Operational
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl bg-slate-800 p-4">
+                        <p className="text-slate-400 text-xs uppercase">
+                          PM Compliance
+                        </p>
+
+                        <h2 className="text-3xl font-black text-blue-400 mt-2">
+                          96.8%
+                        </h2>
+
+                        <p className="text-blue-300 text-xs mt-1">
+                          On Schedule
+                        </p>
+                      </div>
+
+                    </div>
+
+                    {/* Fake Graph */}
+                    <div className="rounded-xl bg-slate-800 p-4">
+
+                      <p className="text-slate-400 text-xs mb-4">
+                        Monthly Maintenance
+                      </p>
+
+                      <div className="flex items-end gap-2 h-32">
+
+                        <div className="bg-blue-500 rounded w-5 h-12"></div>
+                        <div className="bg-blue-500 rounded w-5 h-20"></div>
+                        <div className="bg-blue-500 rounded w-5 h-16"></div>
+                        <div className="bg-blue-500 rounded w-5 h-24"></div>
+                        <div className="bg-blue-500 rounded w-5 h-14"></div>
+                        <div className="bg-blue-500 rounded w-5 h-28"></div>
+                        <div className="bg-blue-500 rounded w-5 h-20"></div>
+
+                      </div>
+
+                    </div>
+
+                    {/* Vehicles */}
+                    <div className="space-y-3">
+
+                      <div className="rounded-lg bg-slate-800 p-3 flex justify-between">
+                        <span className="text-white">
+                          Truck KH01VS8
+                        </span>
+
+                        <span className="text-emerald-400">
+                          Healthy
+                        </span>
+                      </div>
+
+                      <div className="rounded-lg bg-slate-800 p-3 flex justify-between">
+                        <span className="text-white">
+                          Truck MH14TR2
+                        </span>
+
+                        <span className="text-yellow-400">
+                          Service Due
+                        </span>
+                      </div>
+
+                      <div className="rounded-lg bg-slate-800 p-3 flex justify-between">
+                        <span className="text-white">
+                          Truck KA19FG9
+                        </span>
+
+                        <span className="text-red-400">
+                          Inspection
+                        </span>
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+                {/* Rating */}
+                <div className="flex items-center justify-between mt-5">
+
+                  <div className="flex gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={18}
+                        className="fill-yellow-400 text-yellow-400"
+                      />
+                    ))}
+                  </div>
+
+                  <span className="text-sm font-medium text-slate-500">
+                    Capterra
+                  </span>
+
+                  <span className="text-sm font-medium text-slate-500">
+                    Google Play
+                  </span>
+
+                  <span className="text-sm font-medium text-slate-500">
+                    App Store
+                  </span>
+
+                </div>
+
+              </div>
+
+              {/* Floating Card 1 */}
+              <div className="absolute -left-14 top-20 bg-white rounded-xl shadow-xl border p-4 w-60">
+                <p className="text-sm font-semibold text-slate-800">
+                  🚛 Maintenance Reminder
+                </p>
+
+                <p className="text-xs text-slate-500 mt-2">
+                  Oil & Filter service due for KH01VS8
+                </p>
+              </div>
+
+              {/* Floating Card 2 */}
+              <div className="absolute -right-14 bottom-20 bg-white rounded-xl shadow-xl border p-4 w-60">
+                <p className="text-sm font-semibold text-red-600">
+                  ⚠ Inspection Alert
+                </p>
+
+                <p className="text-xs text-slate-500 mt-2">
+                  Rear tyre pressure below threshold.
+                </p>
+              </div>
+
             </div>
-
-            <div className="rounded-lg bg-slate-800 p-3 flex justify-between">
-              <span className="text-white">
-                Truck MH14TR2
-              </span>
-
-              <span className="text-yellow-400">
-                Service Due
-              </span>
-            </div>
-
-            <div className="rounded-lg bg-slate-800 p-3 flex justify-between">
-              <span className="text-white">
-                Truck KA19FG9
-              </span>
-
-              <span className="text-red-400">
-                Inspection
-              </span>
-            </div>
-
           </div>
-
         </div>
-
-      </div>
-
-      {/* Rating */}
-      <div className="flex items-center justify-between mt-5">
-
-        <div className="flex gap-1">
-          {[...Array(5)].map((_, i) => (
-            <Star
-              key={i}
-              size={18}
-              className="fill-yellow-400 text-yellow-400"
-            />
-          ))}
-        </div>
-
-        <span className="text-sm font-medium text-slate-500">
-          Capterra
-        </span>
-
-        <span className="text-sm font-medium text-slate-500">
-          Google Play
-        </span>
-
-        <span className="text-sm font-medium text-slate-500">
-          App Store
-        </span>
-
-      </div>
-
-    </div>
-
-    {/* Floating Card 1 */}
-    <div className="absolute -left-14 top-20 bg-white rounded-xl shadow-xl border p-4 w-60">
-      <p className="text-sm font-semibold text-slate-800">
-        🚛 Maintenance Reminder
-      </p>
-
-      <p className="text-xs text-slate-500 mt-2">
-        Oil & Filter service due for KH01VS8
-      </p>
-    </div>
-
-    {/* Floating Card 2 */}
-    <div className="absolute -right-14 bottom-20 bg-white rounded-xl shadow-xl border p-4 w-60">
-      <p className="text-sm font-semibold text-red-600">
-        ⚠ Inspection Alert
-      </p>
-
-      <p className="text-xs text-slate-500 mt-2">
-        Rear tyre pressure below threshold.
-      </p>
-    </div>
-
-  </div>
-</div>
-</div>
-</section>
+      </section>
       {/* ==========================================
           NEW SECTION: MOBILE FLEET WORKFLOWS
       ========================================== */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white border-t border-slate-200 w-full">
         <div className="max-w-7xl mx-auto">
-          
+
           <div className="text-center max-w-3xl mx-auto mb-16 flex flex-col gap-3">
             <span className="text-xs font-bold tracking-widest text-blue-600 uppercase">
               One Source of Truth
@@ -334,9 +336,9 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
+
             {/* Drivers Card */}
-            <div 
+            <div
               style={{ transform: `translate3d(${mousePos.x * 0.2}px, ${mousePos.y * 0.2}px, 0)` }}
               className="bg-slate-50 rounded-2xl p-8 border border-slate-200/80 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:bg-white hover:border-blue-300 group"
             >
@@ -346,7 +348,7 @@ export default function Home() {
                 </div>
                 <span className="text-xs font-bold tracking-wider text-blue-600 uppercase">DRIVERS</span>
               </div>
-              
+
               <h3 className="text-xl font-bold text-slate-900 mb-6">
                 Inspections, Defects, Fuel and Mileage
               </h3>
@@ -369,7 +371,7 @@ export default function Home() {
             </div>
 
             {/* Technicians Card */}
-            <div 
+            <div
               style={{ transform: `translate3d(${-mousePos.x * 0.2}px, ${mousePos.y * 0.2}px, 0)` }}
               className="bg-slate-50 rounded-2xl p-8 border border-slate-200/80 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:bg-white hover:border-blue-300 group"
             >
@@ -402,7 +404,7 @@ export default function Home() {
             </div>
 
             {/* Fleet Managers Card */}
-            <div 
+            <div
               style={{ transform: `translate3d(${mousePos.x * 0.2}px, ${-mousePos.y * 0.2}px, 0)` }}
               className="bg-slate-50 rounded-2xl p-8 border border-slate-200/80 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:bg-white hover:border-blue-300 group"
             >
@@ -443,7 +445,7 @@ export default function Home() {
       ========================================== */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-100/80 border-t border-slate-200 w-full">
         <div className="max-w-7xl mx-auto">
-          
+
           <div className="text-center max-w-3xl mx-auto mb-16 flex flex-col gap-4">
             <div>
               <span className="text-xs font-bold tracking-wider text-blue-600 uppercase bg-blue-100/70 border border-blue-200 px-3.5 py-1.5 rounded-full">

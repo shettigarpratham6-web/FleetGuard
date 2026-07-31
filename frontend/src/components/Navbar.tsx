@@ -64,20 +64,6 @@ export default function Navbar({
       console.error('Failed to mark read:', err);
     }
   };
-return (
-  <header className="flex justify-between items-center px-6 py-3 w-full z-45 bg-white/90 border-b border-slate-200 sticky top-0 flex-shrink-0 backdrop-blur-md shadow-xs">
-    {/* Mobile Toggle & Brand */}
-    <div className="flex items-center gap-3 md:hidden">
-      <button
-        className="p-2 text-slate-600 hover:bg-slate-100 rounded-full cursor-pointer transition-colors"
-        onClick={onMenuClick}
-      >
-        <span className="material-symbols-outlined text-[22px]">menu</span>
-      </button>
-      <span className="text-xl font-extrabold text-blue-600 tracking-tight">
-        FleetGuard
-      </span>
-    </div>
 
   const getNotifIcon = (type?: string) => {
     if (type === 'Compliance Alert') return { icon: 'warning', color: 'text-error' };
@@ -311,7 +297,6 @@ return (
           </div>
         </div>
       )}
-    </div>
   </header>
 );
 }
