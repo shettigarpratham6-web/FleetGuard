@@ -3,10 +3,14 @@ import {
     signOut,
     GoogleAuthProvider,
     UserCredential,
+    User,
+    onAuthStateChanged
 } from "firebase/auth";
 import { auth, googleProvider } from "@/firebase/firebase";
 
-
+/**
+ * Login with Google Pop-up
+ */
 export const loginWithGoogle = async (): Promise<UserCredential> => {
     try {
         const result = await signInWithPopup(auth, googleProvider);
@@ -38,20 +42,34 @@ export const logout = async (): Promise<void> => {
     }
 };
 
+/**
+ * Safely get the ID Token, ensuring the auth state has initialized
+ */
+export const getIdToken = async (forceRefresh = false): Promise<string | null> => {
+    try {
+        const user = await getCurrentUser();
+        if (!user) return null;
 
-export const getIdToken = async (): Promise<string | null> => {
-    const user = auth.currentUser;
-
-    if (!user) {
+        return await user.getIdToken(forceRefresh);
+    } catch (error) {
+        console.error("Get ID Token Error:", error);
         return null;
     }
-
-    return await user.getIdToken();
 };
 
 /**
- * Get currently logged-in user
+ * Get currently logged-in user safely by waiting for initialization.
+ * Resolves immediately if auth is already determined.
  */
-export const getCurrentUser = () => {
-    return auth.currentUser;
+export const getCurrentUser = (): Promise<User | null> => {
+    return new Promise((resolve, reject) => {
+        const unsubscribe = onAuthStateChanged(
+            auth,
+            (user) => {
+                unsubscribe();
+                resolve(user);
+            },
+            reject
+        );
+    });
 };

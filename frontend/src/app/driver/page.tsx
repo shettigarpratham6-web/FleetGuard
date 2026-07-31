@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Notification, User } from '@/types';
+import Footer from '@/components/footer';
 
 export default function DriverDashboardPage() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function DriverDashboardPage() {
   const handleMarkAsRead = async (id: string) => {
     try {
       await api.notifications.markAsRead(id);
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, is_read: true } : n)
       );
     } catch (err) {
@@ -63,7 +64,7 @@ export default function DriverDashboardPage() {
   return (
     <LayoutWrapper>
       <div className="p-6 md:p-8 max-w-5xl mx-auto bg-slate-50 min-h-screen text-slate-900 space-y-8">
-        
+
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-200">
           <div>
@@ -108,7 +109,7 @@ export default function DriverDashboardPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Main Notifications Feed */}
           <div className="lg:col-span-2 space-y-6">
             <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -121,7 +122,7 @@ export default function DriverDashboardPage() {
                 notifications.map((notif) => {
                   const isCompliance = notif.notification_type === 'Compliance Alert' || notif.title.toLowerCase().includes('expir');
                   const isMaintenance = notif.notification_type === 'Maintenance Alert' || notif.title.toLowerCase().includes('service');
-                  
+
                   let icon = 'notifications';
                   let iconColor = 'text-blue-600';
                   let bgColor = 'bg-blue-50';
@@ -137,8 +138,8 @@ export default function DriverDashboardPage() {
                   }
 
                   return (
-                    <div 
-                      key={notif.id} 
+                    <div
+                      key={notif.id}
                       className={`relative bg-white border ${notif.is_read ? 'border-slate-200' : 'border-blue-300 ring-1 ring-blue-300'} rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow group overflow-hidden`}
                     >
                       {!notif.is_read && (
@@ -146,7 +147,7 @@ export default function DriverDashboardPage() {
                           <span className="material-symbols-outlined text-white text-[14px] absolute -top-[34px] -left-[18px]">new_releases</span>
                         </div>
                       )}
-                      
+
                       <div className="flex gap-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bgColor} ${notif.is_read ? 'opacity-60' : ''}`}>
                           <span className={`material-symbols-outlined text-[24px] ${iconColor}`}>{icon}</span>
@@ -163,10 +164,10 @@ export default function DriverDashboardPage() {
                           <p className={`text-sm leading-relaxed mb-4 ${notif.is_read ? 'text-slate-500' : 'text-slate-700 font-medium'}`}>
                             {notif.message}
                           </p>
-                          
+
                           <div className="flex items-center gap-3">
                             {!notif.is_read ? (
-                              <button 
+                              <button
                                 onClick={() => handleMarkAsRead(notif.id)}
                                 className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
                               >
@@ -228,7 +229,9 @@ export default function DriverDashboardPage() {
             </div>
           </div>
         </div>
+        <div><Footer /></div>
       </div>
     </LayoutWrapper>
+
   );
 }

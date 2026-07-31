@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
 import GoogleButton from "@/components/GoogleButton";
 
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -91,28 +92,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-y-auto bg-[#0a0e17] font-sans selection:bg-[#ff2a2a] selection:text-white flex flex-col justify-between">
-
-      {/* Base radial gradient background */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse 80% 60% at 15% 40%, rgba(220,38,38,0.13) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 50% at 80% 75%, rgba(30,58,138,0.16) 0%, transparent 60%),
-            radial-gradient(ellipse 100% 80% at 50% 0%, rgba(15,23,42,0.95) 0%, #0a0e17 80%)
-          `,
-        }}
-      />
-
-      {/* Dot-matrix grid overlay */}
-      <div
-        className="absolute inset-0 opacity-[0.06] pointer-events-none"
-        style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
-      />
+    <div className="relative min-h-screen w-full overflow-y-auto bg-white font-sans selection:bg-[#ff2a2a] selection:text-white flex flex-col justify-between">
 
       {/* Top Header */}
       <header className="relative z-20 flex items-center justify-between px-8 md:px-16 py-6">
@@ -120,7 +100,7 @@ export default function LoginPage() {
           <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-blue-600/30">
             FG
           </div>
-          <span className="text-xl font-black tracking-tight text-white">
+          <span className="text-xl font-black tracking-tight text-slate-900">
             Simply<span className="text-blue-500">Fleet</span>
           </span>
         </div>
@@ -263,7 +243,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* ----- RIGHT CARD: DESIGN ----- */}
+          {/* ----- RIGHT CARD: UI DISPLAY ----- */}
           <div className="hidden lg:flex bg-blue-600 rounded-3xl p-8 lg:p-10 flex-col justify-between items-center text-center text-white relative overflow-hidden shadow-xl shadow-blue-600/20 min-h-[560px]">
 
             {/* Background Soft Glow Circles */}
@@ -340,7 +320,7 @@ export default function LoginPage() {
 
               </div>
 
-              {/* Title & Two-line Description */}
+              {/* Title & Description */}
               <div className="space-y-2 mt-8 text-center">
                 <h2 className="text-2xl font-bold tracking-tight text-white">
                   Connect with every vehicle.
