@@ -367,8 +367,8 @@ export default function DashboardPage() {
                         <div
                           style={{ height: `${heightPct}%` }}
                           className={`w-full rounded-t-xl transition-all duration-300 relative ${isLast
-                            ? 'bg-blue-600 shadow-md shadow-blue-500/20'
-                            : 'bg-blue-100 group-hover:bg-blue-400'
+                              ? 'bg-blue-600 shadow-md shadow-blue-500/20'
+                              : 'bg-blue-100 group-hover:bg-blue-400'
                             }`}
                         />
 
@@ -482,8 +482,8 @@ export default function DashboardPage() {
                           </td>
                           <td className="p-4 pr-6">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${u.status === 'Active'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
                               }`}>
                               {u.status}
                             </span>
