@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
-import { User as UserType, Notification } from '@/types';
-import { User as UserIcon, Settings, LogOut, ShieldCheck } from 'lucide-react';
-
+import { User, Notification } from '@/types';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 interface NavbarProps {
   onMenuClick: () => void;
   searchPlaceholder?: string;
@@ -24,10 +24,8 @@ export default function Navbar({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const [profileOpen, setProfileOpen] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
-
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const router = useRouter();
   useEffect(() => {
     setUser(api.auth.getLocalUser());
 
@@ -109,29 +107,8 @@ export default function Navbar({
         </span>
       </div>
 
-      {/* Search Bar (Desktop) */}
-      <div className="hidden md:flex items-center flex-1 max-w-md bg-slate-50 rounded-2xl px-4 py-2.5 border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 focus-within:bg-white transition-all duration-200 shadow-sm ml-4 md:ml-0">
-        <span className="material-symbols-outlined text-slate-400 mr-2 text-[18px]">
-          search
-        </span>
-        <input
-          className="bg-transparent border-none focus:ring-0 w-full text-sm text-slate-900 placeholder-slate-400 outline-none"
-          placeholder={searchPlaceholder}
-          type="search"
-          value={searchValue}
-          onChange={(e) => onSearchChange?.(e.target.value)}
-        />
-        {searchValue && (
-          <button
-            className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer border-0 bg-transparent flex items-center justify-center"
-            onClick={() => onSearchChange?.('')}
-          >
-            <span className="material-symbols-outlined text-[16px]">close</span>
-          </button>
-        )}
-      </div>
 
-      {/* Utility Actions & User Info */}
+      {/* Utility Actions & User Info Container */}
       <div className="flex items-center gap-2 ml-auto">
 
         {/* Notifications Bell Dropdown */}
@@ -246,13 +223,44 @@ export default function Navbar({
         </div>
 
         {/* Settings Button */}
-        <button
-          onClick={() => router.push('/profile')}
-          className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer active:scale-95 hidden md:block"
-        >
-          <span className="material-symbols-outlined text-[22px]">settings</span>
-        </button>
+        {/* Settings Dropdown Container */}
+        <div className="relative">
+          <button
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer active:scale-95 hidden md:block"
+            title="Settings"
+          >
+            <span className="material-symbols-outlined text-[22px]">settings</span>
+          </button>
 
+          {/* Settings Dropdown Menu */}
+          {isSettingsOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <Link
+                href="/profile"
+                onClick={() => setIsSettingsOpen(false)}
+                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg text-slate-500">person</span>
+                Profile
+              </Link>
+
+              <div className="border-t border-slate-100 my-1"></div>
+
+              <button
+                onClick={() => {
+                  setIsSettingsOpen(false);
+                  api.auth.logout();
+                  router.push('/login');
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left"
+              >
+                <span className="material-symbols-outlined text-lg text-rose-600">logout</span>
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
         {/* User Profile */}
         {user && (
           <div className="relative ml-2" ref={profileRef}>
@@ -278,108 +286,6 @@ export default function Navbar({
                 />
               </div>
 
-              <div className="hidden lg:block text-left">
-                <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                  {user.full_name}
-                </p>
-                <p className="text-[10px] text-slate-500 capitalize">
-                  {user.role}
-                </p>
-              </div>
-            </button>
-
-            {profileOpen && (
-              <div className="absolute right-0 mt-3 w-80 rounded-2xl border border-slate-200 bg-white shadow-xl z-50 overflow-hidden animate-scale-in">
-
-                {/* Header */}
-                <div className="p-5 border-b border-slate-100 bg-slate-50">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-blue-500/20 bg-slate-200 flex-shrink-0">
-                      <img
-                        src={
-                          user.profile_picture ||
-                          `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            user.full_name
-                          )}&background=091426&color=fff&size=128`
-                        }
-                        alt={user.full_name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            user.full_name
-                          )}&background=091426&color=fff&size=128`;
-                        }}
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-slate-900 text-sm truncate">
-                        {user.full_name}
-                      </h3>
-                      <p className="text-xs text-slate-500 truncate">
-                        {user.email}
-                      </p>
-                      <span className="mt-1.5 inline-flex rounded-full bg-blue-100 text-blue-800 font-bold px-2 py-0.5 text-[10px] capitalize">
-                        {user.role}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Details */}
-                <div className="p-4 space-y-2.5 text-xs">
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Username</span>
-                    <span className="font-bold text-slate-800">{user.username || user.email.split('@')[0]}</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-slate-100">
-                    <span className="text-slate-500 font-medium">Phone</span>
-                    <span className="font-bold text-slate-800">{user.phone_number || '-'}</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span className="text-slate-500 font-medium">Status</span>
-                    <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                      {user.status || 'Active'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="border-t border-slate-100 p-2 bg-slate-50/50 space-y-1">
-                  <button
-                    onClick={() => {
-                      setProfileOpen(false);
-                      router.push('/profile');
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-blue-600 transition cursor-pointer border-0 bg-transparent"
-                  >
-                    <UserIcon size={16} />
-                    My Profile
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setProfileOpen(false);
-                      router.push('/profile');
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-blue-600 transition cursor-pointer border-0 bg-transparent"
-                  >
-                    <Settings size={16} />
-                    Account Settings
-                  </button>
-
-                  <button
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition cursor-pointer border-0 bg-transparent"
-                  >
-                    <LogOut size={16} />
-                    Sign Out
-                  </button>
-                </div>
-
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </header>
   );
