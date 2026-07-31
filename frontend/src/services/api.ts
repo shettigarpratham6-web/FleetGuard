@@ -1,12 +1,15 @@
 import { User, Vehicle, ServiceRecord, MaintenanceRisk, Notification, HistoricalService } from '@/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  'http://localhost:5000/api';
 
 const getAuthHeaders = (isMultipart = false) => {
   const headers: Record<string, string> = {};
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('fleetguard_token');
-    if (token) {
+    if (token && token !== 'undefined') {
       headers['Authorization'] = `Bearer ${token}`;
     }
   }
@@ -34,31 +37,96 @@ export const api = {
   // Auth API
   auth: {
     login: async (email: string, password: string) => {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await handleResponse<{ token: string; user: User }>(res);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('fleetguard_token', data.token);
-        localStorage.setItem('fleetguard_user', JSON.stringify(data.user));
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await handleResponse<any>(res);
+
+        const token = data.token || data.accessToken;
+        const user = data.user || data.data?.user || data;
+
+        if (!token) {
+          throw new Error('Authentication failed: No token received from server.');
+        }
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('fleetguard_token', token);
+          if (user) {
+            localStorage.setItem('fleetguard_user', JSON.stringify(user));
+          }
+        }
+
+        return { token, user };
+      } catch (error: any) {
+        if (error.message === 'Failed to fetch') {
+          throw new Error('Unable to connect to the backend server. Please verify your backend API is running.');
+        }
+        throw error;
       }
-      return data;
+    },
+
+    // Fixed Google Sign-In method with network error handling
+    googleLogin: async (credential: string) => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ credential }),
+        });
+
+        const data = await handleResponse<any>(res);
+
+        const token = data.token || data.accessToken;
+        const user = data.user || data.data?.user || data;
+
+        if (!token) {
+          throw new Error('Google Sign-In failed: No session token received from backend.');
+        }
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('fleetguard_token', token);
+          if (user) {
+            localStorage.setItem('fleetguard_user', JSON.stringify(user));
+          }
+        }
+
+        return { token, user };
+      } catch (error: any) {
+        console.error('Google login API error:', error);
+        if (error.message === 'Failed to fetch') {
+          throw new Error('Unable to connect to the backend server. Please verify your API server is running on ' + API_BASE_URL);
+        }
+        throw error;
+      }
     },
 
     register: async (userData: Partial<User> & { password?: string }) => {
-      const res = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      });
-      const data = await handleResponse<{ token: string; user: User }>(res);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('fleetguard_token', data.token);
-        localStorage.setItem('fleetguard_user', JSON.stringify(data.user));
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData),
+        });
+        const data = await handleResponse<any>(res);
+
+        const token = data.token || data.accessToken;
+        const user = data.user || data.data?.user || data;
+
+        if (typeof window !== 'undefined') {
+          if (token) localStorage.setItem('fleetguard_token', token);
+          if (user) localStorage.setItem('fleetguard_user', JSON.stringify(user));
+        }
+        return { token, user };
+      } catch (error: any) {
+        if (error.message === 'Failed to fetch') {
+          throw new Error('Unable to connect to the backend server. Please check your network connection.');
+        }
+        throw error;
       }
-      return data;
     },
 
     logout: () => {
@@ -69,15 +137,23 @@ export const api = {
     },
 
     getCurrentUser: async () => {
-      const res = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      const data = await handleResponse<{ user: User }>(res);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('fleetguard_user', JSON.stringify(data.user));
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+
+        const data = await handleResponse<any>(res);
+        const user = data.user || data.data?.user || data;
+
+        if (typeof window !== 'undefined' && user) {
+          localStorage.setItem('fleetguard_user', JSON.stringify(user));
+        }
+        return user;
+      } catch (error) {
+        console.warn('Unable to verify user with backend, falling back to local session:', error);
+        return api.auth.getLocalUser();
       }
-      return data.user;
     },
 
     getUsers: async (role?: string) => {
@@ -93,7 +169,7 @@ export const api = {
     getLocalUser: (): User | null => {
       if (typeof window !== 'undefined') {
         const userStr = localStorage.getItem('fleetguard_user');
-        if (userStr) {
+        if (userStr && userStr !== 'undefined') {
           try {
             return JSON.parse(userStr);
           } catch {
@@ -106,7 +182,8 @@ export const api = {
 
     isAuthenticated: (): boolean => {
       if (typeof window !== 'undefined') {
-        return !!localStorage.getItem('fleetguard_token');
+        const token = localStorage.getItem('fleetguard_token');
+        return !!token && token !== 'undefined';
       }
       return false;
     }
@@ -142,6 +219,7 @@ export const api = {
       return data.vehicle;
     }
   },
+
   // Branches API
   branches: {
     getAll: async () => {
@@ -164,6 +242,7 @@ export const api = {
       return data.branch;
     },
   },
+
   // Services API
   services: {
     getAll: async () => {
@@ -219,12 +298,17 @@ export const api = {
   // Notifications API
   notifications: {
     getMyNotifications: async () => {
-      const res = await fetch(`${API_BASE_URL}/notifications`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      const data = await handleResponse<{ notifications: Notification[] }>(res);
-      return data.notifications;
+      try {
+        const res = await fetch(`${API_BASE_URL}/notifications`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+        const data = await handleResponse<{ notifications: Notification[] }>(res);
+        return data.notifications || [];
+      } catch (error) {
+        console.warn('Unable to connect to notifications service:', error);
+        return [];
+      }
     },
     markAsRead: async (id: string) => {
       const res = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
