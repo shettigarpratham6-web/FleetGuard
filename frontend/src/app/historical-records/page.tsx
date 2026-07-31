@@ -12,6 +12,7 @@ export default function HistoricalRecordsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [records, setRecords] = useState<any[]>(mockHistoricalServices);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHistoricalRecords = async () => {
@@ -23,6 +24,7 @@ export default function HistoricalRecordsPage() {
         }
       } catch (err) {
         console.error('Error fetching historical records:', err);
+        setError('Failed to fetch historical records.');
       } finally {
         setLoading(false);
       }

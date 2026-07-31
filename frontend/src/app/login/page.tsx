@@ -345,9 +345,8 @@ export default function LoginPage() {
                 <h2 className="text-2xl font-bold tracking-tight text-white">
                   Connect with every vehicle.
                 </h2>
-                <p className="text-xs text-blue-100/80 mx-auto leading-relaxed font-normal text-center">
-                  <span className="block">Everything you need in an</span>
-                  <span className="block">easily customizable dashboard.</span>
+                <p className="text-xs text-blue-100/80 max-w-xs mx-auto leading-relaxed font-normal text-center">
+                  Everything you need in an easily customizable dashboard.
                 </p>
               </div>
 

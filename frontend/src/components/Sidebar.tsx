@@ -15,6 +15,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const router = useRouter();
 
   const navItems = [
+    { name: 'Home', icon: 'home', href: '/home' },
     { name: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
     { name: 'Service Records', icon: 'description', href: '/service-records' },
     { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
@@ -37,6 +38,12 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     router.push('/login');
   };
 
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    setIsOpen(false);
+    router.push(href);
+  };
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -50,8 +57,12 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
       {/* Sidebar Panel */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-white border-r border-slate-200/90 py-6 flex flex-col flex-shrink-0 z-50 md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
-          } transition-transform duration-300 ease-in-out`}
+        className={`fixed md:sticky top-0 left-0 h-screen w-sidebar-width py-lg border-r border-outline-variant flex flex-col flex-shrink-0 z-50 md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        style={{
+          background: 'linear-gradient(180deg, #f8f6f8 0%, #f3f1f3 100%)',
+          transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
+        }}
         role="navigation"
         aria-label="Main navigation"
       >
@@ -87,16 +98,16 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         </div>
 
         {/* Navigation list */}
-        <nav className="flex-1 overflow-y-auto px-3 space-y-1" aria-label="Sidebar">
-          {navItems.map((item) => {
+        <nav className="flex-1 overflow-y-auto custom-scrollbar px-sm space-y-xs" aria-label="Sidebar">
+          {navItems.map((item, index) => {
             const isActive = pathname?.startsWith(item.href) || false;
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 font-bold text-[13.5px] group relative ${isActive
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                className={`flex items-center gap-3 px-md py-[10px] rounded-xl transition-all duration-200 ease-out font-medium text-[13.5px] group relative focus-ring ${isActive
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                   }`}
                 onClick={handleNavClick}
                 aria-current={isActive ? 'page' : undefined}
