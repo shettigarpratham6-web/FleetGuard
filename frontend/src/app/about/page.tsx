@@ -72,7 +72,7 @@ export default function AboutUsPage() {
     },
   ];
 
-  const handleBlogClick = (slug) => {
+  const handleBlogClick = (slug: string) => {
     router.push(`/blog/${slug}`);
   };
 
@@ -80,7 +80,7 @@ export default function AboutUsPage() {
     <LayoutWrapper>
       <div className="bg-slate-50 min-h-screen text-slate-800 font-sans antialiased selection:bg-blue-100 selection:text-blue-700">
         <main>
-          
+
           {/* HERO SECTION */}
           <section className="py-16 md:py-24 px-8 max-w-7xl mx-auto text-center">
             <span className="text-sm font-black tracking-widest text-blue-600 uppercase bg-blue-50 border border-blue-200 px-4 py-1.5 rounded-full inline-block">
@@ -95,7 +95,7 @@ export default function AboutUsPage() {
 
             {/* WORKFLOW CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 text-left">
-              
+
               {/* DRIVERS */}
               <div className="bg-white p-8 rounded-2xl border border-slate-200/90 shadow-xs hover:border-blue-300 hover:shadow-md transition-all">
                 <span className="text-xs font-black tracking-wider text-blue-600 uppercase">
@@ -200,7 +200,7 @@ export default function AboutUsPage() {
                           className="w-16 h-16 rounded-full object-cover ring-4 ring-blue-600/20"
                         />
                       </div>
-                      
+
                       {/* Star Rating */}
                       <div className="flex justify-center gap-1 text-amber-400 mb-3">
                         {[...Array(item.rating)].map((_, i) => (
@@ -248,7 +248,9 @@ export default function AboutUsPage() {
               {blogPosts.map((post) => (
                 <div
                   key={post.id}
-                  onClick={() => handleBlogClick(post.slug)}
+                  onClick={() =>
+                    router.push('/blog')}
+                  // handleBlogClick(post.slug)}
                   className="group cursor-pointer bg-white rounded-2xl overflow-hidden border border-slate-200/90 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
                 >
                   <div className="relative h-56 w-full overflow-hidden bg-slate-100">

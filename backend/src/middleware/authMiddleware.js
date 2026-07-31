@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const env = require('../config/env');
 
 // Renamed inner function to 'authMiddleware' so it doesn't clash
 const authMiddleware = (req, res, next) => {
@@ -15,7 +16,7 @@ const authMiddleware = (req, res, next) => {
     try {
         const decoded = jwt.verify(
             token,
-            process.env.JWT_SECRET || "supersecretkeyreplaceinproduction"
+            env.JWT_SECRET
         );
 
         req.user = decoded;
