@@ -22,6 +22,15 @@ exports.createAssignment = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid Driver. User must be registered as a Driver.' });
     }
 
+    // Check if driver already has an active vehicle assignment
+    const activeDriverRes = await db.query(
+      "SELECT id FROM assignments WHERE driver_id = $1 AND assignment_status = 'Active'",
+      [driver_id]
+    );
+    if (activeDriverRes.rows.length > 0) {
+      return res.status(400).json({ error: 'Driver already has an active vehicle assignment.' });
+    }
+
     // If vehicle is not available, check for override
     if (vehicle.status !== 'Available') {
       if (!override_used || !override_log_id) {
@@ -32,13 +41,33 @@ exports.createAssignment = async (req, res, next) => {
 
       // Verify the override log exists and is approved
       const overrideRes = await db.query(
-        "SELECT id FROM override_logs WHERE id = $1 AND approval_status = 'Approved'", 
+        "SELECT id, vehicle_id FROM override_logs WHERE id = $1 AND approval_status = 'Approved'", 
         [override_log_id]
       );
       if (overrideRes.rows.length === 0) {
         return res.status(400).json({ error: 'Invalid or unapproved override log ID.' });
       }
+
+      const overrideLog = overrideRes.rows[0];
+      if (overrideLog.vehicle_id !== vehicle_id) {
+        return res.status(400).json({ error: 'Override log does not match the requested vehicle ID.' });
+      }
+
+      // Check if override log was already used
+      const usedOverrideRes = await db.query(
+        "SELECT id FROM assignments WHERE override_log_id = $1",
+        [override_log_id]
+      );
+      if (usedOverrideRes.rows.length > 0) {
+        return res.status(400).json({ error: 'This override log has already been used for another assignment.' });
+      }
     }
+
+    // Close any existing active assignments for this vehicle
+    await db.query(
+      "UPDATE assignments SET assignment_status = 'Completed', return_date = NOW() WHERE vehicle_id = $1 AND assignment_status = 'Active'",
+      [vehicle_id]
+    );
 
     // Insert assignment
     const insertQuery = `

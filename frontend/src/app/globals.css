@@ -1,0 +1,303 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #091426;
+  --color-primary-container: #1e293b;
+  --color-on-primary-container: #8590a6;
+  --color-secondary: #5c5f61;
+  --color-secondary-container: #e0e3e5;
+  --color-tertiary: #001815;
+  --color-tertiary-container: #002f2a;
+  --color-background: #fbf8fa;
+  --color-on-background: #1b1b1d;
+  --color-surface: #fbf8fa;
+  --color-on-surface: #1b1b1d;
+  --color-on-surface-variant: #45474c;
+  --color-inverse-surface: #303032;
+  --color-inverse-on-surface: #f3f0f2;
+  --color-outline: #75777d;
+  --color-outline-variant: #c5c6cd;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-surface-container: #f0edef;
+  --color-surface-container-low: #f5f3f4;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-high: #eae7e9;
+  --color-surface-container-highest: #e4e2e3;
+  --color-surface-dim: #dcd9db;
+  --color-surface-bright: #fbf8fa;
+  --color-surface-tint: #545f73;
+
+  --color-primary-fixed: #d8e3fb;
+  --color-primary-fixed-dim: #bcc7de;
+  --color-on-primary-fixed: #111c2d;
+  --color-on-primary-fixed-variant: #3c475a;
+  --color-secondary-fixed: #e0e3e5;
+  --color-secondary-fixed-dim: #c4c7c9;
+  --color-on-secondary-fixed: #191c1e;
+  --color-on-secondary-fixed-variant: #444749;
+  --color-tertiary-fixed: #89f5e7;
+  --color-tertiary-fixed-dim: #6bd8cb;
+  --color-on-tertiary-fixed: #00201d;
+  --color-on-tertiary-fixed-variant: #005049;
+
+  --spacing-gutter: 24px;
+  --spacing-sm: 8px;
+  --spacing-lg: 24px;
+  --spacing-xs: 4px;
+  --spacing-xl: 32px;
+  --spacing-margin-mobile: 16px;
+  --spacing-sidebar-width: 280px;
+  --spacing-base: 4px;
+  --spacing-margin-desktop: 32px;
+  --spacing-md: 16px;
+
+  --radius-DEFAULT: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  --font-sans: var(--font-inter);
+}
+
+/* ============================================================
+   MATERIAL SYMBOLS
+   ============================================================ */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+  transition: font-variation-settings 0.2s ease;
+}
+
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ============================================================
+   CUSTOM SCROLLBARS
+   ============================================================ */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-outline-variant);
+  border-radius: var(--radius-full);
+  transition: background-color 0.2s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-outline);
+}
+
+/* ============================================================
+   CHART CONIC GRADIENT
+   ============================================================ */
+.pie-chart {
+  background: conic-gradient(
+    var(--color-error) 0% 15%, 
+    var(--color-surface-tint) 15% 45%, 
+    var(--color-secondary-container) 45% 100%
+  );
+  border-radius: 50%;
+}
+
+/* ============================================================
+   ANIMATION KEYFRAMES
+   ============================================================ */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 1; }
+  70%  { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+@keyframes bar-grow {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to   { transform: scaleY(1); transform-origin: bottom; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-4px); }
+}
+
+/* ============================================================
+   ANIMATION UTILITY CLASSES
+   ============================================================ */
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease forwards;
+}
+.animate-fade-in {
+  animation: fadeIn 0.35s ease forwards;
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.35s ease forwards;
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.35s ease forwards;
+}
+.animate-scale-in {
+  animation: scaleIn 0.25s ease forwards;
+}
+.animate-bar-grow {
+  animation: bar-grow 0.6s ease forwards;
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Staggered children */
+.stagger-children > *:nth-child(1)  { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2)  { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3)  { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4)  { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5)  { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6)  { animation-delay: 300ms; }
+.stagger-children > *:nth-child(7)  { animation-delay: 360ms; }
+.stagger-children > *:nth-child(8)  { animation-delay: 420ms; }
+
+/* ============================================================
+   SKELETON LOADER
+   ============================================================ */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-container-high) 25%,
+    var(--color-surface-container-highest) 50%,
+    var(--color-surface-container-high) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}
+
+/* ============================================================
+   CARD HOVER EFFECTS
+   ============================================================ */
+.card-hover {
+  transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 8px 24px -4px rgba(9, 20, 38, 0.12), 0 4px 8px -2px rgba(9, 20, 38, 0.08);
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   BUTTON EFFECTS
+   ============================================================ */
+.btn-scale {
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-scale:hover  { transform: scale(1.02); }
+.btn-scale:active { transform: scale(0.97); }
+
+/* ============================================================
+   TABLE IMPROVEMENTS
+   ============================================================ */
+.table-row-hover tr:hover td {
+  background-color: var(--color-surface-container-low);
+}
+
+/* ============================================================
+   FOCUS RING
+   ============================================================ */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   PULSE NOTIFICATION BADGE
+   ============================================================ */
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--color-error);
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* ============================================================
+   SIDEBAR ACTIVE GLOW
+   ============================================================ */
+.nav-active {
+  background: linear-gradient(135deg, rgba(9,20,38,0.08) 0%, rgba(9,20,38,0.04) 100%);
+  box-shadow: inset 0 0 0 1px rgba(9,20,38,0.10);
+}
+
+/* ============================================================
+   PAGE TRANSITION
+   ============================================================ */
+.page-enter {
+  animation: fadeInUp 0.3s ease forwards;
+}
