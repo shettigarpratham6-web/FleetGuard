@@ -190,14 +190,19 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
-            <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-blue-600">directions_car</span>
-              New Vehicle
-            </button>
+            {/* Wrapped in Link to route to /vehicle/create */}
+            <Link href="/vehicles/create">
+              <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-blue-600">directions_car</span>
+                New Vehicle
+              </button>
+            </Link>
+
             <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px] text-blue-600">summarize</span>
               Generate Report
             </button>
+
             <Link href="/service-records/create">
               <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer active:scale-[0.98]">
                 <span className="material-symbols-outlined text-[18px]">add_notes</span>
@@ -206,7 +211,6 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
-
         {error && (
           <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center gap-3 shadow-sm">
             <span className="material-symbols-outlined text-[20px] text-rose-600">error</span>
@@ -335,8 +339,8 @@ export default function DashboardPage() {
                         <div
                           style={{ height: `${heightPct}%` }}
                           className={`w-full rounded-t-xl transition-all duration-300 relative ${isLast
-                              ? 'bg-blue-600 shadow-md shadow-blue-500/20'
-                              : 'bg-blue-100 group-hover:bg-blue-400'
+                            ? 'bg-blue-600 shadow-md shadow-blue-500/20'
+                            : 'bg-blue-100 group-hover:bg-blue-400'
                             }`}
                         >
                           {/* Tooltip */}
@@ -453,8 +457,8 @@ export default function DashboardPage() {
                           </td>
                           <td className="p-4 pr-6">
                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${u.status === 'Active'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
                               }`}>
                               {u.status}
                             </span>

@@ -8,12 +8,12 @@ import { Vehicle } from '@/types';
 
 export default function CreateVehiclePage() {
   const router = useRouter();
-  
+
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchingBranches, setFetchingBranches] = useState(true);
   const [error, setError] = useState('');
-  
+
   const [formData, setFormData] = useState<Partial<Vehicle>>({
     vehicle_number: '',
     registration_number: '',
