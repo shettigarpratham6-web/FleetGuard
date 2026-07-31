@@ -162,12 +162,18 @@ export default function DriverDashboardPage() {
               Driver Portal • Safe driving today!
             </p>
           </div>
-          <div className="flex gap-3">
-            <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2">
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setIsFuelModalOpen(true)}
+              className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
               <span className="material-symbols-outlined text-[18px] text-blue-600">local_gas_station</span>
               Log Fuel
             </button>
-            <button className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2">
+            <button
+              onClick={() => setIsIssueModalOpen(true)}
+              className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            >
               <span className="material-symbols-outlined text-[18px]">report</span>
               Report Issue
             </button>
@@ -176,7 +182,7 @@ export default function DriverDashboardPage() {
 
         {/* Action Required Banner */}
         {unreadCount > 0 && (
-          <div className="bg-gradient-to-r from-rose-500 to-rose-600 rounded-2xl p-6 shadow-lg text-white flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in">
+          <div className="bg-gradient-to-r from-rose-500 to-rose-600 rounded-2xl p-6 shadow-lg text-white flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 animate-pulse">
                 <span className="material-symbols-outlined text-[28px] text-white">warning</span>
@@ -190,6 +196,41 @@ export default function DriverDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Driver Quick Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase">Current Mileage</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">45,210 mi</div>
+            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
+              <span className="material-symbols-outlined text-[14px]">check_circle</span> Verified 2 days ago
+            </span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase">Fuel Status</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">78%</div>
+            <span className="text-[11px] font-semibold text-blue-600 flex items-center gap-1 mt-1">
+              <span className="material-symbols-outlined text-[14px]">local_gas_station</span> ~320 mi range
+            </span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase">Next Service</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">1,200 mi</div>
+            <span className="text-[11px] font-semibold text-amber-600 flex items-center gap-1 mt-1">
+              <span className="material-symbols-outlined text-[14px]">schedule</span> Oil Change Due
+            </span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase">Safety Score</span>
+            <div className="text-2xl font-black text-emerald-600 mt-1">98 / 100</div>
+            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
+              <span className="material-symbols-outlined text-[14px]">star</span> Excellent Driver
+            </span>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
@@ -281,12 +322,12 @@ export default function DriverDashboardPage() {
           {/* Quick Info Sidebar */}
           <div className="space-y-6">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
-                My Vehicle Status
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+                My Assigned Vehicle
               </h3>
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-                  <span className="material-symbols-outlined text-[24px]">directions_car</span>
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                  <span className="material-symbols-outlined text-[28px]">directions_car</span>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mb-1">Active Assignment</p>
@@ -306,8 +347,12 @@ export default function DriverDashboardPage() {
               <p className="text-xs text-slate-600 font-medium mb-4 leading-relaxed">
                 Contact your fleet manager immediately for any compliance issues, part requests, or breakdowns.
               </p>
-              <button className="w-full bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
-                Contact Manager
+              <button
+                onClick={() => alert('Dialing Fleet Support: 1-800-555-FLEET')}
+                className="w-full bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm hover:bg-blue-700 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[16px]">call</span>
+                Contact Fleet Manager
               </button>
             </div>
           </div>

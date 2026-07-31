@@ -147,15 +147,23 @@ export const api = {
     },
 
     getCurrentUser: async () => {
-      const res = await fetch(`${API_BASE_URL}/auth/me`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      const data = await handleResponse<{ user: User }>(res);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('fleetguard_user', JSON.stringify(data.user));
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          method: 'GET',
+          headers: getAuthHeaders(),
+        });
+
+        const data = await handleResponse<any>(res);
+        const user = data.user || data.data?.user || data;
+
+        if (typeof window !== 'undefined' && user) {
+          localStorage.setItem('fleetguard_user', JSON.stringify(user));
+        }
+        return user;
+      } catch (error) {
+        console.warn('Unable to verify user with backend, falling back to local session:', error);
+        return api.auth.getLocalUser();
       }
-      return data.user;
     },
 
     getUsers: async (role?: string) => {
