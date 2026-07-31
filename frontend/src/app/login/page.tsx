@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
 import GoogleButton from "@/components/GoogleButton";
 
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');

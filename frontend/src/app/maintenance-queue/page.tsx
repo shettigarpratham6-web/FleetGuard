@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle, MaintenanceRisk } from '@/types';
+import Footer from '@/components/footer';
 
 export default function MaintenanceQueuePage() {
   const router = useRouter();
@@ -49,24 +50,24 @@ export default function MaintenanceQueuePage() {
   // Group vehicles into lanes based on risk level
   const overdueVehicles = vehicles.filter((v) => {
     const risk = getVehicleRisk(v.id);
-    return risk?.risk_level === 'High' && 
+    return risk?.risk_level === 'High' &&
       (v.vehicle_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       v.model.toLowerCase().includes(searchQuery.toLowerCase()));
+        v.model.toLowerCase().includes(searchQuery.toLowerCase()));
   });
 
   const dueSoonVehicles = vehicles.filter((v) => {
     const risk = getVehicleRisk(v.id);
-    return risk?.risk_level === 'Medium' && 
+    return risk?.risk_level === 'Medium' &&
       (v.vehicle_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       v.model.toLowerCase().includes(searchQuery.toLowerCase()));
+        v.model.toLowerCase().includes(searchQuery.toLowerCase()));
   });
 
   const upcomingVehicles = vehicles.filter((v) => {
     const risk = getVehicleRisk(v.id);
     // Include vehicles with Low risk or default available vehicles
-    return (risk?.risk_level === 'Low' || (!risk && v.status !== 'Maintenance')) && 
+    return (risk?.risk_level === 'Low' || (!risk && v.status !== 'Maintenance')) &&
       (v.vehicle_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       v.model.toLowerCase().includes(searchQuery.toLowerCase()));
+        v.model.toLowerCase().includes(searchQuery.toLowerCase()));
   });
 
   if (loading) {
@@ -87,7 +88,7 @@ export default function MaintenanceQueuePage() {
       onSearchChange={setSearchQuery}
     >
       <div className="p-lg md:p-margin-desktop space-y-xl max-w-[1400px] mx-auto">
-        
+
         {/* Page Title */}
         <div className="flex justify-between items-center pb-sm border-b border-outline-variant/30">
           <div>
@@ -109,7 +110,7 @@ export default function MaintenanceQueuePage() {
 
         {/* Lanes Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter items-start">
-          
+
           {/* Overdue Lane */}
           <section className="space-y-md">
             <div className="flex items-center gap-sm mb-md pb-xs border-b border-outline-variant/30 py-sm">
@@ -119,7 +120,7 @@ export default function MaintenanceQueuePage() {
                 {overdueVehicles.length}
               </span>
             </div>
-            
+
             <div className="space-y-md">
               {overdueVehicles.map((vehicle) => {
                 const risk = getVehicleRisk(vehicle.id);
@@ -194,7 +195,7 @@ export default function MaintenanceQueuePage() {
                 {dueSoonVehicles.length}
               </span>
             </div>
-            
+
             <div className="space-y-md">
               {dueSoonVehicles.map((vehicle) => {
                 const risk = getVehicleRisk(vehicle.id);
@@ -269,7 +270,7 @@ export default function MaintenanceQueuePage() {
                 {upcomingVehicles.length}
               </span>
             </div>
-            
+
             <div className="space-y-md">
               {upcomingVehicles.map((vehicle) => {
                 const risk = getVehicleRisk(vehicle.id);
@@ -336,7 +337,7 @@ export default function MaintenanceQueuePage() {
           </section>
 
         </div>
-
+        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

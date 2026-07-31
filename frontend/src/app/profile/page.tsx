@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { User, Mail, Phone, MapPin, Calendar, Shield, ArrowLeft, CheckCircle2, UserCheck, Key, RefreshCw } from 'lucide-react';
 import { api } from '@/services/api';
 import { User as UserType } from '@/types';
+import Footer from '@/components/footer';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -195,6 +196,7 @@ export default function ProfilePage() {
         </div>
 
       </div>
+      <div><Footer /></div>
     </div>
   );
 }

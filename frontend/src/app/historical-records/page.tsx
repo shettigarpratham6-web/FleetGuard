@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { mockHistoricalServices } from '@/data/mockDb';
+import Footer from '@/components/footer';
 
 export default function HistoricalRecordsPage() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export default function HistoricalRecordsPage() {
       onSearchChange={setSearchQuery}
     >
       <div className="p-margin-mobile md:p-margin-desktop flex-1 flex flex-col gap-lg max-w-[1600px] mx-auto w-full">
-        
+
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-md border-b border-outline-variant/30 pb-md">
           <div>
@@ -191,6 +192,7 @@ export default function HistoricalRecordsPage() {
             </div>
           </div>
         </div>
+        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );
