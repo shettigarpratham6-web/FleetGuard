@@ -64,6 +64,7 @@ export default function Navbar({
       console.error('Failed to mark read:', err);
     }
   };
+
   const getNotifIcon = (type?: string) => {
     if (type === 'Compliance Alert') return { icon: 'warning', color: 'text-rose-500' };
     if (type === 'Maintenance Alert') return { icon: 'build', color: 'text-amber-500' };
@@ -251,7 +252,30 @@ export default function Navbar({
           </div>
         )}
 
-      </div>
-    </header>
-  );
+      <button className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer active:scale-95 hidden md:block">
+        <span className="material-symbols-outlined text-[22px]">settings</span>
+      </button>
+      
+      {/* User Profile */}
+      {user && (
+        <div className="ml-2 pl-3 border-l border-slate-200 flex items-center gap-2.5 cursor-pointer group">
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden ring-2 ring-slate-200 group-hover:ring-blue-600 transition-all">
+            <img
+              alt={user.full_name}
+              className="w-full h-full object-cover"
+              src={user.profile_picture || 'https://lh3.googleusercontent.com/aida-public/AB6AXuAyNWRLx_E1OWgPi7aT-s7keymJamS_sAULSOKC77sBamBVVEH8asmCa3f4NYOaE3mG3geTNRGrCEk9EHHGtRbopLaZ52J0biD4pjdRExkF4tELoYtoq-zasE6so0CeaGSIAvvheeL2qrq5EGlYXYnXy2LFAAHWpIX7MRS7rUU0FgN3ulrekGF7ncrztv17tLcE_3HUrNuSMCnC1wGiBZ6Az6Q7ajamDg6nZkmfN3G0rW9Vloo_heFU'}
+            />
+          </div>
+          <div className="hidden lg:block text-left">
+            <p className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+              {user.full_name}
+            </p>
+            <p className="text-[10px] font-semibold text-slate-500 capitalize">
+              {user.role}
+            </p>
+          </div>
+        </div>
+      )}
+  </header>
+);
 }

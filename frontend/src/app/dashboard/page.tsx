@@ -154,10 +154,42 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <LayoutWrapper>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 bg-slate-50">
-          <div className="relative flex items-center justify-center">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-            <span className="material-symbols-outlined text-blue-600 text-[20px] absolute">database</span>
+        <div className="p-lg md:p-margin-desktop space-y-lg max-w-7xl mx-auto">
+          {/* Header skeleton */}
+          <div className="flex justify-between items-end">
+            <div className="space-y-2">
+              <div className="skeleton h-8 w-40 rounded-lg" />
+              <div className="skeleton h-4 w-56 rounded" />
+            </div>
+            <div className="flex gap-2">
+              <div className="skeleton h-9 w-28 rounded-xl" />
+              <div className="skeleton h-9 w-32 rounded-xl" />
+              <div className="skeleton h-9 w-36 rounded-xl" />
+            </div>
+          </div>
+          {/* KPI skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
+            {[1, 2, 3, 4].map(i => <StatSkeleton key={i} />)}
+          </div>
+          {/* Chart skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+            <div className="lg:col-span-2 space-y-lg">
+              <div className="bg-white rounded-2xl border border-outline-variant/60 p-lg h-[400px] shadow-sm">
+                <div className="skeleton h-4 w-48 rounded mb-2" />
+                <div className="skeleton h-3 w-64 rounded mb-8" />
+                <div className="flex items-end gap-3 h-48 px-4">
+                  {[60, 40, 80, 55, 90, 70].map((h, i) => (
+                    <div key={i} className="flex-1 skeleton rounded-t-lg" style={{ height: `${h}%` }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-lg">
+              <div className="bg-white rounded-2xl border border-outline-variant/60 p-lg h-64 shadow-sm">
+                <div className="skeleton h-4 w-32 rounded mb-4" />
+                <div className="w-40 h-40 skeleton rounded-full mx-auto" />
+              </div>
+            </div>
           </div>
           <p className="font-semibold text-sm text-slate-600 tracking-wide">
             Connecting to live PostgreSQL database...
@@ -279,6 +311,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </Link>
+        </div>
 
           {/* High Risk */}
           <Link href="/predictive-risk" className="block group">
@@ -471,10 +504,10 @@ export default function DashboardPage() {
                           No registered users found in directory.
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    )
+                  }
+                </tbody>
+              </table>
             </div>
           </div>
 

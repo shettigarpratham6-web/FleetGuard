@@ -30,12 +30,6 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     router.push('/login');
   };
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault();
-    setIsOpen(false);
-    router.push(href);
-  };
-
   return (
     <>
       {/* Mobile Backdrop */}
@@ -77,6 +71,12 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
+        <button
+          className="md:hidden text-slate-500 p-1.5 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
+          onClick={() => setIsOpen(false)}
+        >
+          <span className="material-symbols-outlined text-[20px]">close</span>
+        </button>
 
         {/* Section Label */}
         <div className="px-6 mb-3">
