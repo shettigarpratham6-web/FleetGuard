@@ -78,9 +78,47 @@ exports.getAllVehicles = async (req, res, next) => {
   try {
     const { branch_id, status, vehicle_type, search } = req.query;
     let queryText = `
-      SELECT v.*, b.branch_name, b.city as branch_city
+      WITH latest_docs AS (
+        SELECT DISTINCT ON (vehicle_id, document_type)
+          vehicle_id,
+          document_type,
+          expiry_date
+        FROM compliance_documents
+        ORDER BY vehicle_id, document_type, expiry_date DESC
+      ),
+      vehicle_compliance AS (
+        SELECT
+          v.id AS vehicle_id,
+          CASE
+            WHEN COUNT(ld.document_type) FILTER (WHERE ld.document_type IN ('Insurance', 'Inspection', 'PUC', 'Fitness Certificate')) < 4 THEN 'Non-Compliant'
+            WHEN BOOL_OR(ld.document_type IN ('Insurance', 'Inspection', 'PUC', 'Fitness Certificate') AND ld.expiry_date < CURRENT_DATE) THEN 'Non-Compliant'
+            ELSE 'Compliant'
+          END AS compliance_status
+        FROM vehicles v
+        LEFT JOIN latest_docs ld ON v.id = ld.vehicle_id
+        GROUP BY v.id
+      ),
+      latest_service AS (
+        SELECT DISTINCT ON (vehicle_id)
+          *
+        FROM service_records
+        ORDER BY vehicle_id, service_date DESC, created_at DESC
+      )
+      SELECT 
+        v.*, 
+        b.branch_name, 
+        b.city as branch_city,
+        COALESCE(vc.compliance_status, 'Non-Compliant') AS compliance_status,
+        COALESCE(mr.risk_level, 'Low') AS maintenance_status,
+        ls.service_date AS last_service_date,
+        ls.service_type AS last_service_type,
+        ls.next_service_date AS next_service_date,
+        ls.next_service_mileage AS next_service_mileage
       FROM vehicles v
       JOIN branches b ON v.branch_id = b.id
+      LEFT JOIN vehicle_compliance vc ON v.id = vc.vehicle_id
+      LEFT JOIN maintenance_risks mr ON v.id = mr.vehicle_id
+      LEFT JOIN latest_service ls ON v.id = ls.vehicle_id
     `;
     const params = [];
     const conditions = [];
@@ -112,7 +150,28 @@ exports.getAllVehicles = async (req, res, next) => {
     queryText += ' ORDER BY v.created_at DESC';
 
     const result = await db.query(queryText, params);
-    res.status(200).json({ vehicles: result.rows });
+    
+    const vehicles = result.rows.map(row => {
+      const {
+        last_service_date,
+        last_service_type,
+        next_service_date,
+        next_service_mileage,
+        ...vehicleData
+      } = row;
+      
+      return {
+        ...vehicleData,
+        latest_maintenance: last_service_date ? {
+          service_date: last_service_date,
+          service_type: last_service_type,
+          next_service_date: next_service_date,
+          next_service_mileage: next_service_mileage
+        } : null
+      };
+    });
+
+    res.status(200).json({ vehicles });
   } catch (error) {
     next(error);
   }
@@ -122,11 +181,55 @@ exports.getVehicleById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Get vehicle details
+    const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ error: 'Invalid vehicle ID format.' });
+    }
+
+    // Get vehicle details with compliance and maintenance status
     const vehicleQuery = `
-      SELECT v.*, b.branch_name, b.city as branch_city, b.manager_name as branch_manager
+      WITH latest_docs AS (
+        SELECT DISTINCT ON (vehicle_id, document_type)
+          vehicle_id,
+          document_type,
+          expiry_date
+        FROM compliance_documents
+        ORDER BY vehicle_id, document_type, expiry_date DESC
+      ),
+      vehicle_compliance AS (
+        SELECT
+          v.id AS vehicle_id,
+          CASE
+            WHEN COUNT(ld.document_type) FILTER (WHERE ld.document_type IN ('Insurance', 'Inspection', 'PUC', 'Fitness Certificate')) < 4 THEN 'Non-Compliant'
+            WHEN BOOL_OR(ld.document_type IN ('Insurance', 'Inspection', 'PUC', 'Fitness Certificate') AND ld.expiry_date < CURRENT_DATE) THEN 'Non-Compliant'
+            ELSE 'Compliant'
+          END AS compliance_status
+        FROM vehicles v
+        LEFT JOIN latest_docs ld ON v.id = ld.vehicle_id
+        GROUP BY v.id
+      ),
+      latest_service AS (
+        SELECT DISTINCT ON (vehicle_id)
+          *
+        FROM service_records
+        ORDER BY vehicle_id, service_date DESC, created_at DESC
+      )
+      SELECT 
+        v.*, 
+        b.branch_name, 
+        b.city as branch_city, 
+        b.manager_name as branch_manager,
+        COALESCE(vc.compliance_status, 'Non-Compliant') AS compliance_status,
+        COALESCE(mr.risk_level, 'Low') AS maintenance_status,
+        ls.service_date AS last_service_date,
+        ls.service_type AS last_service_type,
+        ls.next_service_date AS next_service_date,
+        ls.next_service_mileage AS next_service_mileage
       FROM vehicles v
       JOIN branches b ON v.branch_id = b.id
+      LEFT JOIN vehicle_compliance vc ON v.id = vc.vehicle_id
+      LEFT JOIN maintenance_risks mr ON v.id = mr.vehicle_id
+      LEFT JOIN latest_service ls ON v.id = ls.vehicle_id
       WHERE v.id = $1
     `;
     const vehicleResult = await db.query(vehicleQuery, [id]);
@@ -135,7 +238,24 @@ exports.getVehicleById = async (req, res, next) => {
       return res.status(404).json({ error: 'Vehicle not found.' });
     }
 
-    const vehicle = vehicleResult.rows[0];
+    const row = vehicleResult.rows[0];
+    const {
+      last_service_date,
+      last_service_type,
+      next_service_date,
+      next_service_mileage,
+      ...vehicleData
+    } = row;
+
+    const vehicle = {
+      ...vehicleData,
+      latest_maintenance: last_service_date ? {
+        service_date: last_service_date,
+        service_type: last_service_type,
+        next_service_date: next_service_date,
+        next_service_mileage: next_service_mileage
+      } : null
+    };
 
     // Get associated compliance documents
     const docQuery = `
