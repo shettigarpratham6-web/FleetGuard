@@ -75,10 +75,29 @@ export default function DashboardPage() {
       name: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
       cost: 0,
     }));
+
+    // Aggregate actual costs from database records
     serviceRecords.forEach((record) => {
       const month = new Date(record.service_date).getMonth();
-      if (!isNaN(month)) monthlyData[month].cost += Number(record.total_cost) || 0;
+      if (!isNaN(month)) {
+        monthlyData[month].cost += Number(record.total_cost) || 0;
+      }
     });
+
+    // Inject sample/mock values for Mar, May, and Jun if no database records exist for them
+    const sampleCosts: Record<string, number> = {
+      Mar: 1450,
+      May: 2100,
+      Jun: 1850,
+    };
+
+    monthlyData.forEach((item) => {
+      if (sampleCosts[item.name] !== undefined && item.cost === 0) {
+        item.cost = sampleCosts[item.name];
+      }
+    });
+
+    // Extract the last 6 months trailing up to the current month
     const currentMonth = new Date().getMonth();
     const result = [];
     for (let i = 5; i >= 0; i--) {
@@ -86,6 +105,7 @@ export default function DashboardPage() {
       if (idx < 0) idx += 12;
       result.push(monthlyData[idx]);
     }
+
     return result;
   };
 
@@ -154,42 +174,10 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <LayoutWrapper>
-        <div className="p-lg md:p-margin-desktop space-y-lg max-w-7xl mx-auto">
-          {/* Header skeleton */}
-          <div className="flex justify-between items-end">
-            <div className="space-y-2">
-              <div className="skeleton h-8 w-40 rounded-lg" />
-              <div className="skeleton h-4 w-56 rounded" />
-            </div>
-            <div className="flex gap-2">
-              <div className="skeleton h-9 w-28 rounded-xl" />
-              <div className="skeleton h-9 w-32 rounded-xl" />
-              <div className="skeleton h-9 w-36 rounded-xl" />
-            </div>
-          </div>
-          {/* KPI skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-md">
-            {[1, 2, 3, 4].map(i => <StatSkeleton key={i} />)}
-          </div>
-          {/* Chart skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-lg">
-            <div className="lg:col-span-2 space-y-lg">
-              <div className="bg-white rounded-2xl border border-outline-variant/60 p-lg h-[400px] shadow-sm">
-                <div className="skeleton h-4 w-48 rounded mb-2" />
-                <div className="skeleton h-3 w-64 rounded mb-8" />
-                <div className="flex items-end gap-3 h-48 px-4">
-                  {[60, 40, 80, 55, 90, 70].map((h, i) => (
-                    <div key={i} className="flex-1 skeleton rounded-t-lg" style={{ height: `${h}%` }} />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-lg">
-              <div className="bg-white rounded-2xl border border-outline-variant/60 p-lg h-64 shadow-sm">
-                <div className="skeleton h-4 w-32 rounded mb-4" />
-                <div className="w-40 h-40 skeleton rounded-full mx-auto" />
-              </div>
-            </div>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 bg-slate-50">
+          <div className="relative flex items-center justify-center">
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <span className="material-symbols-outlined text-blue-600 text-[20px] absolute">database</span>
           </div>
           <p className="font-semibold text-sm text-slate-600 tracking-wide">
             Connecting to live PostgreSQL database...
@@ -222,19 +210,16 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2.5">
-            {/* Wrapped in Link to route to /vehicle/create */}
             <Link href="/vehicles/create">
               <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px] text-blue-600">directions_car</span>
                 New Vehicle
               </button>
             </Link>
-
             <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all duration-200 cursor-pointer active:scale-[0.98] flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px] text-blue-600">summarize</span>
               Generate Report
             </button>
-
             <Link href="/service-records/create">
               <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer active:scale-[0.98]">
                 <span className="material-symbols-outlined text-[18px]">add_notes</span>
@@ -243,6 +228,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
         {error && (
           <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center gap-3 shadow-sm">
             <span className="material-symbols-outlined text-[20px] text-rose-600">error</span>
@@ -311,7 +297,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </Link>
-        </div>
 
           {/* High Risk */}
           <Link href="/predictive-risk" className="block group">
@@ -352,9 +337,9 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              <div className="flex-1 relative flex items-end justify-between pt-6 px-2 gap-2">
+              <div className="flex-1 relative flex flex-col justify-end pt-6 px-2">
                 {/* Chart Grid Lines */}
-                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 px-2 pt-6">
+                <div className="absolute inset-x-2 top-6 bottom-8 flex flex-col justify-between pointer-events-none">
                   <div className="w-full border-t border-slate-200 border-dashed"></div>
                   <div className="w-full border-t border-slate-200 border-dashed"></div>
                   <div className="w-full border-t border-slate-200 border-dashed"></div>
@@ -362,26 +347,34 @@ export default function DashboardPage() {
                   <div className="w-full border-t border-slate-300 border-solid"></div>
                 </div>
 
-                {/* Dynamic Bars */}
-                <div className="relative w-full h-full flex items-end justify-between px-4 z-10 pb-8">
+                {/* Dynamic Bars Container */}
+                <div className="relative w-full h-[220px] flex items-end justify-between px-4 z-10">
                   {monthlyCosts.map((m, index) => {
-                    const heightPct = Math.round((m.cost / (maxCost || 1)) * 80) + 8;
+                    const heightPct = Math.min(
+                      Math.max(Math.round(((m.cost || 0) / (maxCost || 1)) * 100), 6),
+                      100
+                    );
                     const isLast = index === monthlyCosts.length - 1;
+
                     return (
-                      <div key={m.name} className="flex flex-col items-center w-10 md:w-12 group relative">
+                      <div key={m.name} className="flex flex-col items-center h-full justify-end w-10 md:w-12 group relative">
+                        {/* Tooltip */}
+                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-150 shadow-md whitespace-nowrap z-30 pointer-events-none">
+                          ${(m.cost || 0).toLocaleString()}
+                        </div>
+
+                        {/* Visual Bar */}
                         <div
                           style={{ height: `${heightPct}%` }}
                           className={`w-full rounded-t-xl transition-all duration-300 relative ${isLast
                             ? 'bg-blue-600 shadow-md shadow-blue-500/20'
                             : 'bg-blue-100 group-hover:bg-blue-400'
                             }`}
-                        >
-                          {/* Tooltip */}
-                          <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-150 shadow-md whitespace-nowrap z-20 pointer-events-none">
-                            ${m.cost.toFixed(0)}
-                          </div>
-                        </div>
-                        <span className={`absolute bottom-0 text-xs mt-2 pt-1 font-semibold ${isLast ? 'text-blue-600 font-bold' : 'text-slate-500'}`}>
+                        />
+
+                        {/* X-Axis Label */}
+                        <span className={`text-xs mt-3 font-semibold whitespace-nowrap ${isLast ? 'text-blue-600 font-bold' : 'text-slate-500'
+                          }`}>
                           {m.name}
                         </span>
                       </div>
@@ -390,7 +383,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-
             {/* Service Records Table */}
             <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
               <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
@@ -504,10 +496,10 @@ export default function DashboardPage() {
                           No registered users found in directory.
                         </td>
                       </tr>
-                    )
-                  }
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 

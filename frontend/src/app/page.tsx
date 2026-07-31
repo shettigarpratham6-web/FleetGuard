@@ -22,7 +22,7 @@ import {
 export default function Home() {
   // Cursor position state for interactive parallax animations
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-
+  const router = useRouter();
 
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
