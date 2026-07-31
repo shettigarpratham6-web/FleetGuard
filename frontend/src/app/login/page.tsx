@@ -28,7 +28,7 @@ export default function LoginPage() {
       role === 'Admin' ||
       role === 'Fleet Manager' ||
       role === 'Manager'
-    ) ? '/dashboard' : '/driver';
+    ) ? '/home' : '/driver';
 
     router.replace(target);
   }, [router]);

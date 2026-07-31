@@ -11,26 +11,23 @@ export default function DriverDashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Modals state
-  const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
-  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [contactSubject, setContactSubject] = useState('General Query');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactStatus, setContactStatus] = useState({ type: '', msg: '' });
+  const [contactLoading, setContactLoading] = useState(false);
 
-  // Fuel log form state
-  const [fuelForm, setFuelForm] = useState({
-    odometer: '',
-    gallons: '',
-    cost: '',
-    station: '',
-  });
-
-  // Issue report form state
-  const [issueForm, setIssueForm] = useState({
-    title: '',
-    severity: 'Medium',
-    description: '',
-  });
+  const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
+  const [compVehicleId, setCompVehicleId] = useState('');
+  const [compType, setCompType] = useState('Insurance');
+  const [compExpiry, setCompExpiry] = useState('');
+  const [compFile, setCompFile] = useState<File | null>(null);
+  const [compStatus, setCompStatus] = useState({ type: '', msg: '' });
+  const [compLoading, setCompLoading] = useState(false);
 
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
@@ -44,7 +41,10 @@ export default function DriverDashboardPage() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const notifs = await api.notifications.getMyNotifications();
+        const [notifs, vehs] = await Promise.all([
+          api.notifications.getMyNotifications(),
+          api.vehicles.getAll()
+        ]);
         setNotifications(notifs || []);
       } catch (err) {
         console.error('Failed to load driver dashboard data', err);
@@ -59,29 +59,82 @@ export default function DriverDashboardPage() {
   const handleMarkAsRead = async (id: string) => {
     try {
       await api.notifications.markAsRead(id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
       );
     } catch (err) {
       console.error('Failed to mark notification as read', err);
     }
   };
 
-  const handleFuelSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Fuel Log Saved!\nOdometer: ${fuelForm.odometer} mi\nCost: $${fuelForm.cost}`);
-    setIsFuelModalOpen(false);
-    setFuelForm({ odometer: '', gallons: '', cost: '', station: '' });
+    if (!contactMessage) return;
+
+    setContactLoading(true);
+    setContactStatus({ type: '', msg: '' });
+
+    try {
+      // Find admins/managers to notify
+      const admins = await api.auth.getUsers('Admin');
+      const managers = await api.auth.getUsers('Fleet Manager');
+      const targetUsers = [...admins, ...managers];
+
+      if (targetUsers.length === 0) {
+        throw new Error('No managers found to contact.');
+      }
+
+      // Send to the first admin/manager for simplicity
+      const adminId = targetUsers[0].id;
+
+      await api.notifications.create({
+        user_id: adminId,
+        title: `Message from ${user?.full_name}: ${contactSubject}`,
+        message: contactMessage,
+        notification_type: 'Driver Query'
+      });
+
+      setContactStatus({ type: 'success', msg: 'Message sent successfully to the fleet manager.' });
+      setContactMessage('');
+      setTimeout(() => setIsContactModalOpen(false), 2000);
+    } catch (err: any) {
+      setContactStatus({ type: 'error', msg: err.message || 'Failed to send message.' });
+    } finally {
+      setContactLoading(false);
+    }
   };
 
-  const handleIssueSubmit = (e: React.FormEvent) => {
+  const handleComplianceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert(`Issue Reported to Fleet Manager!\nTitle: ${issueForm.title}\nSeverity: ${issueForm.severity}`);
-    setIsIssueModalOpen(false);
-    setIssueForm({ title: '', severity: 'Medium', description: '' });
+    if (!compVehicleId || !compType || !compExpiry || !compFile) {
+      setCompStatus({ type: 'error', msg: 'Please fill all fields and select a file.' });
+      return;
+    }
+
+    setCompLoading(true);
+    setCompStatus({ type: '', msg: '' });
+
+    try {
+      const formData = new FormData();
+      formData.append('vehicle_id', compVehicleId);
+      formData.append('document_type', compType);
+      formData.append('expiry_date', compExpiry);
+      formData.append('file', compFile);
+
+      await api.compliance.create(formData);
+
+      setCompStatus({ type: 'success', msg: 'Compliance document uploaded successfully.' });
+      setCompFile(null);
+      setCompExpiry('');
+      setTimeout(() => setIsComplianceModalOpen(false), 2000);
+    } catch (err: any) {
+      setCompStatus({ type: 'error', msg: err.message || 'Failed to upload document.' });
+    } finally {
+      setCompLoading(false);
+    }
   };
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (loading) {
     return (
@@ -96,7 +149,7 @@ export default function DriverDashboardPage() {
 
   return (
     <LayoutWrapper>
-      <div className="p-6 md:p-8 max-w-6xl mx-auto bg-slate-50 min-h-screen text-slate-900 space-y-8">
+      <div className="p-6 md:p-8 max-w-5xl mx-auto bg-slate-50 min-h-screen text-slate-900 space-y-8">
 
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-200">
@@ -141,9 +194,6 @@ export default function DriverDashboardPage() {
                 </p>
               </div>
             </div>
-            <button className="bg-white text-rose-600 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:shadow-md transition-all whitespace-nowrap cursor-pointer">
-              Review Now
-            </button>
           </div>
         )}
 
@@ -280,33 +330,22 @@ export default function DriverDashboardPage() {
                   <span className="material-symbols-outlined text-[28px]">directions_car</span>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block mb-1">
-                    Active Assignment
-                  </p>
-                  <p className="text-base font-extrabold text-slate-900">2023 Ford Transit (#TRK-884)</p>
-                  <p className="text-xs font-medium text-slate-500">Plate: KXB-9201</p>
+                  <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mb-1">Active Assignment</p>
+                  <p className="text-sm font-bold text-slate-900">Assigned Vehicles</p>
                 </div>
               </div>
-
-              <div className="text-xs text-slate-600 space-y-2 border-t border-slate-100 pt-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-400 font-medium">Insurance Status:</span>
-                  <span className="font-bold text-emerald-600">Valid (Expires Nov 2026)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400 font-medium">Registration:</span>
-                  <span className="font-bold text-emerald-600">Up to date</span>
-                </div>
-              </div>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                You can add compliance documents for any of your branch vehicles using the "Add Compliance" button above.
+              </p>
             </div>
 
             <div className="bg-blue-50 rounded-2xl border border-blue-100 shadow-sm p-6 text-center">
               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
                 <span className="material-symbols-outlined text-blue-600">support_agent</span>
               </div>
-              <h4 className="text-sm font-bold text-slate-900 mb-1">Need Immediate Assistance?</h4>
-              <p className="text-xs text-slate-600 font-medium mb-4">
-                Contact your fleet manager or emergency dispatch for breakdowns.
+              <h4 className="text-sm font-bold text-slate-900 mb-2">Need Assistance?</h4>
+              <p className="text-xs text-slate-600 font-medium mb-4 leading-relaxed">
+                Contact your fleet manager immediately for any compliance issues, part requests, or breakdowns.
               </p>
               <button
                 onClick={() => alert('Dialing Fleet Support: 1-800-555-FLEET')}
@@ -318,172 +357,9 @@ export default function DriverDashboardPage() {
             </div>
           </div>
         </div>
-
-        {/* LOG FUEL MODAL */}
-        {isFuelModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-              <div className="flex justify-between items-center border-b pb-3">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-600">local_gas_station</span>
-                  Log Fuel Receipt
-                </h3>
-                <button
-                  onClick={() => setIsFuelModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-
-              <form onSubmit={handleFuelSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Current Odometer Reading (mi)</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="e.g. 45210"
-                    value={fuelForm.odometer}
-                    onChange={(e) => setFuelForm({ ...fuelForm, odometer: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Gallons / Liters</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      placeholder="18.5"
-                      value={fuelForm.gallons}
-                      onChange={(e) => setFuelForm({ ...fuelForm, gallons: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Total Cost ($)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      placeholder="65.00"
-                      value={fuelForm.cost}
-                      onChange={(e) => setFuelForm({ ...fuelForm, cost: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Fuel Station Name</label>
-                  <input
-                    type="text"
-                    placeholder="Shell / Chevron"
-                    value={fuelForm.station}
-                    onChange={(e) => setFuelForm({ ...fuelForm, station: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsFuelModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                  >
-                    Save Log
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* REPORT ISSUE MODAL */}
-        {isIssueModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-              <div className="flex justify-between items-center border-b pb-3">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-rose-600">report</span>
-                  Report Vehicle Issue
-                </h3>
-                <button
-                  onClick={() => setIsIssueModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-
-              <form onSubmit={handleIssueSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Issue Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Unusual noise in brakes"
-                    value={issueForm.title}
-                    onChange={(e) => setIssueForm({ ...issueForm, title: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Severity Level</label>
-                  <select
-                    value={issueForm.severity}
-                    onChange={(e) => setIssueForm({ ...issueForm, severity: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  >
-                    <option value="Low">Low - Monitor only</option>
-                    <option value="Medium">Medium - Needs attention soon</option>
-                    <option value="Critical">Critical - Unsafe to drive</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Detailed Description</label>
-                  <textarea
-                    rows={3}
-                    required
-                    placeholder="Describe what happened or what you noticed..."
-                    value={issueForm.description}
-                    onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsIssueModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
-                  >
-                    Submit Report
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
         <div><Footer /></div>
       </div>
     </LayoutWrapper>
+
   );
 }

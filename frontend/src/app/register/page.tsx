@@ -40,7 +40,7 @@ export default function RegisterPage() {
         profile_picture: profilePicture || undefined,
       });
 
-      router.push('/dashboard');
+      router.push('/home');
     } catch (err: any) {
       setError(err?.message || 'Registration failed. Please try again.');
     } finally {
@@ -71,7 +71,7 @@ export default function RegisterPage() {
 
           {/* LEFT SIDE CARD: Feature Highlight Showcase */}
           <div className="lg:col-span-5 bg-slate-900 text-white rounded-2xl p-8 border border-slate-800 shadow-xl flex flex-col justify-between relative overflow-hidden">
-            
+
             {/* Subtle Gradient Glow Backgrounds */}
             <div className="absolute -top-20 -left-20 w-48 h-48 bg-blue-600/30 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />

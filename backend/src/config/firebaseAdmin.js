@@ -26,6 +26,9 @@ if (!admin.apps.length) {
         privateKey: privateKey
       });
     } else {
+      if (process.env.NODE_ENV !== 'production') {
+        throw new Error('No Firebase Service Account provided in development. Skipping initialization.');
+      }
       // Default application credentials (GCP / Firebase environment fallback)
       credential = admin.credential.applicationDefault();
     }
