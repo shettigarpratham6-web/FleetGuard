@@ -13,6 +13,25 @@ export default function DriverDashboardPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Modals state
+  const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+
+  // Fuel log form state
+  const [fuelForm, setFuelForm] = useState({
+    odometer: '',
+    gallons: '',
+    cost: '',
+    station: '',
+  });
+
+  // Issue report form state
+  const [issueForm, setIssueForm] = useState({
+    title: '',
+    severity: 'Medium',
+    description: '',
+  });
+
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
       router.push('/login');
@@ -40,15 +59,29 @@ export default function DriverDashboardPage() {
   const handleMarkAsRead = async (id: string) => {
     try {
       await api.notifications.markAsRead(id);
-      setNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
     } catch (err) {
       console.error('Failed to mark notification as read', err);
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const handleFuelSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    alert(`Fuel Log Saved!\nOdometer: ${fuelForm.odometer} mi\nCost: $${fuelForm.cost}`);
+    setIsFuelModalOpen(false);
+    setFuelForm({ odometer: '', gallons: '', cost: '', station: '' });
+  };
+
+  const handleIssueSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    alert(`Issue Reported to Fleet Manager!\nTitle: ${issueForm.title}\nSeverity: ${issueForm.severity}`);
+    setIsIssueModalOpen(false);
+    setIssueForm({ title: '', severity: 'Medium', description: '' });
+  };
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   if (loading) {
     return (
@@ -63,7 +96,7 @@ export default function DriverDashboardPage() {
 
   return (
     <LayoutWrapper>
-      <div className="p-6 md:p-8 max-w-5xl mx-auto bg-slate-50 min-h-screen text-slate-900 space-y-8">
+      <div className="p-6 md:p-8 max-w-6xl mx-auto bg-slate-50 min-h-screen text-slate-900 space-y-8">
 
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-200">
@@ -76,12 +109,18 @@ export default function DriverDashboardPage() {
               Driver Portal • Safe driving today!
             </p>
           </div>
-          <div className="flex gap-3">
-            <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2">
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setIsFuelModalOpen(true)}
+              className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
               <span className="material-symbols-outlined text-[18px] text-blue-600">local_gas_station</span>
               Log Fuel
             </button>
-            <button className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2">
+            <button
+              onClick={() => setIsIssueModalOpen(true)}
+              className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            >
               <span className="material-symbols-outlined text-[18px]">report</span>
               Report Issue
             </button>
@@ -90,7 +129,7 @@ export default function DriverDashboardPage() {
 
         {/* Action Required Banner */}
         {unreadCount > 0 && (
-          <div className="bg-gradient-to-r from-rose-500 to-rose-600 rounded-2xl p-6 shadow-lg text-white flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in">
+          <div className="bg-gradient-to-r from-rose-500 to-rose-600 rounded-2xl p-6 shadow-lg text-white flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 animate-pulse">
                 <span className="material-symbols-outlined text-[28px] text-white">warning</span>
@@ -102,11 +141,46 @@ export default function DriverDashboardPage() {
                 </p>
               </div>
             </div>
-            <button className="bg-white text-rose-600 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:shadow-md transition-all whitespace-nowrap active:scale-[0.98]">
+            <button className="bg-white text-rose-600 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:shadow-md transition-all whitespace-nowrap cursor-pointer">
               Review Now
             </button>
           </div>
         )}
+
+        {/* Driver Quick Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase">Current Mileage</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">45,210 mi</div>
+            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
+              <span className="material-symbols-outlined text-[14px]">check_circle</span> Verified 2 days ago
+            </span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase">Fuel Status</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">78%</div>
+            <span className="text-[11px] font-semibold text-blue-600 flex items-center gap-1 mt-1">
+              <span className="material-symbols-outlined text-[14px]">local_gas_station</span> ~320 mi range
+            </span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase">Next Service</span>
+            <div className="text-2xl font-black text-slate-900 mt-1">1,200 mi</div>
+            <span className="text-[11px] font-semibold text-amber-600 flex items-center gap-1 mt-1">
+              <span className="material-symbols-outlined text-[14px]">schedule</span> Oil Change Due
+            </span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-xs font-bold text-slate-400 uppercase">Safety Score</span>
+            <div className="text-2xl font-black text-emerald-600 mt-1">98 / 100</div>
+            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
+              <span className="material-symbols-outlined text-[14px]">star</span> Excellent Driver
+            </span>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
@@ -169,7 +243,7 @@ export default function DriverDashboardPage() {
                             {!notif.is_read ? (
                               <button
                                 onClick={() => handleMarkAsRead(notif.id)}
-                                className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                               >
                                 <span className="material-symbols-outlined text-[16px]">done_all</span>
                                 Mark as Acknowledged
@@ -198,40 +272,218 @@ export default function DriverDashboardPage() {
           {/* Quick Info Sidebar */}
           <div className="space-y-6">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
-                My Vehicle Status
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
+                My Assigned Vehicle
               </h3>
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-                  <span className="material-symbols-outlined text-[24px]">directions_car</span>
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                  <span className="material-symbols-outlined text-[28px]">directions_car</span>
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mb-1">Active Assignment</p>
-                  <p className="text-sm font-bold text-slate-900">Checking Assignment...</p>
+                  <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block mb-1">
+                    Active Assignment
+                  </p>
+                  <p className="text-base font-extrabold text-slate-900">2023 Ford Transit (#TRK-884)</p>
+                  <p className="text-xs font-medium text-slate-500">Plate: KXB-9201</p>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Your assigned vehicle details will appear here once linked by the Fleet Manager.
-              </p>
+
+              <div className="text-xs text-slate-600 space-y-2 border-t border-slate-100 pt-3">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">Insurance Status:</span>
+                  <span className="font-bold text-emerald-600">Valid (Expires Nov 2026)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">Registration:</span>
+                  <span className="font-bold text-emerald-600">Up to date</span>
+                </div>
+              </div>
             </div>
 
             <div className="bg-blue-50 rounded-2xl border border-blue-100 shadow-sm p-6 text-center">
               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
                 <span className="material-symbols-outlined text-blue-600">support_agent</span>
               </div>
-              <h4 className="text-sm font-bold text-slate-900 mb-2">Need Assistance?</h4>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Need Immediate Assistance?</h4>
               <p className="text-xs text-slate-600 font-medium mb-4">
-                Contact your fleet manager immediately for any compliance issues or breakdowns.
+                Contact your fleet manager or emergency dispatch for breakdowns.
               </p>
-              <button className="w-full bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
-                Contact Manager
+              <button
+                onClick={() => alert('Dialing Fleet Support: 1-800-555-FLEET')}
+                className="w-full bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm hover:bg-blue-700 transition-all cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[16px]">call</span>
+                Contact Fleet Manager
               </button>
             </div>
           </div>
         </div>
+
+        {/* LOG FUEL MODAL */}
+        {isFuelModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+              <div className="flex justify-between items-center border-b pb-3">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600">local_gas_station</span>
+                  Log Fuel Receipt
+                </h3>
+                <button
+                  onClick={() => setIsFuelModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <form onSubmit={handleFuelSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Current Odometer Reading (mi)</label>
+                  <input
+                    type="number"
+                    required
+                    placeholder="e.g. 45210"
+                    value={fuelForm.odometer}
+                    onChange={(e) => setFuelForm({ ...fuelForm, odometer: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Gallons / Liters</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="18.5"
+                      value={fuelForm.gallons}
+                      onChange={(e) => setFuelForm({ ...fuelForm, gallons: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Total Cost ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="65.00"
+                      value={fuelForm.cost}
+                      onChange={(e) => setFuelForm({ ...fuelForm, cost: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Fuel Station Name</label>
+                  <input
+                    type="text"
+                    placeholder="Shell / Chevron"
+                    value={fuelForm.station}
+                    onChange={(e) => setFuelForm({ ...fuelForm, station: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsFuelModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                  >
+                    Save Log
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* REPORT ISSUE MODAL */}
+        {isIssueModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+              <div className="flex justify-between items-center border-b pb-3">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-rose-600">report</span>
+                  Report Vehicle Issue
+                </h3>
+                <button
+                  onClick={() => setIsIssueModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <form onSubmit={handleIssueSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Issue Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Unusual noise in brakes"
+                    value={issueForm.title}
+                    onChange={(e) => setIssueForm({ ...issueForm, title: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Severity Level</label>
+                  <select
+                    value={issueForm.severity}
+                    onChange={(e) => setIssueForm({ ...issueForm, severity: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  >
+                    <option value="Low">Low - Monitor only</option>
+                    <option value="Medium">Medium - Needs attention soon</option>
+                    <option value="Critical">Critical - Unsafe to drive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Detailed Description</label>
+                  <textarea
+                    rows={3}
+                    required
+                    placeholder="Describe what happened or what you noticed..."
+                    value={issueForm.description}
+                    onChange={(e) => setIssueForm({ ...issueForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsIssueModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
+                  >
+                    Submit Report
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         <div><Footer /></div>
       </div>
     </LayoutWrapper>
-
   );
 }

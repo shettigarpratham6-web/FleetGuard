@@ -13,17 +13,20 @@ export default function HistoricalRecordsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [records, setRecords] = useState<any[]>(mockHistoricalServices);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null); // Fixed: Added missing state
 
   useEffect(() => {
     const fetchHistoricalRecords = async () => {
       try {
         setLoading(true);
+        setError(null);
         const data = await api.historicalServices.getAll();
         if (data && Array.isArray(data) && data.length > 0) {
           setRecords(data);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching historical records:', err);
+        setError(err?.message || 'Failed to fetch historical records. Showing fallback data.');
       } finally {
         setLoading(false);
       }
@@ -33,10 +36,12 @@ export default function HistoricalRecordsPage() {
 
   // Filtering Logic
   const filteredRecords = records.filter((record) => {
+    const query = searchQuery.toLowerCase();
     return (
-      (record.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (record.remarks || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (record.vehicle_id || '').toLowerCase().includes(searchQuery.toLowerCase())
+      (record.description || '').toLowerCase().includes(query) ||
+      (record.remarks || '').toLowerCase().includes(query) ||
+      (record.vehicle_id || '').toLowerCase().includes(query) ||
+      (record.vehicle_number || '').toLowerCase().includes(query)
     );
   });
 
@@ -86,6 +91,7 @@ export default function HistoricalRecordsPage() {
           </div>
         </div>
 
+        {/* Error Alert Display */}
         {error && (
           <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
             <span className="material-symbols-outlined text-[20px]">error</span>
@@ -113,20 +119,22 @@ export default function HistoricalRecordsPage() {
                 {filteredRecords.length > 0 ? (
                   filteredRecords.map((record, index) => (
                     <tr
-                      key={record.id}
+                      key={record.id || index}
                       className="hover:bg-surface-container-lowest transition-colors group"
                     >
-                      <td className="py-md px-lg text-on-surface">{new Date(record.service_date).toLocaleDateString()}</td>
+                      <td className="py-md px-lg text-on-surface">
+                        {record.service_date ? new Date(record.service_date).toLocaleDateString() : 'N/A'}
+                      </td>
                       <td className="py-md px-lg">
                         <div className="flex items-center gap-sm">
                           <div className="w-2 h-2 rounded-full bg-primary"></div>
                           <span className="font-body-md font-semibold text-primary">
-                            {record.vehicle_number || record.vehicle_id}
+                            {record.vehicle_number || record.vehicle_id || 'N/A'}
                           </span>
                         </div>
                       </td>
                       <td className="py-md px-lg font-body-md text-on-surface">
-                        {record.description}
+                        {record.description || 'N/A'}
                       </td>
                       <td className="py-md px-lg text-on-surface-variant">
                         {record.entered_by_username || 'SYS_MIG_001'}
