@@ -20,26 +20,28 @@ export default function LoginPage() {
   // Helper function to handle role-based navigation
   const redirectBasedOnRole = useCallback((role?: string) => {
     if (!role) {
-      router.replace('/login');
+      setCheckingAuth(false);
       return;
     }
 
-    if (
+    const target = (
       role === 'Admin' ||
       role === 'Fleet Manager' ||
       role === 'Manager'
-    ) {
-      router.replace('/dashboard');
-    } else {
-      router.replace('/driver');
-    }
+    ) ? '/dashboard' : '/driver';
+
+    router.replace(target);
   }, [router]);
 
   useEffect(() => {
     if (api.auth.isAuthenticated()) {
       const user = api.auth.getLocalUser();
       if (user?.role) {
-        redirectBasedOnRole(user.role);
+        // Defer navigation slightly to avoid Next.js mount state updates
+        const timer = setTimeout(() => {
+          redirectBasedOnRole(user.role);
+        }, 0);
+        return () => clearTimeout(timer);
       } else {
         api.auth.logout();
         setCheckingAuth(false);
@@ -76,47 +78,15 @@ export default function LoginPage() {
     }
   };
 
-  // Google Login Handler
-  const handleGoogleSuccess = async (result: any) => {
-    setLoading(true);
-    setError('');
-
-    try {
-      // 1. Get Firebase ID token
-      const idToken = await result.user.getIdToken();
-
-      // 2. Sync with backend API or local auth storage
-      let userRole = 'Admin';
-
-      if (api.auth.googleLogin) {
-        // If your API service has a googleLogin method
-        const response = await api.auth.googleLogin(idToken);
-        userRole = response?.user?.role || userRole;
-      } else {
-        // Fallback: save standard auth object locally
-        const userObj = {
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName,
-          role: 'Admin', // Default fallback role
-        };
-        localStorage.setItem('fleetguard_user', JSON.stringify(userObj));
-      }
-
-      // 3. Perform role-based redirection
-      redirectBasedOnRole(userRole);
-    } catch (err: any) {
-      console.error("Google Auth Sync Error:", err);
-      setError(err?.message || 'Google authentication failed to sync.');
-    } finally {
-      setLoading(false);
-    }
+  const handleGoogleSuccess = () => {
+    const user = api.auth.getLocalUser();
+    redirectBasedOnRole(user?.role || 'Admin');
   };
 
   if (checkingAuth) {
     return (
       <div className="flex min-h-screen w-screen items-center justify-center bg-slate-100">
-        <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

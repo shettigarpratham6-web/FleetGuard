@@ -24,16 +24,18 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { name: 'Blog', icon: 'article', href: '/blog' },
   ];
 
-  const handleLogout = (e: React.MouseEvent) => {
-    e.preventDefault();
-    api.auth.logout();
-    router.push('/login');
+  // Helper to close sidebar on mobile navigation
+  const closeSidebarOnMobile = () => {
+    if (isOpen) {
+      setIsOpen(false);
+    }
   };
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+  const handleLogout = (e: React.MouseEvent) => {
     e.preventDefault();
-    setIsOpen(false);
-    router.push(href);
+    closeSidebarOnMobile();
+    api.auth.logout();
+    router.push('/login');
   };
 
   return (
@@ -98,13 +100,13 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-3 px-md py-[10px] rounded-xl transition-all duration-200 ease-out font-medium text-[13.5px] group relative focus-ring ${isActive
-                  ? 'bg-primary text-white shadow-md'
-                  : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                   }`}
                 style={{
                   animationDelay: `${index * 40}ms`,
                 }}
-                onClick={(e) => handleNavClick(e, item.href)}
+                onClick={closeSidebarOnMobile}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {/* Active indicator bar */}
@@ -134,7 +136,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         <div className="px-3 space-y-2 pb-2">
           <Link
             href="/service-records/create"
-            onClick={(e) => handleNavClick(e, '/service-records/create')}
+            onClick={closeSidebarOnMobile}
             className="focus-ring block rounded-xl"
           >
             <button
@@ -152,15 +154,16 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           </Link>
 
           <nav className="mt-2 space-y-1" aria-label="Secondary navigation">
-            <a
-              href="#"
+            <Link
+              href="/support"
+              onClick={closeSidebarOnMobile}
               className="flex items-center gap-3 text-slate-600 px-3.5 py-2.5 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition-colors text-[13px] font-bold group"
             >
               <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform" aria-hidden="true">
                 help
               </span>
               Support
-            </a>
+            </Link>
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 text-rose-600 px-3.5 py-2.5 hover:bg-rose-50 rounded-xl transition-colors text-[13px] font-bold text-left cursor-pointer group border-0 bg-transparent"
