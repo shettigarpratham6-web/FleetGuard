@@ -13,6 +13,12 @@ const overrideLogRoutes = require('./routes/overrideLogRoutes');
 const checklistRoutes = require('./routes/checklistRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 
+const maintenanceRoutes = require('./routes/maintenanceRoutes');
+
+const driverRoutes = require("./routes/driverRoutes");
+
+
+
 const app = express();
 
 // Enable CORS
@@ -37,10 +43,13 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/override-logs', overrideLogRoutes);
 app.use('/api/checklists', checklistRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
+app.use("/api/drivers", driverRoutes);
+
 
 // Base route status check
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Welcome to the FleetGuard API',
     status: 'online',
     timestamp: new Date()
@@ -55,7 +64,7 @@ app.use((req, res, next) => {
 // Global central error handler middleware
 app.use((err, req, res, next) => {
   console.error('API Error:', err);
-  
+
   // PostgreSQL connection errors
   if (err.message && err.message.includes('ECONNREFUSED')) {
     return res.status(500).json({ error: 'Database connection failed. Please ensure PostgreSQL is running.' });
