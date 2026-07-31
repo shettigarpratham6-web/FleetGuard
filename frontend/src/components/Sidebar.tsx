@@ -20,7 +20,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
     { name: 'Predictive Risk', icon: 'analytics', href: '/predictive-risk' },
     { name: 'Historical Records', icon: 'history', href: '/historical-records' },
-    { name: 'About Us', icon: 'phone', href:'/about'}
+    { name: 'About Us', icon: 'info', href: '/about' },
+    { name: 'Blog', icon: 'article', href: '/blog' },
   ];
 
   const handleLogout = (e: React.MouseEvent) => {
@@ -34,7 +35,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       {/* Mobile Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-45 md:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-45 md:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />
@@ -42,36 +43,28 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
       {/* Sidebar Panel */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-sidebar-width py-lg border-r border-outline-variant flex flex-col flex-shrink-0 z-50 md:translate-x-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        style={{
-          background: 'linear-gradient(180deg, #f8f6f8 0%, #f3f1f3 100%)',
-          transition: 'transform 0.3s cubic-bezier(0.4,0,0.2,1)',
-        }}
+        className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-white border-r border-slate-200/90 py-6 flex flex-col flex-shrink-0 z-50 md:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+          } transition-transform duration-300 ease-in-out`}
         role="navigation"
         aria-label="Main navigation"
       >
         {/* Brand Header */}
-        <div className="px-lg mb-xl flex items-center justify-between">
-          <div className="flex items-center gap-sm">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-base shadow-md"
-              style={{ background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)' }}
-            >
+        <div className="px-6 mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-blue-500/20">
               FG
             </div>
             <div>
-              <h1 className="font-sans font-black text-[16px] leading-tight text-primary">
+              <h1 className="font-sans font-black text-[16px] leading-tight text-slate-900">
                 FleetGuard
               </h1>
-              <p className="text-[11px] text-on-surface-variant leading-tight">
+              <p className="text-[11px] font-semibold text-slate-500 leading-tight">
                 Logistics Enterprise
               </p>
             </div>
           </div>
           <button
-            className="md:hidden text-on-surface-variant p-1.5 hover:bg-surface-container-high rounded-full transition-colors focus-ring cursor-pointer"
+            className="md:hidden text-slate-500 p-1.5 hover:bg-slate-100 rounded-full transition-colors focus:outline-none cursor-pointer"
             onClick={() => setIsOpen(false)}
             aria-label="Close sidebar"
           >
@@ -86,29 +79,25 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         </button>
 
         {/* Section Label */}
-        <div className="px-lg mb-xs">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">
+        <div className="px-6 mb-3">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
             Navigation
           </span>
         </div>
 
         {/* Navigation list */}
-        <nav className="flex-1 overflow-y-auto custom-scrollbar px-sm space-y-xs" aria-label="Sidebar">
-          {navItems.map((item, index) => {
-            const isActive = pathname.startsWith(item.href);
+        <nav className="flex-1 overflow-y-auto px-3 space-y-1" aria-label="Sidebar">
+          {navItems.map((item) => {
+            const isActive = pathname?.startsWith(item.href) || false;
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-md py-[10px] rounded-xl transition-all duration-200 ease-out font-medium text-[13.5px] group relative focus-ring ${
-                  isActive
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
-                }`}
-                style={{
-                  animationDelay: `${index * 40}ms`,
-                }}
-                onClick={() => setIsOpen(false)}
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 font-bold text-[13.5px] group relative ${isActive
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  }`}
+                onClick={(e) => handleNavClick(e, item.href)}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {/* Active indicator bar */}
@@ -119,9 +108,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                   />
                 )}
                 <span
-                  className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${
-                    isActive ? 'fill scale-110' : 'group-hover:scale-110'
-                  }`}
+                  className={`material-symbols-outlined text-[20px] transition-transform duration-200 ${isActive ? 'fill scale-110' : 'group-hover:scale-110'
+                    }`}
                   aria-hidden="true"
                 >
                   {item.icon}
@@ -133,31 +121,27 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         </nav>
 
         {/* Divider */}
-        <div className="mx-lg my-md h-px bg-outline-variant/50" />
+        <div className="mx-6 my-4 h-px bg-slate-200/80" />
 
         {/* Footer Quick Actions */}
-        <div className="px-sm space-y-xs pb-sm">
+        <div className="px-3 space-y-2 pb-2">
           <Link
             href="/service-records/create"
-            onClick={() => setIsOpen(false)}
-            className="focus-ring block rounded-xl"
+            onClick={(e) => handleNavClick(e, '/service-records/create')}
+            className="block rounded-xl"
           >
-            <button
-              className="w-full py-[10px] px-md rounded-xl font-semibold text-[13px] flex items-center justify-center gap-2 cursor-pointer shadow-md active:shadow-sm btn-scale border-0 transition-all duration-200"
-              style={{
-                background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)',
-                color: 'white',
-              }}
-            >
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">add</span>
+            <button className="w-full py-2.5 px-4 rounded-xl font-extrabold text-[13px] flex items-center justify-center gap-2 cursor-pointer bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 active:scale-98 transition-all border-0">
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                add
+              </span>
               New Service Entry
             </button>
           </Link>
 
-          <nav className="mt-xs space-y-xs" aria-label="Secondary navigation">
+          <nav className="mt-2 space-y-1" aria-label="Secondary navigation">
             <a
               href="#"
-              className="flex items-center gap-3 text-on-surface-variant px-md py-[10px] hover:bg-surface-container-high rounded-xl transition-colors text-[13px] font-medium focus-ring group"
+              className="flex items-center gap-3 text-slate-600 px-3.5 py-2.5 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition-colors text-[13px] font-bold group"
             >
               <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform" aria-hidden="true">
                 help
@@ -166,7 +150,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             </a>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 text-error px-md py-[10px] hover:bg-error-container/15 rounded-xl transition-colors text-[13px] font-medium text-left cursor-pointer focus-ring group border-0 bg-transparent"
+              className="w-full flex items-center gap-3 text-rose-600 px-3.5 py-2.5 hover:bg-rose-50 rounded-xl transition-colors text-[13px] font-bold text-left cursor-pointer group border-0 bg-transparent"
             >
               <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform" aria-hidden="true">
                 logout
