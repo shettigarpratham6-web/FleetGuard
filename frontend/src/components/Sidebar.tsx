@@ -15,6 +15,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const router = useRouter();
 
   const navItems = [
+    { name: 'Home', icon: 'home', href: '/home' },
     { name: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
     { name: 'Service Records', icon: 'description', href: '/service-records' },
     { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
@@ -100,8 +101,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-3 px-md py-[10px] rounded-xl transition-all duration-200 ease-out font-medium text-[13.5px] group relative focus-ring ${isActive
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                   }`}
                 style={{
                   animationDelay: `${index * 40}ms`,

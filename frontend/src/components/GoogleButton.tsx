@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { UserCredential } from "firebase/auth";
 import { loginWithGoogle } from "@/services/authService";
+import { api } from "@/services/api";
 
 export interface GoogleButtonProps
     extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -39,8 +40,12 @@ export default function GoogleButton({
                 if (typeof window !== "undefined" && token) {
                     localStorage.setItem("fleetguard_token", token);
                 }
-            } catch (tokenError) {
-                console.warn("Could not retrieve Firebase ID token:", tokenError);
+                
+                // Sync Firebase user with PostgreSQL backend
+                await api.auth.syncGoogleUser();
+            } catch (syncError) {
+                console.warn("Could not retrieve Firebase ID token or sync user:", syncError);
+                throw new Error("Failed to synchronize Google account with the backend.");
             }
 
             console.log("Google Login successful:", result.user);

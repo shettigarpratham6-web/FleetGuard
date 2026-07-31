@@ -1,6 +1,6 @@
 import { User, Vehicle, ServiceRecord, MaintenanceRisk, Notification, HistoricalService } from '@/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api';
 
 const getAuthHeaders = (isMultipart = false) => {
   const headers: Record<string, string> = {};
@@ -66,6 +66,19 @@ export const api = {
         localStorage.removeItem('fleetguard_token');
         localStorage.removeItem('fleetguard_user');
       }
+    },
+
+    syncGoogleUser: async () => {
+      const res = await fetch(`${API_BASE_URL}/auth/sync`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({}),
+      });
+      const data = await handleResponse<{ user: User }>(res);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('fleetguard_user', JSON.stringify(data.user));
+      }
+      return data;
     },
 
     getCurrentUser: async () => {
@@ -264,6 +277,26 @@ export const api = {
         body: JSON.stringify(data),
       });
       return handleResponse(res);
+    },
+  },
+
+  compliance: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/compliance`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ documents: any[] }>(res);
+      return data.documents;
+    },
+    create: async (formData: FormData) => {
+      const headers = getAuthHeaders(true); // true = isMultipart
+      const res = await fetch(`${API_BASE_URL}/compliance`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      const data = await handleResponse<{ message: string; document: any }>(res);
+      return data.document;
     },
   },
 };
