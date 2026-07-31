@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
-import { Notification, User } from '@/types';
-import Footer from '@/components/footer';
+import { Notification, User, Vehicle } from '@/types';
+import Footer from '@/components/Footer';
 
 export default function DriverDashboardPage() {
   const router = useRouter();
@@ -14,7 +14,7 @@ export default function DriverDashboardPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modals state
+  // Modals state (All states properly initialized)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [contactSubject, setContactSubject] = useState('General Query');
   const [contactMessage, setContactMessage] = useState('');
@@ -28,6 +28,22 @@ export default function DriverDashboardPage() {
   const [compFile, setCompFile] = useState<File | null>(null);
   const [compStatus, setCompStatus] = useState({ type: '', msg: '' });
   const [compLoading, setCompLoading] = useState(false);
+
+  // Additional modal states referenced in header buttons
+  const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
+  const [fuelGallons, setFuelGallons] = useState('');
+  const [fuelCost, setFuelCost] = useState('');
+  const [fuelOdo, setFuelOdo] = useState('');
+  const [fuelStation, setFuelStation] = useState('');
+  const [fuelStatus, setFuelStatus] = useState({ type: '', msg: '' });
+  const [fuelLoading, setFuelLoading] = useState(false);
+
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [issueVehicleId, setIssueVehicleId] = useState('');
+  const [issueDesc, setIssueDesc] = useState('');
+  const [issuePriority, setIssuePriority] = useState('Medium');
+  const [issueStatus, setIssueStatus] = useState({ type: '', msg: '' });
+  const [issueLoading, setIssueLoading] = useState(false);
 
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
@@ -46,6 +62,7 @@ export default function DriverDashboardPage() {
           api.vehicles.getAll()
         ]);
         setNotifications(notifs || []);
+        setVehicles(vehs || []);
       } catch (err) {
         console.error('Failed to load driver dashboard data', err);
       } finally {
@@ -75,7 +92,6 @@ export default function DriverDashboardPage() {
     setContactStatus({ type: '', msg: '' });
 
     try {
-      // Find admins/managers to notify
       const admins = await api.auth.getUsers('Admin');
       const managers = await api.auth.getUsers('Fleet Manager');
       const targetUsers = [...admins, ...managers];
@@ -84,7 +100,6 @@ export default function DriverDashboardPage() {
         throw new Error('No managers found to contact.');
       }
 
-      // Send to the first admin/manager for simplicity
       const adminId = targetUsers[0].id;
 
       await api.notifications.create({
@@ -134,6 +149,68 @@ export default function DriverDashboardPage() {
     }
   };
 
+  const handleFuelSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fuelGallons || !fuelCost || !fuelOdo) return;
+    
+    setFuelLoading(true);
+    setFuelStatus({ type: '', msg: '' });
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API
+      setFuelStatus({ type: 'success', msg: 'Fuel log saved successfully!' });
+      
+      setTimeout(() => {
+        setIsFuelModalOpen(false);
+        setFuelStatus({ type: '', msg: '' });
+        setFuelGallons(''); setFuelCost(''); setFuelOdo(''); setFuelStation('');
+      }, 1500);
+    } catch (err: any) {
+      setFuelStatus({ type: 'error', msg: 'Failed to log fuel.' });
+    } finally {
+      setFuelLoading(false);
+    }
+  };
+
+  const handleIssueSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!issueVehicleId || !issueDesc) return;
+    
+    setIssueLoading(true);
+    setIssueStatus({ type: '', msg: '' });
+    
+    try {
+      const admins = await api.auth.getUsers('Admin');
+      const managers = await api.auth.getUsers('Fleet Manager');
+      const targetUsers = [...admins, ...managers];
+      
+      if (targetUsers.length > 0) {
+        const adminId = targetUsers[0].id;
+        const vInfo = vehicles.find(v => v.id === issueVehicleId);
+        const vName = vInfo ? `${vInfo.manufacturer} ${vInfo.model} (${vInfo.registration_number})` : issueVehicleId;
+        
+        await api.notifications.create({
+          user_id: adminId,
+          title: `Vehicle Issue Reported (${issuePriority} Priority)`,
+          message: `Vehicle: ${vName}. Issue: ${issueDesc}`,
+          notification_type: 'Maintenance Alert'
+        });
+      }
+      
+      setIssueStatus({ type: 'success', msg: 'Issue successfully reported to maintenance.' });
+      
+      setTimeout(() => {
+        setIsIssueModalOpen(false);
+        setIssueStatus({ type: '', msg: '' });
+        setIssueVehicleId(''); setIssueDesc(''); setIssuePriority('Medium');
+      }, 2000);
+    } catch (err: any) {
+      setIssueStatus({ type: 'error', msg: 'Failed to report issue.' });
+    } finally {
+      setIssueLoading(false);
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (loading) {
@@ -163,6 +240,13 @@ export default function DriverDashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setIsComplianceModalOpen(true)}
+              className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px] text-blue-600">upload_file</span>
+              Add Compliance
+            </button>
             <button
               onClick={() => setIsFuelModalOpen(true)}
               className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
@@ -233,7 +317,6 @@ export default function DriverDashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
           {/* Main Notifications Feed */}
           <div className="lg:col-span-2 space-y-6">
             <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -331,7 +414,7 @@ export default function DriverDashboardPage() {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mb-1">Active Assignment</p>
-                  <p className="text-sm font-bold text-slate-900">Assigned Vehicles</p>
+                  <p className="text-sm font-bold text-slate-900">Assigned Fleet Vehicle</p>
                 </div>
               </div>
               <p className="text-xs text-slate-500 font-medium leading-relaxed">
@@ -348,7 +431,7 @@ export default function DriverDashboardPage() {
                 Contact your fleet manager immediately for any compliance issues, part requests, or breakdowns.
               </p>
               <button
-                onClick={() => alert('Dialing Fleet Support: 1-800-555-FLEET')}
+                onClick={() => setIsContactModalOpen(true)}
                 className="w-full bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm hover:bg-blue-700 transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[16px]">call</span>
@@ -357,9 +440,333 @@ export default function DriverDashboardPage() {
             </div>
           </div>
         </div>
+        {/* COMPLIANCE UPLOAD MODAL */}
+        {/* COMPLIANCE UPLOAD MODAL */}
+        {isComplianceModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto"
+            onClick={() => setIsComplianceModalOpen(false)}
+          >
+            <div
+              className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0"
+              style={{ width: '100%', maxWidth: '28rem' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg">upload_file</span>
+                  Upload Document
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsComplianceModalOpen(false)}
+                  className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div className="p-6">
+                {compStatus.msg && (
+                  <div className={`p-3 rounded-xl mb-5 text-sm font-semibold flex items-center gap-2 ${compStatus.type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                    <span className="material-symbols-outlined text-[18px]">
+                      {compStatus.type === 'error' ? 'error' : 'check_circle'}
+                    </span>
+                    {compStatus.msg}
+                  </div>
+                )}
+
+                <form onSubmit={handleComplianceSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Select Vehicle</label>
+                    <select
+                      value={compVehicleId}
+                      onChange={(e) => setCompVehicleId(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-blue-500"
+                      required
+                    >
+                      <option value="">-- Choose Vehicle --</option>
+                      {vehicles.map((v: any) => (
+                        <option key={v.id} value={v.id}>
+                          {v.manufacturer} {v.model} ({v.license_plate || v.registration_number || v.id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Document Type</label>
+                    <select
+                      value={compType}
+                      onChange={(e) => setCompType(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-blue-500"
+                    >
+                      <option value="Insurance">Insurance</option>
+                      <option value="Registration">Registration</option>
+                      <option value="Inspection">Inspection</option>
+                      <option value="Permit">Permit</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Expiry Date</label>
+                    <input
+                      type="date"
+                      value={compExpiry}
+                      onChange={(e) => setCompExpiry(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Upload File</label>
+                    <input
+                      type="file"
+                      onChange={(e) => setCompFile(e.target.files ? e.target.files[0] : null)}
+                      className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsComplianceModalOpen(false)}
+                      className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={compLoading}
+                      className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                    >
+                      {compLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Uploading...
+                        </>
+                      ) : 'Submit Document'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CONTACT MANAGER MODAL */}
+        {isContactModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto"
+            onClick={() => setIsContactModalOpen(false)}
+          >
+            <div
+              className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0"
+              style={{ width: '100%', maxWidth: '28rem' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg">
+                    support_agent
+                  </span>
+                  Contact Manager
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsContactModalOpen(false)}
+                  className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-6">
+                {contactStatus?.msg && (
+                  <div
+                    className={`p-3 rounded-xl mb-5 text-sm font-semibold flex items-center gap-2 ${contactStatus.type === 'error'
+                        ? 'bg-rose-50 text-rose-600'
+                        : 'bg-emerald-50 text-emerald-700'
+                      }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {contactStatus.type === 'error' ? 'error' : 'check_circle'}
+                    </span>
+                    {contactStatus.msg}
+                  </div>
+                )}
+
+                <form onSubmit={handleContactSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Subject
+                    </label>
+                    <select
+                      value={contactSubject}
+                      onChange={(e) => setContactSubject(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="General Query">General Query</option>
+                      <option value="Compliance Issue">Compliance Issue</option>
+                      <option value="Breakdown / Repair">Breakdown / Repair</option>
+                      <option value="Shift Schedule">Shift Schedule</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Message
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={contactMessage}
+                      onChange={(e) => setContactMessage(e.target.value)}
+                      placeholder="Describe your inquiry or issue..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsContactModalOpen(false)}
+                      className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={contactLoading}
+                      className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                    >
+                      {contactLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        'Send Message'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LOG FUEL MODAL */}
+        {isFuelModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto" onClick={() => setIsFuelModalOpen(false)}>
+            <div className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0" style={{ width: '100%', maxWidth: '28rem' }} onClick={(e) => e.stopPropagation()}>
+              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg">local_gas_station</span>
+                  Log Fuel
+                </h3>
+                <button type="button" onClick={() => setIsFuelModalOpen(false)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="p-6">
+                {fuelStatus.msg && (
+                  <div className={`p-3 rounded-xl mb-5 text-sm font-semibold flex items-center gap-2 ${fuelStatus.type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                    <span className="material-symbols-outlined text-[18px]">{fuelStatus.type === 'error' ? 'error' : 'check_circle'}</span>
+                    {fuelStatus.msg}
+                  </div>
+                )}
+                <form onSubmit={handleFuelSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Gallons/Liters</label>
+                      <input type="number" step="0.01" value={fuelGallons} onChange={(e) => setFuelGallons(e.target.value)} required placeholder="e.g. 15.4" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Total Cost ($)</label>
+                      <input type="number" step="0.01" value={fuelCost} onChange={(e) => setFuelCost(e.target.value)} required placeholder="e.g. 45.00" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Odometer (mi)</label>
+                      <input type="number" value={fuelOdo} onChange={(e) => setFuelOdo(e.target.value)} required placeholder="e.g. 45210" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Gas Station</label>
+                      <input type="text" value={fuelStation} onChange={(e) => setFuelStation(e.target.value)} required placeholder="e.g. Shell #442" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 pt-4 mt-2">
+                    <button type="button" onClick={() => setIsFuelModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer">Cancel</button>
+                    <button type="submit" disabled={fuelLoading} className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2">
+                      {fuelLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</> : 'Save Log'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* REPORT ISSUE MODAL */}
+        {isIssueModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto" onClick={() => setIsIssueModalOpen(false)}>
+            <div className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0" style={{ width: '100%', maxWidth: '28rem' }} onClick={(e) => e.stopPropagation()}>
+              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-rose-600 bg-rose-50 p-1.5 rounded-lg">report</span>
+                  Report Vehicle Issue
+                </h3>
+                <button type="button" onClick={() => setIsIssueModalOpen(false)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="p-6">
+                {issueStatus.msg && (
+                  <div className={`p-3 rounded-xl mb-5 text-sm font-semibold flex items-center gap-2 ${issueStatus.type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                    <span className="material-symbols-outlined text-[18px]">{issueStatus.type === 'error' ? 'error' : 'check_circle'}</span>
+                    {issueStatus.msg}
+                  </div>
+                )}
+                <form onSubmit={handleIssueSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Select Vehicle</label>
+                    <select value={issueVehicleId} onChange={(e) => setIssueVehicleId(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                      <option value="">-- Choose Vehicle --</option>
+                      {vehicles.map(v => <option key={v.id} value={v.id}>{v.manufacturer} {v.model} ({v.registration_number})</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Issue Priority</label>
+                    <select value={issuePriority} onChange={(e) => setIssuePriority(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                      <option value="Low">Low - Minor cosmetic issue</option>
+                      <option value="Medium">Medium - Needs attention soon</option>
+                      <option value="High">High - Safety concern or broken part</option>
+                      <option value="Critical">Critical - Do Not Drive</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Describe Issue</label>
+                    <textarea rows={3} value={issueDesc} onChange={(e) => setIssueDesc(e.target.value)} required placeholder="e.g. Check engine light came on during trip." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500" />
+                  </div>
+                  <div className="flex justify-end gap-3 pt-4 mt-2">
+                    <button type="button" onClick={() => setIsIssueModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer">Cancel</button>
+                    <button type="submit" disabled={issueLoading} className="px-5 py-2.5 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-all shadow-md shadow-rose-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2">
+                      {issueLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Submitting...</> : 'Submit Issue'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
         <div><Footer /></div>
       </div>
     </LayoutWrapper>
-
   );
 }

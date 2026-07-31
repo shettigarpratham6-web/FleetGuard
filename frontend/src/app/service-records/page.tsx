@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle, ServiceRecord, User } from '@/types';
-import Footer from '@/components/footer';
+import Footer from '@/components/Footer';
 
 export default function ServiceRecordsPage() {
   const router = useRouter();

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle } from '@/types';
-import Footer from "@/components/footer"
+import Footer from "@/components/Footer"
 export default function CreateVehiclePage() {
   const router = useRouter();
 

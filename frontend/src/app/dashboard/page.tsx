@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { User, Vehicle, ServiceRecord, MaintenanceRisk } from '@/types';
-import Footer from '@/components/footer';
+import Footer from '@/components/Footer';
 
 export default function DashboardPage() {
   const router = useRouter();

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { api } from '@/services/api';
@@ -13,17 +13,38 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [userRole, setUserRole] = useState<string>('Driver');
 
-  const navItems = [
-    { name: 'Home', icon: 'home', href: '/home' },
-    { name: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
-    { name: 'Service Records', icon: 'description', href: '/service-records' },
-    { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
-    { name: 'Predictive Risk', icon: 'analytics', href: '/predictive-risk' },
-    { name: 'Historical Records', icon: 'history', href: '/historical-records' },
-    { name: 'About Us', icon: 'info', href: '/about' },
-    { name: 'Blog', icon: 'article', href: '/blog' },
-  ];
+  useEffect(() => {
+    const user = api.auth.getLocalUser();
+    if (user && user.role) {
+      setUserRole(user.role);
+    }
+  }, []);
+
+  const isAdminOrManager = userRole === 'Admin' || userRole === 'Fleet Manager' || userRole === 'Manager';
+
+  let navItems = [];
+  if (isAdminOrManager) {
+    navItems = [
+      { name: 'Home', icon: 'home', href: '/home' },
+      { name: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
+      { name: 'Service Records', icon: 'description', href: '/service-records' },
+      { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
+      { name: 'Predictive Risk', icon: 'analytics', href: '/predictive-risk' },
+      { name: 'Historical Records', icon: 'history', href: '/historical-records' },
+      { name: 'About Us', icon: 'info', href: '/about' },
+      { name: 'Blog', icon: 'article', href: '/blog' },
+    ];
+  } else {
+    navItems = [
+      { name: 'Home', icon: 'home', href: '/home' },
+      { name: 'Driver Portal', icon: 'badge', href: '/driver' },
+      { name: 'My Logbook', icon: 'menu_book', href: '/logbook' },
+      { name: 'About Us', icon: 'info', href: '/about' },
+      { name: 'Blog', icon: 'article', href: '/blog' },
+    ];
+  }
 
   // Helper to close sidebar on mobile navigation
   const closeSidebarOnMobile = () => {
@@ -135,24 +156,26 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
         {/* Footer Quick Actions */}
         <div className="px-3 space-y-2 pb-2">
-          <Link
-            href="/service-records/create"
-            onClick={closeSidebarOnMobile}
-            className="focus-ring block rounded-xl"
-          >
-            <button
-              className="w-full py-[10px] px-md rounded-xl font-semibold text-[13px] flex items-center justify-center gap-2 cursor-pointer shadow-md active:shadow-sm btn-scale border-0 transition-all duration-200"
-              style={{
-                background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)',
-                color: 'white',
-              }}
+          {isAdminOrManager && (
+            <Link
+              href="/service-records/create"
+              onClick={closeSidebarOnMobile}
+              className="focus-ring block rounded-xl"
             >
-              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-                add
-              </span>
-              New Service Entry
-            </button>
-          </Link>
+              <button
+                className="w-full py-[10px] px-md rounded-xl font-semibold text-[13px] flex items-center justify-center gap-2 cursor-pointer shadow-md active:shadow-sm btn-scale border-0 transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)',
+                  color: 'white',
+                }}
+              >
+                <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                  add
+                </span>
+                New Service Entry
+              </button>
+            </Link>
+          )}
 
           <nav className="mt-2 space-y-1" aria-label="Secondary navigation">
             <Link
