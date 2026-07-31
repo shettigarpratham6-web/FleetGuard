@@ -15,6 +15,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const router = useRouter();
 
   const navItems = [
+    { name: 'Home', icon: 'home', href: '/home' },
     { name: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
     { name: 'Service Records', icon: 'description', href: '/service-records' },
     { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
