@@ -41,7 +41,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       {/* Mobile Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-45 md:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-45 md:hidden transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />
@@ -59,25 +59,22 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         aria-label="Main navigation"
       >
         {/* Brand Header */}
-        <div className="px-lg mb-xl flex items-center justify-between">
-          <div className="flex items-center gap-sm">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-base shadow-md"
-              style={{ background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)' }}
-            >
+        <div className="px-6 mb-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-base shadow-md shadow-blue-500/20">
               FG
             </div>
             <div>
-              <h1 className="font-sans font-black text-[16px] leading-tight text-primary">
+              <h1 className="font-sans font-black text-[16px] leading-tight text-slate-900">
                 FleetGuard
               </h1>
-              <p className="text-[11px] text-on-surface-variant leading-tight">
+              <p className="text-[11px] font-semibold text-slate-500 leading-tight">
                 Logistics Enterprise
               </p>
             </div>
           </div>
           <button
-            className="md:hidden text-on-surface-variant p-1.5 hover:bg-surface-container-high rounded-full transition-colors focus-ring cursor-pointer"
+            className="md:hidden text-slate-500 p-1.5 hover:bg-slate-100 rounded-full transition-colors focus:outline-none cursor-pointer"
             onClick={() => setIsOpen(false)}
             aria-label="Close sidebar"
           >
@@ -86,8 +83,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         </div>
 
         {/* Section Label */}
-        <div className="px-lg mb-xs">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/60">
+        <div className="px-6 mb-3">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
             Navigation
           </span>
         </div>
@@ -131,10 +128,10 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         </nav>
 
         {/* Divider */}
-        <div className="mx-lg my-md h-px bg-outline-variant/50" />
+        <div className="mx-6 my-4 h-px bg-slate-200/80" />
 
         {/* Footer Quick Actions */}
-        <div className="px-sm space-y-xs pb-sm">
+        <div className="px-3 space-y-2 pb-2">
           <Link
             href="/service-records/create"
             onClick={(e) => handleNavClick(e, '/service-records/create')}
@@ -154,10 +151,10 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             </button>
           </Link>
 
-          <nav className="mt-xs space-y-xs" aria-label="Secondary navigation">
+          <nav className="mt-2 space-y-1" aria-label="Secondary navigation">
             <a
               href="#"
-              className="flex items-center gap-3 text-on-surface-variant px-md py-[10px] hover:bg-surface-container-high rounded-xl transition-colors text-[13px] font-medium focus-ring group"
+              className="flex items-center gap-3 text-slate-600 px-3.5 py-2.5 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition-colors text-[13px] font-bold group"
             >
               <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform" aria-hidden="true">
                 help
@@ -166,7 +163,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             </a>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 text-error px-md py-[10px] hover:bg-error-container/15 rounded-xl transition-colors text-[13px] font-medium text-left cursor-pointer focus-ring group border-0 bg-transparent"
+              className="w-full flex items-center gap-3 text-rose-600 px-3.5 py-2.5 hover:bg-rose-50 rounded-xl transition-colors text-[13px] font-bold text-left cursor-pointer group border-0 bg-transparent"
             >
               <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform" aria-hidden="true">
                 logout

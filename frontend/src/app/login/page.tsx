@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
 import GoogleButton from "@/components/GoogleButton";
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ export default function LoginPage() {
     ) {
       router.replace('/dashboard');
     } else {
-      router.replace('/driver');   // or your driver page
+      router.replace('/driver');
     }
   }, [router]);
 
@@ -36,10 +37,8 @@ export default function LoginPage() {
     if (api.auth.isAuthenticated()) {
       const user = api.auth.getLocalUser();
       if (user?.role) {
-        // Valid user data - proceed with role-based redirect
         redirectBasedOnRole(user.role);
       } else {
-        // Invalid auth state - clear and show login form
         api.auth.logout();
         setCheckingAuth(false);
       }
@@ -61,8 +60,6 @@ export default function LoginPage() {
 
     try {
       await api.auth.login(email, password);
-
-      // Always use the stored user
       const user = api.auth.getLocalUser();
 
       if (!user) {
@@ -98,14 +95,9 @@ export default function LoginPage() {
           <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xl border border-white/20">
             FG
           </div>
-          <div>
-            <h1 className="font-headline-sm text-headline-sm font-black tracking-tight text-white">
-              FleetGuard
-            </h1>
-            <p className="font-body-sm text-[12px] text-on-primary-container">
-              LOGISTICS ENTERPRISE
-            </p>
-          </div>
+          <span className="text-xl font-black tracking-tight text-white">
+            Simply<span className="text-blue-500">Fleet</span>
+          </span>
         </div>
 
         {/* Message */}
@@ -239,8 +231,15 @@ export default function LoginPage() {
             <p>• Admin: <code className="bg-surface-container px-1 py-0.5 rounded font-mono">admin@fleetguard.com</code> / <code className="bg-surface-container px-1 py-0.5 rounded font-mono">admin123</code></p>
             <p>• Manager: <code className="bg-surface-container px-1 py-0.5 rounded font-mono">manager@fleetguard.com</code> / <code className="bg-surface-container px-1 py-0.5 rounded font-mono">manager123</code></p>
           </div>
+
         </div>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="relative z-20 w-full py-4 text-center text-xs text-slate-500 font-medium">
+        © {new Date().getFullYear()} Simply Fleet Enterprise. All rights reserved.
+      </footer>
+
     </div>
   );
 }

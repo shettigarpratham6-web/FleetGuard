@@ -4,9 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
-
-
-
+import { CheckCircle2, ShieldCheck, Truck, Zap } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -42,7 +40,6 @@ export default function RegisterPage() {
         profile_picture: profilePicture || undefined,
       });
 
-      // Navigate safely to dashboard upon successful registration
       router.push('/dashboard');
     } catch (err: any) {
       setError(err?.message || 'Registration failed. Please try again.');
@@ -52,300 +49,255 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-screen bg-background overflow-y-auto">
-      {/* Visual Showcase Panel (Left - Hidden on Mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-xl text-on-primary bg-[#0a0e17]">
+    <div className="min-h-screen w-full bg-slate-50 font-sans text-slate-900 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
 
-        {/* Base radial gradient foundation */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `
-              radial-gradient(ellipse 80% 60% at 20% 40%, rgba(220,38,38,0.15) 0%, transparent 60%),
-              radial-gradient(ellipse 60% 50% at 75% 75%, rgba(30,58,138,0.18) 0%, transparent 60%),
-              radial-gradient(ellipse 100% 80% at 50% 0%, rgba(15,23,42,0.98) 0%, #0a0e17 80%)
-            `,
-          }}
-        />
-
-        {/* Animated red glowing orb — top-left */}
-        <div
-          className="absolute rounded-full blur-3xl opacity-30 animate-pulse pointer-events-none"
-          style={{
-            width: '480px',
-            height: '480px',
-            top: '-100px',
-            left: '-80px',
-            background: 'radial-gradient(circle, rgba(239,68,68,0.55) 0%, rgba(185,28,28,0.22) 50%, transparent 70%)',
-            animationDuration: '4s',
-          }}
-        />
-
-        {/* Animated blue orb — bottom-right */}
-        <div
-          className="absolute rounded-full blur-3xl opacity-20 animate-pulse pointer-events-none"
-          style={{
-            width: '540px',
-            height: '540px',
-            bottom: '-120px',
-            right: '-120px',
-            background: 'radial-gradient(circle, rgba(59,130,246,0.4) 0%, rgba(29,78,216,0.18) 50%, transparent 70%)',
-            animationDuration: '6s',
-            animationDelay: '2s',
-          }}
-        />
-
-        {/* Subtle mid orb (center) */}
-        <div
-          className="absolute rounded-full blur-2xl opacity-10 animate-pulse pointer-events-none"
-          style={{
-            width: '300px',
-            height: '300px',
-            top: '45%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            background: 'radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%)',
-            animationDuration: '8s',
-            animationDelay: '1s',
-          }}
-        />
-
-        {/* Dot-matrix grid overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.07] pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }}
-        />
-
-        {/* Scanline texture */}
-        <div
-          className="absolute inset-0 opacity-[0.025] pointer-events-none"
-          style={{
-            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.5) 2px, rgba(255,255,255,0.5) 3px)',
-          }}
-        />
-
-        {/* Vignette edges */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.6) 100%)' }}
-        />
-
-        {/* Left arc edge decoration */}
-        <div
-          className="pointer-events-none absolute -left-16 top-0 h-full border-r border-white/10 backdrop-blur-[1px]"
-          style={{
-            width: '40%',
-            borderRadius: '0 100% 100% 0',
-            background: 'linear-gradient(to right, rgba(255,255,255,0.02), transparent)',
-          }}
-        />
-
-
-        {/* Top Header */}
-        <div className="z-10 flex items-center gap-md">
-          <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center font-bold text-xl border border-white/20">
-            FG
+      {/* Header Bar */}
+      <nav className="w-full bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="bg-blue-600 text-white font-extrabold text-sm px-2.5 py-1 rounded-md shadow-sm">
+            SF
           </div>
-          <div>
-            <h1 className="font-headline-sm text-headline-sm font-black tracking-tight text-white">
-              FleetGuard
-            </h1>
-            <p className="font-body-sm text-[12px] text-on-primary-container">
-              LOGISTICS ENTERPRISE
-            </p>
-          </div>
-        </div>
-
-        {/* Message */}
-        <div className="z-10 max-w-md my-auto space-y-md">
-          <span className="inline-block px-sm py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-semibold border border-white/15">
-            Enterprise Fleet Management
+          <span className="text-lg font-bold tracking-tight text-slate-900">
+            Simply<span className="text-blue-600">Fleet</span>
           </span>
-          <h2 className="font-display-lg text-display-lg font-black tracking-tight text-white leading-tight">
-            Streamline your fleet and service operations.
-          </h2>
-          <p className="font-body-lg text-body-lg text-on-primary-container leading-relaxed">
-            Register your organizational profile to track vehicle compliance, manage service center records, and calculate predictive maintenance risks in real-time.
-          </p>
-        </div>
+        </Link>
+      </nav>
 
-        {/* Footer info */}
-        <div className="z-10 border-t border-white/10 pt-md flex items-center justify-between text-body-sm text-on-primary-container">
-          <span>&copy; {new Date().getFullYear()} FleetGuard Logistics</span>
-          <div className="flex gap-md">
-            <a href="#" className="hover:underline">Privacy Policy</a>
-            <a href="#" className="hover:underline">Terms of Service</a>
+      {/* Main Container - Centered Two-Column Layout */}
+      <main className="flex-1 w-full flex items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+
+        {/* Outer Grid Container */}
+        <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+
+          {/* LEFT SIDE CARD: Feature Highlight Showcase */}
+          <div className="lg:col-span-5 bg-slate-900 text-white rounded-2xl p-8 border border-slate-800 shadow-xl flex flex-col justify-between relative overflow-hidden">
+            
+            {/* Subtle Gradient Glow Backgrounds */}
+            <div className="absolute -top-20 -left-20 w-48 h-48 bg-blue-600/30 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-20 -right-20 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 space-y-6">
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-xs font-semibold">
+                <Zap size={14} /> AI-Powered Fleet Management
+              </div>
+
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
+                  Streamline Your Fleet Operations
+                </h2>
+                <p className="mt-3 text-slate-400 text-sm leading-relaxed">
+                  Join thousands of fleet managers, drivers, and service centers keeping vehicles compliant and maintenance on schedule.
+                </p>
+              </div>
+
+              {/* Feature Checklist */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="text-blue-400 shrink-0 mt-0.5" size={18} />
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-200">Automated Maintenance Alerts</h4>
+                    <p className="text-xs text-slate-400">Stay ahead of service intervals before costly breakdowns occur.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="text-emerald-400 shrink-0 mt-0.5" size={18} />
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-200">Digital Inspections & DVIR</h4>
+                    <p className="text-xs text-slate-400">Drivers capture mobile logs with photo proof and defect reporting.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Truck className="text-amber-400 shrink-0 mt-0.5" size={18} />
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-200">Real-Time Fleet Analytics</h4>
+                    <p className="text-xs text-slate-400">Track operating costs, fuel consumption, and asset health effortlessly.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Testimonial / Quote */}
+            <div className="relative z-10 pt-8 border-t border-slate-800/80 mt-8">
+              <p className="text-xs italic text-slate-300">
+                "Simply Fleet cut our maintenance downtime by over 30% within the first two months."
+              </p>
+              <span className="block mt-2 text-[11px] font-semibold text-slate-400">
+                — Fleet Operations Team
+              </span>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Registration Form Panel (Right) */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-md md:p-xl bg-surface-container-lowest">
-        <div className="w-full max-w-[500px] space-y-lg">
-          {/* Header */}
-          <div className="space-y-xs">
-            <h2 className="font-headline-lg text-headline-lg font-bold text-on-surface">
-              Create Your Account
-            </h2>
-            <p className="font-body-md text-body-md text-on-surface-variant">
-              Already have an account?{' '}
-              <Link href="/login" className="text-primary font-semibold hover:underline">
-                Sign In
-              </Link>
-            </p>
-          </div>
+          {/* RIGHT SIDE CARD: Registration Form */}
+          <div className="lg:col-span-7 bg-white p-7 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xl shadow-slate-200/50 flex flex-col justify-center space-y-5">
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-md">
+            {/* Form Title & Subtitle */}
+            <div className="space-y-1">
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+                Create an account
+              </h1>
+              <p className="text-xs text-slate-500">
+                Register your profile to manage fleet operations
+              </p>
+            </div>
+
+            {/* Error Message */}
             {error && (
-              <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
-                <span className="material-symbols-outlined text-[20px]">error</span>
+              <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs text-center font-medium">
                 {error}
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
-              {/* Full Name */}
-              <div>
-                <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                  Full Name *
+            {/* Registration Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+
+              {/* Full Name & Username */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Full Name *
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="johndoe"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              {/* Email Field */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Email Address *
                 </label>
                 <input
                   required
-                  type="text"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none"
+                  type="email"
+                  placeholder="john@enterprise.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
                 />
               </div>
 
-              {/* Username */}
-              <div>
-                <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                  Username
+              {/* Password Field */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Password *
+                </label>
+                <input
+                  required
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
+                />
+              </div>
+
+              {/* Role & Phone Number */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Role *
+                  </label>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-900 cursor-pointer"
+                  >
+                    <option value="Fleet Manager">Fleet Manager</option>
+                    <option value="Admin">Administrator</option>
+                    <option value="Service Center">Service Center</option>
+                    <option value="Driver">Driver</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="+1 (555) 000-0000"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              {/* Profile Picture URL */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Profile Picture URL
                 </label>
                 <input
                   type="text"
-                  placeholder="johndoe"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none"
+                  placeholder="https://example.com/avatar.jpg"
+                  value={profilePicture}
+                  onChange={(e) => setProfilePicture(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-xl text-sm outline-none focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-900 placeholder:text-slate-400"
                 />
               </div>
-            </div>
 
-            {/* Email */}
-            <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                Email Address *
-              </label>
-              <input
-                required
-                type="email"
-                placeholder="john@enterprise.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                Password *
-              </label>
-              <input
-                required
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-md">
-              {/* Role Select */}
-              <div>
-                <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                  Role *
-                </label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none cursor-pointer"
-                >
-                  <option value="Fleet Manager">Fleet Manager</option>
-                  <option value="Admin">Administrator</option>
-                  <option value="Service Center">Service Center (Mechanic)</option>
-                  <option value="Driver">Driver</option>
-                </select>
-              </div>
-
-              {/* Phone Number */}
-              <div>
-                <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                  Phone Number
-                </label>
+              {/* Terms and Conditions */}
+              <div className="flex items-center gap-2 pt-1">
                 <input
-                  type="text"
-                  placeholder="+1 (555) 000-0000"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none"
+                  id="terms"
+                  required
+                  type="checkbox"
+                  className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
                 />
+                <label htmlFor="terms" className="text-xs text-slate-600 font-medium cursor-pointer">
+                  I agree to the Terms of Service & Privacy Policy
+                </label>
               </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl shadow-md transition-all text-sm disabled:opacity-50 cursor-pointer active:scale-[0.99] mt-2"
+              >
+                {loading ? 'Creating account...' : 'Register Account'}
+              </button>
+            </form>
+
+            {/* Navigation Link to Login */}
+            <div className="pt-2 text-center text-xs text-slate-500">
+              Already have an account?{' '}
+              <Link href="/login" className="text-blue-600 font-bold hover:underline">
+                Sign In
+              </Link>
             </div>
 
-            {/* Profile Picture URL */}
-            <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-xs">
-                Profile Picture URL
-              </label>
-              <input
-                type="text"
-                placeholder="https://example.com/avatar.jpg"
-                value={profilePicture}
-                onChange={(e) => setProfilePicture(e.target.value)}
-                className="w-full bg-surface-container rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary px-md py-sm text-body-md font-body-md text-on-surface transition-all outline-none"
-              />
-            </div>
+          </div>
 
-            {/* Terms and Conditions checkbox */}
-            <div className="flex items-start gap-sm pt-xs">
-              <input
-                id="terms"
-                required
-                type="checkbox"
-                className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary cursor-pointer mt-0.5"
-              />
-              <label htmlFor="terms" className="font-body-sm text-body-sm text-on-surface-variant cursor-pointer select-none">
-                I agree to the Terms of Service and Privacy Policy.
-              </label>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:opacity-90 active:opacity-80 text-on-primary font-semibold py-sm rounded-lg flex items-center justify-center gap-xs shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed pt-2.5 pb-2.5 mt-md"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-on-primary border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-[20px]">person_add</span>
-                  <span>Register Account</span>
-                </>
-              )}
-            </button>
-          </form>
         </div>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full border-t border-slate-200/60 bg-white py-3 text-center text-xs text-slate-400">
+        © {new Date().getFullYear()} Simply Fleet. All rights reserved.
+      </footer>
     </div>
   );
 }
