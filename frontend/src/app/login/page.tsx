@@ -19,26 +19,28 @@ export default function LoginPage() {
   // Helper function to handle role-based navigation
   const redirectBasedOnRole = useCallback((role?: string) => {
     if (!role) {
-      router.replace('/login');
+      setCheckingAuth(false);
       return;
     }
 
-    if (
+    const target = (
       role === 'Admin' ||
       role === 'Fleet Manager' ||
       role === 'Manager'
-    ) {
-      router.replace('/dashboard');
-    } else {
-      router.replace('/driver');
-    }
+    ) ? '/dashboard' : '/driver';
+
+    router.replace(target);
   }, [router]);
 
   useEffect(() => {
     if (api.auth.isAuthenticated()) {
       const user = api.auth.getLocalUser();
       if (user?.role) {
-        redirectBasedOnRole(user.role);
+        // Defer navigation slightly to avoid Next.js mount state updates
+        const timer = setTimeout(() => {
+          redirectBasedOnRole(user.role);
+        }, 0);
+        return () => clearTimeout(timer);
       } else {
         api.auth.logout();
         setCheckingAuth(false);
@@ -75,10 +77,15 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleSuccess = () => {
+    const user = api.auth.getLocalUser();
+    redirectBasedOnRole(user?.role || 'Admin');
+  };
+
   if (checkingAuth) {
     return (
       <div className="flex min-h-screen w-screen items-center justify-center bg-slate-100">
-        <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -240,7 +247,7 @@ export default function LoginPage() {
               {/* Google Button */}
               <div className="pt-2">
                 <GoogleButton
-                  onSuccess={() => redirectBasedOnRole(api.auth.getLocalUser()?.role || 'Admin')}
+                  onSuccess={handleGoogleSuccess}
                   onError={(err: any) => setError(err?.message || 'Google sign in failed.')}
                 />
               </div>
@@ -256,7 +263,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* ----- RIGHT CARD: MATCHING SCREENSHOT DESIGN ----- */}
+          {/* ----- RIGHT CARD: DESIGN ----- */}
           <div className="hidden lg:flex bg-blue-600 rounded-3xl p-8 lg:p-10 flex-col justify-between items-center text-center text-white relative overflow-hidden shadow-xl shadow-blue-600/20 min-h-[560px]">
 
             {/* Background Soft Glow Circles */}

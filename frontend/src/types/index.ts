@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   username: string;
@@ -7,6 +8,9 @@ export interface User {
   role: 'Admin' | 'Fleet Manager' | 'Driver' | 'Service Center' | 'Manager' | 'User';
   profile_picture?: string;
   status: 'Active' | 'Inactive';
+  firebase_uid?: string;
+  created_at?: string;
+  branch_id?: string;
 }
 
 export interface Vehicle {

@@ -24,6 +24,13 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     { name: 'Blog', icon: 'article', href: '/blog' },
   ];
 
+  // Close sidebar on mobile when navigating
+  const handleNavClick = () => {
+    if (isOpen) {
+      setIsOpen(false);
+    }
+  };
+
   const handleLogout = (e: React.MouseEvent) => {
     e.preventDefault();
     api.auth.logout();
@@ -152,15 +159,16 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           </Link>
 
           <nav className="mt-2 space-y-1" aria-label="Secondary navigation">
-            <a
-              href="#"
+            <Link
+              href="/support"
+              onClick={handleNavClick}
               className="flex items-center gap-3 text-slate-600 px-3.5 py-2.5 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition-colors text-[13px] font-bold group"
             >
               <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform" aria-hidden="true">
                 help
               </span>
               Support
-            </a>
+            </Link>
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 text-rose-600 px-3.5 py-2.5 hover:bg-rose-50 rounded-xl transition-colors text-[13px] font-bold text-left cursor-pointer group border-0 bg-transparent"
