@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
+import Footer from "@/components/footer";
 
 interface RiskItem {
   id: string;
@@ -151,7 +152,7 @@ export default function PredictiveRiskPage() {
       onSearchChange={setSearchQuery}
     >
       <div className="min-h-full bg-[#0f172a] text-slate-100 p-lg md:p-margin-desktop space-y-lg">
-        
+
         {/* Page Header & Actions */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-md border-b border-slate-800 pb-md">
           <div>
@@ -163,7 +164,7 @@ export default function PredictiveRiskPage() {
               AI-driven telemetry alerts for proactive fleet intervention.
             </p>
           </div>
-          
+
           {/* Filtering selectors */}
           <div className="flex flex-wrap gap-sm w-full md:w-auto">
             <select
@@ -176,7 +177,7 @@ export default function PredictiveRiskPage() {
               <option>Medium Risk</option>
               <option>Low Risk</option>
             </select>
-            
+
             <select
               value={branchFilter}
               onChange={(e) => setBranchFilter(e.target.value)}
@@ -203,7 +204,7 @@ export default function PredictiveRiskPage() {
 
         {/* Bento Grid layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg">
-          
+
           {/* Left Block: Critical Alert Summary */}
           <div className="lg:col-span-4 bg-[#1e293b] rounded-xl border border-error/30 p-lg shadow-[0_4px_20px_-5px_rgba(186,26,26,0.2)] relative overflow-hidden flex flex-col justify-between h-72 lg:h-auto">
             <div className="absolute top-0 right-0 w-32 h-32 bg-error/10 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
@@ -241,7 +242,7 @@ export default function PredictiveRiskPage() {
                 Priority Intervention Required
               </h3>
             </div>
-            
+
             <div className="flex-1 overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -313,7 +314,7 @@ export default function PredictiveRiskPage() {
             Watchlist
             <span className="font-body-sm text-slate-400 font-normal">Sorted by Severity</span>
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-md">
             {watchlistItems.length > 0 ? (
               watchlistItems.map((item) => {
@@ -328,18 +329,17 @@ export default function PredictiveRiskPage() {
                         {item.unit}
                       </div>
                       <span
-                        className={`border rounded px-sm py-xs text-xs font-bold uppercase ${
-                          isMedium
+                        className={`border rounded px-sm py-xs text-xs font-bold uppercase ${isMedium
                             ? 'bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/30'
                             : 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30'
-                        }`}
+                          }`}
                       >
                         {item.risk}
                       </span>
                     </div>
 
                     <h4 className="font-semibold text-white mb-xs truncate">{item.model}</h4>
-                    
+
                     <div className="bg-[#0f172a] rounded p-sm border border-slate-800/50 mb-md flex-1">
                       <p className="font-body-sm text-slate-300 line-clamp-3 leading-relaxed">
                         {item.alert}
@@ -370,7 +370,7 @@ export default function PredictiveRiskPage() {
             )}
           </div>
         </div>
-
+        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

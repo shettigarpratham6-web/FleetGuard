@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { UserCredential } from "firebase/auth";
+import { useRouter } from "next/navigation";
 import { loginWithGoogle } from "@/services/authService";
 import { api } from "@/services/api";
 
@@ -9,6 +10,7 @@ export interface GoogleButtonProps
     extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     onSuccess?: (result: UserCredential) => void;
     onError?: (error: unknown) => void;
+    redirectTo?: string; // Target page after login (default: /dashboard)
     className?: string;
     children?: React.ReactNode;
 }
@@ -16,6 +18,7 @@ export interface GoogleButtonProps
 export default function GoogleButton({
     onSuccess,
     onError,
+    redirectTo = "/dashboard",
     className = "",
     children,
     onClick,
@@ -24,6 +27,7 @@ export default function GoogleButton({
     ...props
 }: GoogleButtonProps) {
     const [loading, setLoading] = useState(false);
+    const router = useRouter();
 
     const handleLogin = async (e: React.MouseEvent<HTMLButtonElement>) => {
         if (onClick) {
@@ -35,12 +39,13 @@ export default function GoogleButton({
             setLoading(true);
             const result = await loginWithGoogle();
 
+            // Store Firebase token locally
             try {
                 const token = await result.user.getIdToken();
                 if (typeof window !== "undefined" && token) {
                     localStorage.setItem("fleetguard_token", token);
                 }
-                
+
                 // Sync Firebase user with PostgreSQL backend
                 await api.auth.syncGoogleUser();
             } catch (syncError) {
@@ -49,9 +54,15 @@ export default function GoogleButton({
             }
 
             console.log("Google Login successful:", result.user);
+
+            // Notify parent component if callback provided
             if (onSuccess) {
                 onSuccess(result);
             }
+
+            // --- REDIRECT TO NEXT PAGE ---
+            router.push(redirectTo);
+            router.refresh();
         } catch (error) {
             console.error("Google Login error:", error);
             if (onError) {
@@ -103,4 +114,4 @@ export default function GoogleButton({
             )}
         </button>
     );
-}
+}

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
-import { Notification, User, Vehicle } from '@/types';
+import { Notification, User } from '@/types';
+import Footer from '@/components/footer';
 
 export default function DriverDashboardPage() {
   const router = useRouter();
@@ -45,12 +46,6 @@ export default function DriverDashboardPage() {
           api.vehicles.getAll()
         ]);
         setNotifications(notifs || []);
-        
-        // Let driver select from vehicles in their branch (or all if not filtered yet)
-        setVehicles(vehs || []);
-        if (vehs && vehs.length > 0) {
-          setCompVehicleId(vehs[0].id);
-        }
       } catch (err) {
         console.error('Failed to load driver dashboard data', err);
       } finally {
@@ -64,7 +59,7 @@ export default function DriverDashboardPage() {
   const handleMarkAsRead = async (id: string) => {
     try {
       await api.notifications.markAsRead(id);
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, is_read: true } : n)
       );
     } catch (err) {
@@ -154,8 +149,8 @@ export default function DriverDashboardPage() {
 
   return (
     <LayoutWrapper>
-      <div className="p-6 md:p-8 max-w-5xl mx-auto bg-slate-50 min-h-screen text-slate-900 space-y-8 relative">
-        
+      <div className="p-6 md:p-8 max-w-5xl mx-auto bg-slate-50 min-h-screen text-slate-900 space-y-8">
+
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-200">
           <div>
@@ -167,13 +162,10 @@ export default function DriverDashboardPage() {
               Driver Portal • Safe driving today!
             </p>
           </div>
-          <div className="flex gap-3 flex-wrap">
-            <button 
-              onClick={() => setIsComplianceModalOpen(true)}
-              className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px] text-emerald-600">verified</span>
-              Add Compliance
+          <div className="flex gap-3">
+            <button className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-blue-600">local_gas_station</span>
+              Log Fuel
             </button>
             <button className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">report</span>
@@ -200,7 +192,7 @@ export default function DriverDashboardPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Main Notifications Feed */}
           <div className="lg:col-span-2 space-y-6">
             <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -213,7 +205,7 @@ export default function DriverDashboardPage() {
                 notifications.map((notif) => {
                   const isCompliance = notif.notification_type === 'Compliance Alert' || notif.title.toLowerCase().includes('expir');
                   const isMaintenance = notif.notification_type === 'Maintenance Alert' || notif.title.toLowerCase().includes('service');
-                  
+
                   let icon = 'notifications';
                   let iconColor = 'text-blue-600';
                   let bgColor = 'bg-blue-50';
@@ -229,8 +221,8 @@ export default function DriverDashboardPage() {
                   }
 
                   return (
-                    <div 
-                      key={notif.id} 
+                    <div
+                      key={notif.id}
                       className={`relative bg-white border ${notif.is_read ? 'border-slate-200' : 'border-blue-300 ring-1 ring-blue-300'} rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow group overflow-hidden`}
                     >
                       {!notif.is_read && (
@@ -238,7 +230,7 @@ export default function DriverDashboardPage() {
                           <span className="material-symbols-outlined text-white text-[14px] absolute -top-[34px] -left-[18px]">new_releases</span>
                         </div>
                       )}
-                      
+
                       <div className="flex gap-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bgColor} ${notif.is_read ? 'opacity-60' : ''}`}>
                           <span className={`material-symbols-outlined text-[24px] ${iconColor}`}>{icon}</span>
@@ -255,10 +247,10 @@ export default function DriverDashboardPage() {
                           <p className={`text-sm leading-relaxed mb-4 ${notif.is_read ? 'text-slate-500' : 'text-slate-700 font-medium'}`}>
                             {notif.message}
                           </p>
-                          
+
                           <div className="flex items-center gap-3">
                             {!notif.is_read ? (
-                              <button 
+                              <button
                                 onClick={() => handleMarkAsRead(notif.id)}
                                 className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                               >
@@ -314,186 +306,15 @@ export default function DriverDashboardPage() {
               <p className="text-xs text-slate-600 font-medium mb-4 leading-relaxed">
                 Contact your fleet manager immediately for any compliance issues, part requests, or breakdowns.
               </p>
-              <button 
-                onClick={() => setIsContactModalOpen(true)}
-                className="w-full bg-blue-600 text-white font-bold text-xs py-3 rounded-xl shadow-sm hover:shadow-md hover:bg-blue-700 transition-all cursor-pointer"
-              >
+              <button className="w-full bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
                 Contact Manager
               </button>
             </div>
           </div>
         </div>
+        <div><Footer /></div>
       </div>
-
-      {/* --- MODAL: Contact Manager --- */}
-      {isContactModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-slide-up">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-600">mail</span>
-                Message Fleet Manager
-              </h3>
-              <button onClick={() => setIsContactModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            
-            <form onSubmit={handleContactSubmit} className="p-6 space-y-4">
-              {contactStatus.msg && (
-                <div className={`p-3 rounded-xl text-sm font-medium ${contactStatus.type === 'error' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                  {contactStatus.msg}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Subject</label>
-                <select 
-                  value={contactSubject}
-                  onChange={(e) => setContactSubject(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                >
-                  <option>General Query</option>
-                  <option>Vehicle Breakdown</option>
-                  <option>Maintenance Request</option>
-                  <option>Compliance Issue</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Message Details</label>
-                <textarea 
-                  required
-                  rows={4}
-                  placeholder="Describe your issue or request..."
-                  value={contactMessage}
-                  onChange={(e) => setContactMessage(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
-                />
-              </div>
-
-              <div className="pt-2 flex gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setIsContactModalOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={contactLoading}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {contactLoading ? 'Sending...' : (
-                    <>
-                      <span className="material-symbols-outlined text-[18px]">send</span> Send
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL: Add Compliance Document --- */}
-      {isComplianceModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-slide-up">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-emerald-600">verified</span>
-                Add Compliance Document
-              </h3>
-              <button onClick={() => setIsComplianceModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            
-            <form onSubmit={handleComplianceSubmit} className="p-6 space-y-4">
-              {compStatus.msg && (
-                <div className={`p-3 rounded-xl text-sm font-medium ${compStatus.type === 'error' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                  {compStatus.msg}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Select Vehicle</label>
-                <select 
-                  required
-                  value={compVehicleId}
-                  onChange={(e) => setCompVehicleId(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
-                >
-                  <option value="" disabled>-- Select Vehicle --</option>
-                  {vehicles.map(v => (
-                    <option key={v.id} value={v.id}>{v.registration_number} ({v.model})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Document Type</label>
-                  <select 
-                    value={compType}
-                    onChange={(e) => setCompType(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
-                  >
-                    <option>Insurance</option>
-                    <option>Inspection</option>
-                    <option>PUC</option>
-                    <option>Fitness Certificate</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Expiry Date</label>
-                  <input 
-                    required
-                    type="date"
-                    value={compExpiry}
-                    onChange={(e) => setCompExpiry(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Upload File (PDF/Image)</label>
-                <input 
-                  required
-                  type="file"
-                  accept=".pdf,image/*"
-                  onChange={(e) => setCompFile(e.target.files ? e.target.files[0] : null)}
-                  className="w-full border border-dashed border-slate-300 rounded-xl px-4 py-3 text-sm bg-slate-50 focus:bg-white focus:border-emerald-400 outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
-                />
-              </div>
-
-              <div className="pt-2 flex gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => setIsComplianceModalOpen(false)}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={compLoading}
-                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {compLoading ? 'Uploading...' : (
-                    <>
-                      <span className="material-symbols-outlined text-[18px]">upload</span> Upload Doc
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </LayoutWrapper>
+
   );
 }

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle, ServiceRecord, User } from '@/types';
+import Footer from '@/components/footer';
 
 export default function ServiceRecordsPage() {
   const router = useRouter();
@@ -91,7 +92,7 @@ export default function ServiceRecordsPage() {
             <div className="p-4 border-b border-outline-variant/40">
               <div className="skeleton h-4 w-32 rounded" />
             </div>
-            {[1,2,3,4,5].map(i => (
+            {[1, 2, 3, 4, 5].map(i => (
               <div key={i} className="flex items-center gap-4 p-4 border-b border-outline-variant/30">
                 <div className="skeleton h-8 w-8 rounded-lg flex-shrink-0" />
                 <div className="flex-1 space-y-1.5">
@@ -244,7 +245,7 @@ export default function ServiceRecordsPage() {
             <table className="w-full text-left border-collapse" role="table" aria-label="Service records">
               <thead className="bg-surface-container-low border-b border-outline-variant/40 sticky top-0 z-10">
                 <tr>
-                  {['Vehicle #','Date','Mileage','Service Type','Mechanic/Shop','Cost','Status','Actions'].map((col, i) => (
+                  {['Vehicle #', 'Date', 'Mileage', 'Service Type', 'Mechanic/Shop', 'Cost', 'Status', 'Actions'].map((col, i) => (
                     <th
                       key={col}
                       className={`py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant ${i === 2 || i === 5 ? 'text-right' : ''} ${i === 7 ? 'text-right' : ''}`}
@@ -386,6 +387,7 @@ export default function ServiceRecordsPage() {
             </div>
           </div>
         </div>
+        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );
