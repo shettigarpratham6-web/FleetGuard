@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { sendEmail } = require('../services/notificationService');
 
 exports.createNotification = async (req, res, next) => {
   try {
@@ -8,8 +9,8 @@ exports.createNotification = async (req, res, next) => {
       return res.status(400).json({ error: 'User ID, title, and message are required.' });
     }
 
-    // Verify user exists
-    const userCheck = await db.query('SELECT id FROM users WHERE id = $1', [user_id]);
+    // Verify user exists and retrieve contact information
+    const userCheck = await db.query('SELECT id, email, full_name FROM users WHERE id = $1', [user_id]);
     if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: 'User not found.' });
     }
@@ -36,9 +37,10 @@ exports.createNotification = async (req, res, next) => {
       notification_type || 'Alert'
     ]);
 
+    const createdNotification = result.rows[0];
     res.status(201).json({
       message: 'Notification created successfully',
-      notification: result.rows[0]
+      notification: createdNotification
     });
   } catch (error) {
     next(error);

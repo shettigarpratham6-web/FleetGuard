@@ -65,6 +65,23 @@ exports.getHistoricalServicesByVehicle = async (req, res, next) => {
   }
 };
 
+exports.getAllHistoricalServices = async (req, res, next) => {
+  try {
+    const queryText = `
+      SELECT hs.*, u.username as entered_by_username, v.vehicle_number, v.model, v.manufacturer
+      FROM historical_services hs
+      LEFT JOIN users u ON hs.entered_by = u.id
+      LEFT JOIN vehicles v ON hs.vehicle_id = v.id
+      ORDER BY hs.service_date DESC, hs.created_at DESC
+    `;
+
+    const result = await db.query(queryText);
+    res.status(200).json({ records: result.rows });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.deleteHistoricalService = async (req, res, next) => {
   try {
     const { id } = req.params;

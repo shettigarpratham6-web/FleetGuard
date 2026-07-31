@@ -10,7 +10,7 @@ router.get('/', auth, complianceController.getAllDocuments);
 router.get('/vehicle/:vehicleId/status', auth, complianceController.getVehicleComplianceStatus);
 router.get('/vehicle/:vehicleId', auth, complianceController.getDocumentsByVehicle);
 router.get('/:id', auth, complianceController.getDocumentById);
-router.put('/:id', auth, authorize(['Admin', 'Fleet Manager']), upload.single('file'), complianceController.updateDocument);
+router.put('/:id', auth, upload.single('file'), complianceController.updateDocument);
 router.delete('/:id', auth, authorize(['Admin']), complianceController.deleteDocument);
 
 module.exports = router;
