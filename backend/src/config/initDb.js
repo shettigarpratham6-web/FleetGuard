@@ -31,7 +31,7 @@ const initDb = async () => {
         role VARCHAR(20) DEFAULT 'Driver' CHECK (role IN ('Admin','Fleet Manager','Driver','Service Center', 'Manager', 'User')),
         profile_picture TEXT,
         branch_id UUID,
-        status VARCHAR(20) DEFAULT 'Active' CHECK (status IN ('Active','Inactive')),
+        status VARCHAR(20) DEFAULT 'Active' CHECK (status IN ('Active','Inactive','Pending','Rejected')),
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -45,6 +45,11 @@ const initDb = async () => {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);
       ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
       ALTER TABLE users ALTER COLUMN username DROP NOT NULL;
+      
+      UPDATE users SET status = 'Active' WHERE status NOT IN ('Active','Inactive','Pending','Rejected') OR status IS NULL;
+      
+      ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;
+      ALTER TABLE users ADD CONSTRAINT users_status_check CHECK (status IN ('Active','Inactive','Pending','Rejected'));
     `);
 
     // Update existing users to have full_name if null
@@ -74,7 +79,7 @@ const initDb = async () => {
 
     await client.query(`
       ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('Admin','Fleet Manager','Driver','Service Center', 'Manager', 'User'));
-      ALTER TABLE users ADD CONSTRAINT users_status_check CHECK (status IN ('Active','Inactive'));
+      ALTER TABLE users ADD CONSTRAINT users_status_check CHECK (status IN ('Active','Inactive','Pending','Rejected'));
     `);
 
     // 2. Create branches table
@@ -164,7 +169,8 @@ const initDb = async () => {
           CHECK (
             issue_date IS NULL
             OR expiry_date >= issue_date
-          )
+          ),
+        UNIQUE(vehicle_id, document_type)
       );
     `);
 
@@ -245,7 +251,7 @@ const initDb = async () => {
         vehicle_id UUID REFERENCES vehicles(id) ON DELETE CASCADE,
         driver_id UUID REFERENCES users(id),
         assigned_by UUID REFERENCES users(id),
-        assigned_date TIMESTAMPTZ DEFAULT NOW(),
+        assignment_date TIMESTAMPTZ DEFAULT NOW(),
         return_date TIMESTAMPTZ,
         assignment_status VARCHAR(30) DEFAULT 'Active' CHECK (
           assignment_status IN (

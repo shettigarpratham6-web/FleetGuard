@@ -90,8 +90,8 @@ exports.getAllVehicles = async (req, res, next) => {
         SELECT
           v.id AS vehicle_id,
           CASE
-            WHEN COUNT(ld.document_type) FILTER (WHERE ld.document_type IN ('Insurance', 'Inspection', 'PUC', 'Fitness Certificate')) < 4 THEN 'Non-Compliant'
-            WHEN BOOL_OR(ld.document_type IN ('Insurance', 'Inspection', 'PUC', 'Fitness Certificate') AND ld.expiry_date < CURRENT_DATE) THEN 'Non-Compliant'
+            WHEN COUNT(ld.document_type) FILTER (WHERE ld.document_type IN ('Insurance', 'PUC', 'Fitness Certificate')) < 3 THEN 'Non-Compliant'
+            WHEN BOOL_OR(ld.document_type IN ('Insurance', 'PUC', 'Fitness Certificate') AND ld.expiry_date < CURRENT_DATE) THEN 'Non-Compliant'
             ELSE 'Compliant'
           END AS compliance_status
         FROM vehicles v
@@ -200,8 +200,8 @@ exports.getVehicleById = async (req, res, next) => {
         SELECT
           v.id AS vehicle_id,
           CASE
-            WHEN COUNT(ld.document_type) FILTER (WHERE ld.document_type IN ('Insurance', 'Inspection', 'PUC', 'Fitness Certificate')) < 4 THEN 'Non-Compliant'
-            WHEN BOOL_OR(ld.document_type IN ('Insurance', 'Inspection', 'PUC', 'Fitness Certificate') AND ld.expiry_date < CURRENT_DATE) THEN 'Non-Compliant'
+            WHEN COUNT(ld.document_type) FILTER (WHERE ld.document_type IN ('Insurance', 'PUC', 'Fitness Certificate')) < 3 THEN 'Non-Compliant'
+            WHEN BOOL_OR(ld.document_type IN ('Insurance', 'PUC', 'Fitness Certificate') AND ld.expiry_date < CURRENT_DATE) THEN 'Non-Compliant'
             ELSE 'Compliant'
           END AS compliance_status
         FROM vehicles v
@@ -354,18 +354,83 @@ exports.updateVehicle = async (req, res, next) => {
 };
 
 exports.deleteVehicle = async (req, res, next) => {
+  const client = await db.pool.connect();
   try {
     const { id } = req.params;
 
-    const queryText = 'DELETE FROM vehicles WHERE id = $1 RETURNING *';
-    const result = await db.query(queryText, [id]);
+    await client.query('BEGIN');
 
+    // Delete dependent records first to avoid foreign key violations
+    // (Some have ON DELETE CASCADE, but this ensures all related data is safely removed)
+    await client.query('DELETE FROM override_logs WHERE vehicle_id = $1', [id]);
+    await client.query('DELETE FROM checklists WHERE vehicle_id = $1', [id]);
+    await client.query('DELETE FROM assignments WHERE vehicle_id = $1', [id]);
+    await client.query('DELETE FROM notifications WHERE vehicle_id = $1', [id]);
+    await client.query('DELETE FROM maintenance_risks WHERE vehicle_id = $1', [id]);
+    await client.query('DELETE FROM historical_services WHERE vehicle_id = $1', [id]);
+    await client.query('DELETE FROM service_records WHERE vehicle_id = $1', [id]);
+    await client.query('DELETE FROM compliance_documents WHERE vehicle_id = $1', [id]);
+
+    const queryText = 'DELETE FROM vehicles WHERE id = $1 RETURNING *';
+    const result = await client.query(queryText, [id]);
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Vehicle not found.' });
+    }
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      message: 'Vehicle and all related records deleted successfully',
+      vehicle: result.rows[0]
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    next(error);
+  } finally {
+    client.release();
+  }
+};
+
+exports.updateVehicleStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, current_mileage } = req.body;
+
+    let queryParts = [];
+    let values = [];
+    let count = 1;
+
+    if (status) {
+      queryParts.push(`status = $${count++}`);
+      values.push(status);
+    }
+    if (current_mileage !== undefined) {
+      queryParts.push(`current_mileage = GREATEST(current_mileage, $${count++})`);
+      values.push(current_mileage);
+    }
+
+    if (queryParts.length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided for update.' });
+    }
+
+    values.push(id);
+    const queryText = `
+      UPDATE vehicles
+      SET ${queryParts.join(', ')}
+      WHERE id = $${count}
+      RETURNING *
+    `;
+
+    const result = await db.query(queryText, values);
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Vehicle not found.' });
     }
 
     res.status(200).json({
-      message: 'Vehicle deleted successfully',
+      message: 'Vehicle status updated successfully',
       vehicle: result.rows[0]
     });
   } catch (error) {

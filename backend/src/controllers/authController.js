@@ -35,12 +35,21 @@ exports.register = async (req, res, next) => {
     // Save to Postgres
     const insertQuery = `
       INSERT INTO users (username, email, password_hash, full_name, role, phone_number, profile_picture, status, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active', NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
       RETURNING id, username, email, full_name, role, phone_number, profile_picture, created_at, updated_at
     `;
     
     const validRoles = ['Admin', 'Fleet Manager', 'Driver', 'Service Center', 'Manager', 'User'];
     const finalRole = role && validRoles.includes(role) ? role : 'Driver';
+    const initialStatus = finalRole === 'Driver' ? 'Pending' : 'Active';
+
+    // Forcefully fix the DB constraint just in case it wasn't updated on restart
+    try {
+      await db.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;`);
+      await db.query(`ALTER TABLE users ADD CONSTRAINT users_status_check CHECK (status IN ('Active','Inactive','Pending','Rejected'));`);
+    } catch (dbErr) {
+      console.warn("Could not alter constraint on the fly:", dbErr);
+    }
 
     const insertResult = await db.query(insertQuery, [
       username || null,
@@ -49,7 +58,8 @@ exports.register = async (req, res, next) => {
       full_name,
       finalRole,
       phone_number || null,
-      finalProfilePicture
+      finalProfilePicture,
+      initialStatus
     ]);
 
     const user = insertResult.rows[0];
@@ -106,6 +116,12 @@ exports.login = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid email or password.' });
     }
 
+    if (user.status === 'Pending') {
+      return res.status(403).json({ error: 'Your account is pending approval from a Fleet Manager.' });
+    }
+    if (user.status === 'Rejected') {
+      return res.status(403).json({ error: 'Your account application was rejected.' });
+    }
     if (user.status !== 'Active') {
       return res.status(403).json({ error: 'Your account is inactive. Please contact support.' });
     }
@@ -259,13 +275,23 @@ exports.getMe = async (req, res, next) => {
  */
 exports.getUsers = async (req, res, next) => {
   try {
-    const { role } = req.query;
+    const { role, status } = req.query;
     let queryText = 'SELECT id, username, email, full_name, role, phone_number, profile_picture, status, created_at FROM users';
     const params = [];
+    const conditions = [];
 
     if (role) {
-      queryText += ' WHERE role = $1';
       params.push(role);
+      conditions.push(`role = $${params.length}`);
+    }
+
+    if (status) {
+      params.push(status);
+      conditions.push(`status = $${params.length}`);
+    }
+
+    if (conditions.length > 0) {
+      queryText += ' WHERE ' + conditions.join(' AND ');
     }
 
     const result = await db.query(queryText, params);

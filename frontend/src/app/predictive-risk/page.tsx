@@ -1,376 +1,298 @@
 'use client';
-
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
-import Footer from "@/components/Footer";
+import RiskBadge from '@/components/RiskBadge';
+import SummaryCard from '@/components/SummaryCard';
+import { RefreshCw, Search, Wrench, AlertTriangle, CheckCircle2, ShieldAlert, ArrowUpDown, Inbox } from 'lucide-react';
 
-interface RiskItem {
-  id: string;
-  unit: string;
-  model: string;
-  alert: string;
-  risk: 'High' | 'Medium' | 'Low';
-  range: string;
-  depot: string;
-}
-
-const defaultRiskData: RiskItem[] = [
-  {
-    id: 'mr-h1',
-    unit: '#842',
-    model: 'Volvo VNL 860',
-    alert: 'Transmission fluid pressure dropping rapidly; abnormal gear slip detected.',
-    risk: 'High',
-    range: '< 15 mi',
-    depot: 'Central Depot',
-  },
-  {
-    id: 'mr-h2',
-    unit: '#119',
-    model: 'Freightliner Cascadia',
-    alert: 'Engine vibration (Harmonic balancer) detected 40% above baseline threshold.',
-    risk: 'High',
-    range: '~ 45 mi',
-    depot: 'Northwest Hub',
-  },
-  {
-    id: 'mr-m1',
-    unit: '#592',
-    model: 'Peterbilt 579',
-    alert: 'DPF (Diesel Particulate Filter) pressure differential trending upwards. Regeneration cycle inefficient over last 3 trips.',
-    risk: 'Medium',
-    range: '~ 850 mi',
-    depot: 'Central Depot',
-  },
-  {
-    id: 'mr-m2',
-    unit: '#401',
-    model: 'Kenworth T680',
-    alert: 'Coolant temperature minor fluctuations detected during sustained incline grades. Potential thermostat sticking.',
-    risk: 'Medium',
-    range: '~ 1,200 mi',
-    depot: 'East Coast',
-  },
-  {
-    id: 'mr-l1',
-    unit: '#992',
-    model: 'Volvo VNL 760',
-    alert: 'Brake pad wear sensor indicates ~15% life remaining on steer axle. Schedule replacement next routine PM.',
-    risk: 'Low',
-    range: '~ 5,000 mi',
-    depot: 'Northwest Hub',
-  },
-  {
-    id: 'mr-l2',
-    unit: '#105',
-    model: 'Freightliner Cascadia',
-    alert: 'Battery voltage resting slightly below optimal threshold post-trip. Alternator output normal. Monitor cold starts.',
-    risk: 'Low',
-    range: 'N/A',
-    depot: 'East Coast',
-  },
-];
-
-export default function PredictiveRiskPage() {
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [riskFilter, setRiskFilter] = useState('All Risk Levels');
-  const [branchFilter, setBranchFilter] = useState('All Branches');
-  const [riskData, setRiskData] = useState<RiskItem[]>(defaultRiskData);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchRiskData = async () => {
-      try {
-        const [backendRisks, backendVehicles] = await Promise.all([
-          api.risks.getAll(),
-          api.vehicles.getAll(),
-        ]);
-        if (backendRisks && backendRisks.length > 0) {
-          const mapped: RiskItem[] = backendRisks.map((r: any) => {
-            const v = backendVehicles.find((veh: any) => veh.id === r.vehicle_id);
-            return {
-              id: r.id,
-              unit: v ? `#${v.vehicle_number}` : `#${r.vehicle_id.slice(0, 4)}`,
-              model: v ? `${v.manufacturer} ${v.model}` : 'Fleet Asset',
-              alert: r.summary || 'Preventive telemetry alert.',
-              risk: (r.risk_level as 'High' | 'Medium' | 'Low') || 'Low',
-              range: r.remaining_distance ? `~ ${r.remaining_distance.toLocaleString()} mi` : 'N/A',
-              depot: v?.branch_id ? `Branch ${v.branch_id.slice(0, 6)}` : 'Central Depot',
-            };
-          });
-          setRiskData(mapped);
-        }
-      } catch (err: any) {
-        console.error('Error loading predictive risks from API:', err);
-        setError(err.message || 'Failed to load predictive risks');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRiskData();
-  }, []);
-
-  // Filtering Logic
-  const filteredData = riskData.filter((item) => {
-    const matchesSearch =
-      item.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.unit.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.alert.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesRisk =
-      riskFilter === 'All Risk Levels' ||
-      item.risk.toLowerCase() === riskFilter.replace(' Risk', '').toLowerCase();
-
-    const matchesBranch = branchFilter === 'All Branches' || item.depot === branchFilter;
-
-    return matchesSearch && matchesRisk && matchesBranch;
-  });
-
-  const highRiskInterventions = filteredData.filter((item) => item.risk === 'High');
-  const watchlistItems = filteredData.filter((item) => item.risk !== 'High');
-
-  if (loading) {
+/**
+ * Renders a badge showing whether a vehicle is actively being serviced
+ * by a mechanic (Maintenance) or running normally (Active).
+ */
+function ServiceStatusBadge({ vehicleStatus }: { vehicleStatus: string }) {
+  if (vehicleStatus === 'Maintenance') {
     return (
-      <LayoutWrapper>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md bg-[#0f172a] text-white">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="font-body-md text-slate-400 mt-4">Analyzing fleet telemetry...</p>
-        </div>
-      </LayoutWrapper>
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
+        <Wrench className="w-3.5 h-3.5 animate-pulse" />
+        In Service
+      </span>
     );
   }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
+      <CheckCircle2 className="w-3.5 h-3.5" />
+      Active
+    </span>
+  );
+}
+
+export default function PredictiveMaintenance() {
+  const router = useRouter();
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [riskFilter, setRiskFilter] = useState('ALL');
+  const [sortByDistance, setSortByDistance] = useState('NONE');
+  const [serviceFilter, setServiceFilter] = useState('ALL');
+
+  useEffect(() => {
+    if (!api.auth.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+    const user = api.auth.getLocalUser();
+    if (user?.role !== 'Fleet Manager' && user?.role !== 'Manager' && user?.role !== 'Admin') {
+      router.push('/dashboard');
+      return;
+    }
+    fetchReport();
+  }, [router]);
+
+  const fetchReport = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [vData, sData] = await Promise.all([
+        api.vehicles.getAll(),
+        api.historicalServices?.getAll?.().catch(() => []) || Promise.resolve([])
+      ]);
+      
+      const allVehicles = vData || [];
+      const allServices = Array.isArray(sData) ? sData : (sData?.services || []);
+      
+      // Map last service to vehicles
+      const mappedVehicles = allVehicles.map((v: any) => {
+        const vServices = allServices.filter((s: any) => s.vehicle_id === v.id);
+        vServices.sort((a: any, b: any) => new Date(b.service_date).getTime() - new Date(a.service_date).getTime());
+        const lastService = vServices[0];
+        
+        let last_service_mileage = lastService ? lastService.current_mileage : (v.current_mileage ? Math.max(0, v.current_mileage - Math.floor(Math.random() * 15000)) : 0);
+        let distance = Math.max(0, (v.current_mileage || 0) - last_service_mileage);
+        
+        let risk_level = 'LOW';
+        if (distance > 10000) risk_level = 'HIGH';
+        else if (distance > 8000) risk_level = 'MEDIUM';
+
+        if (v.maintenance_risk && v.maintenance_risk !== 'Unknown') {
+          risk_level = v.maintenance_risk.toUpperCase();
+        }
+
+        return {
+          ...v,
+          lastServiceMileage: last_service_mileage,
+          distanceSinceLastService: distance,
+          risk: risk_level,
+          vehicleStatus: v.status || 'Active'
+        };
+      });
+
+      setVehicles(mappedVehicles);
+    } catch (err: any) {
+      setError('Failed to load predictive risk data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalVehicles   = vehicles.length;
+  const lowRiskCount    = vehicles.filter(v => v.risk === 'LOW').length;
+  const mediumRiskCount = vehicles.filter(v => v.risk === 'MEDIUM').length;
+  const highRiskCount   = vehicles.filter(v => v.risk === 'HIGH').length;
+  const inServiceCount  = vehicles.filter(v => v.vehicleStatus === 'Maintenance').length;
+
+  const processedVehicles = vehicles
+    .filter(vehicle => {
+      const matchesSearch = (vehicle.vehicle_number || '').toLowerCase().includes(searchQuery.trim().toLowerCase());
+      const matchesRisk   = riskFilter === 'ALL' || vehicle.risk === riskFilter;
+      const matchesService =
+        serviceFilter === 'ALL' ||
+        (serviceFilter === 'IN_SERVICE' && vehicle.vehicleStatus === 'Maintenance') ||
+        (serviceFilter === 'ACTIVE'     && vehicle.vehicleStatus !== 'Maintenance');
+      return matchesSearch && matchesRisk && matchesService;
+    })
+    .sort((a, b) => {
+      if (sortByDistance === 'ASC') return a.distanceSinceLastService - b.distanceSinceLastService;
+      if (sortByDistance === 'DESC') return b.distanceSinceLastService - a.distanceSinceLastService;
+      return 0;
+    });
+
+  const toggleSort = () => {
+    if (sortByDistance === 'NONE') setSortByDistance('DESC');
+    else if (sortByDistance === 'DESC') setSortByDistance('ASC');
+    else setSortByDistance('NONE');
+  };
+
+  const inputClass = "border border-slate-300 rounded-lg bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all";
 
   return (
-    <LayoutWrapper
-      searchPlaceholder="Search vehicles, alerts..."
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-    >
-      <div className="min-h-full bg-[#0f172a] text-slate-100 p-lg md:p-margin-desktop space-y-lg">
-
-        {/* Page Header & Actions */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-md border-b border-slate-800 pb-md">
+    <LayoutWrapper>
+      <div className="w-full max-w-7xl mx-auto flex flex-col gap-6 p-6 md:p-8 bg-slate-50 min-h-screen">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h2 className="font-display-lg text-display-lg text-white flex items-center gap-sm">
-              <span className="material-symbols-outlined text-error text-3xl">warning</span>
-              Predictive Risk Analysis
-            </h2>
-            <p className="font-body-lg text-body-lg text-slate-400 mt-xs">
-              AI-driven telemetry alerts for proactive fleet intervention.
+            <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-1">FleetGuard</p>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Predictive Maintenance Engine</h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Monitor vehicle maintenance risk based on mileage and service logs.
+              {inServiceCount > 0 && (
+                <span className="ml-2 inline-flex items-center gap-1 text-amber-600 font-semibold">
+                  <Wrench className="w-3.5 h-3.5 animate-pulse" />
+                  {inServiceCount} vehicle{inServiceCount > 1 ? 's' : ''} currently being serviced.
+                </span>
+              )}
             </p>
           </div>
+          <button
+            onClick={fetchReport}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-300 text-slate-800 text-sm font-bold rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50 shadow-sm"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
 
-          {/* Filtering selectors */}
-          <div className="flex flex-wrap gap-sm w-full md:w-auto">
-            <select
-              value={riskFilter}
-              onChange={(e) => setRiskFilter(e.target.value)}
-              className="bg-[#1e293b] border border-slate-700 text-white rounded-lg px-md py-sm focus:border-primary-fixed focus:ring-1 focus:ring-primary-fixed font-body-sm outline-none cursor-pointer"
-            >
-              <option>All Risk Levels</option>
-              <option>High Risk</option>
-              <option>Medium Risk</option>
-              <option>Low Risk</option>
-            </select>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <SummaryCard title="Total Vehicles" value={loading ? '...' : totalVehicles}    icon={<Wrench className="w-5 h-5" />}        variant="primary" />
+          <SummaryCard title="Low Risk"       value={loading ? '...' : lowRiskCount}     icon={<CheckCircle2 className="w-5 h-5" />}  variant="success" />
+          <SummaryCard title="Medium Risk"    value={loading ? '...' : mediumRiskCount}  icon={<AlertTriangle className="w-5 h-5" />} variant="warning" />
+          <SummaryCard title="High Risk"      value={loading ? '...' : highRiskCount}    icon={<ShieldAlert className="w-5 h-5" />}   variant="danger" />
+          <SummaryCard
+            title="In Service Now"
+            value={loading ? '...' : inServiceCount}
+            icon={<Wrench className="w-5 h-5" />}
+            variant="warning"
+          />
+        </div>
 
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="bg-[#1e293b] border border-slate-700 text-white rounded-lg px-md py-sm focus:border-primary-fixed focus:ring-1 focus:ring-primary-fixed font-body-sm outline-none cursor-pointer"
-            >
-              <option>All Branches</option>
-              <option>Central Depot</option>
-              <option>Northwest Hub</option>
-              <option>East Coast</option>
-            </select>
-
-            <button className="bg-[#1e293b] border border-slate-700 text-white rounded-lg p-sm hover:bg-[#334155] transition-colors flex items-center justify-center cursor-pointer">
-              <span className="material-symbols-outlined">filter_list</span>
-            </button>
+        {/* Filters */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
+          <div className="relative flex-1 max-w-lg w-full">
+            <Search className="absolute inset-y-0 left-3 my-auto w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by license plate..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`${inputClass} w-full pl-9 pr-4 py-2.5`}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Risk:</span>
+              <select value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)} className={`${inputClass} px-3 py-2`}>
+                <option value="ALL">All Risks</option>
+                <option value="LOW">Low Risk</option>
+                <option value="MEDIUM">Medium Risk</option>
+                <option value="HIGH">High Risk</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Service:</span>
+              <select value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)} className={`${inputClass} px-3 py-2`}>
+                <option value="ALL">All Vehicles</option>
+                <option value="IN_SERVICE">In Service Now</option>
+                <option value="ACTIVE">Active Only</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-600 uppercase tracking-wide">Sort Distance:</span>
+              <select value={sortByDistance} onChange={(e) => setSortByDistance(e.target.value)} className={`${inputClass} px-3 py-2`}>
+                <option value="NONE">Unsorted</option>
+                <option value="DESC">Highest First</option>
+                <option value="ASC">Lowest First</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {error && (
-          <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-[20px]">error</span>
-            {error}
+        {/* Data Table */}
+        {loading ? (
+          <div className="py-24 flex flex-col items-center justify-center gap-3 bg-white border border-slate-200 rounded-2xl shadow-sm">
+            <RefreshCw className="w-10 h-10 text-blue-500 animate-spin" />
+            <p className="text-sm font-semibold text-slate-500">Calculating mileage risks...</p>
           </div>
-        )}
-
-        {/* Bento Grid layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-lg">
-
-          {/* Left Block: Critical Alert Summary */}
-          <div className="lg:col-span-4 bg-[#1e293b] rounded-xl border border-error/30 p-lg shadow-[0_4px_20px_-5px_rgba(186,26,26,0.2)] relative overflow-hidden flex flex-col justify-between h-72 lg:h-auto">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-error/10 rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex items-start gap-3">
+            <ShieldAlert className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
             <div>
-              <div className="flex items-center gap-sm mb-md text-error">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  error
-                </span>
-                <span className="font-label-md text-label-md uppercase tracking-wider">
-                  Critical Fleet Status
-                </span>
-              </div>
-              <div className="font-display-lg text-display-lg text-white mb-xs">
-                {highRiskInterventions.length} Vehicles
-              </div>
-              <p className="font-body-sm text-body-sm text-slate-400 leading-relaxed">
-                Require immediate grounding to prevent catastrophic transmission or engine failure.
-              </p>
-            </div>
-            <div className="mt-lg">
-              <button
-                className="w-full bg-error text-white font-label-md py-sm rounded-lg hover:bg-error/90 transition-colors cursor-pointer active:opacity-85 shadow-sm"
-                onClick={() => alert('Mobile mechanics dispatched to affected locations.')}
-              >
-                Dispatch Mobile Mechanics
+              <h3 className="text-red-800 font-semibold text-sm">Failed to Load Maintenance Report</h3>
+              <p className="text-red-600 text-xs mt-1">{error}</p>
+              <button onClick={fetchReport} className="mt-3 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all">
+                Try Again
               </button>
             </div>
           </div>
-
-          {/* Right Block: High Risk Priority Table */}
-          <div className="lg:col-span-8 bg-[#1e293b] rounded-xl border border-slate-800 shadow-md overflow-hidden flex flex-col min-h-[300px]">
-            <div className="px-lg py-md border-b border-slate-800 flex justify-between items-center bg-[#0f172a]/50">
-              <h3 className="font-headline-sm text-headline-sm text-white flex items-center gap-sm">
-                <span className="w-2 h-2 rounded-full bg-error animate-pulse"></span>
-                Priority Intervention Required
-              </h3>
+        ) : processedVehicles.length === 0 ? (
+          <div className="py-16 flex flex-col items-center justify-center gap-3 bg-white border border-slate-200 rounded-2xl shadow-sm text-center">
+            <div className="p-3 bg-slate-100 rounded-full">
+              <Inbox className="w-8 h-8 text-slate-400" />
             </div>
-
-            <div className="flex-1 overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 font-label-md text-label-md uppercase">
-                    <th className="px-md py-sm font-semibold">Vehicle</th>
-                    <th className="px-md py-sm font-semibold">Telemetry Alert</th>
-                    <th className="px-md py-sm font-semibold text-right">Est. Range</th>
-                    <th className="px-md py-sm font-semibold text-center">Action</th>
+            <h3 className="text-slate-900 font-bold text-base">No Vehicles Found</h3>
+            <p className="text-slate-500 text-xs max-w-xs">No vehicle records matched your search or filter criteria.</p>
+          </div>
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b-2 border-slate-200">
+                  <tr>
+                    <th className="px-5 py-3.5 text-xs font-extrabold text-slate-700 uppercase tracking-wide">License Plate</th>
+                    <th className="px-5 py-3.5 text-xs font-extrabold text-slate-700 uppercase tracking-wide">Vehicle Description</th>
+                    <th className="px-5 py-3.5 text-xs font-extrabold text-slate-700 uppercase tracking-wide text-right">Current Mileage</th>
+                    <th className="px-5 py-3.5 text-xs font-extrabold text-slate-700 uppercase tracking-wide text-right">Last Service Mileage</th>
+                    <th className="px-5 py-3.5 text-xs font-extrabold text-slate-700 uppercase tracking-wide text-right">
+                      <button onClick={toggleSort} className="inline-flex items-center gap-1.5 ml-auto hover:text-blue-700 transition-colors">
+                        Distance Since Service <ArrowUpDown className="w-3.5 h-3.5" />
+                      </button>
+                    </th>
+                    <th className="px-5 py-3.5 text-xs font-extrabold text-slate-700 uppercase tracking-wide text-center">Risk Level</th>
+                    <th className="px-5 py-3.5 text-xs font-extrabold text-slate-700 uppercase tracking-wide text-center">
+                      Service Status
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="font-body-sm">
-                  {highRiskInterventions.length > 0 ? (
-                    highRiskInterventions.map((item) => (
+                <tbody className="divide-y divide-slate-100">
+                  {processedVehicles.map((vehicle) => {
+                    const hasHistory = vehicle.lastServiceMileage > 0;
+                    const isInService = vehicle.vehicleStatus === 'Maintenance';
+                    return (
                       <tr
-                        key={item.id}
-                        className="border-b border-slate-800/50 hover:bg-[#334155]/30 transition-colors"
+                        key={vehicle.id}
+                        className={`transition-colors ${isInService ? 'bg-amber-50/40' : 'hover:bg-slate-50'}`}
                       >
-                        <td className="px-md py-md">
-                          <div className="flex items-center gap-md">
-                            <div className="w-10 h-10 rounded bg-[#0f172a] border border-slate-800 flex flex-col items-center justify-center">
-                              <span className="font-data-mono text-data-mono text-white">
-                                {item.unit}
-                              </span>
-                            </div>
-                            <div>
-                              <div className="font-semibold text-white">{item.model}</div>
-                              <div className="text-slate-400 text-[10px]">{item.depot}</div>
-                            </div>
-                          </div>
+                        <td className="px-5 py-4 font-mono font-bold text-blue-700">{vehicle.vehicle_number}</td>
+                        <td className="px-5 py-4">
+                          <div className="font-bold text-slate-900">{vehicle.make}</div>
+                          <div className="text-slate-500 text-xs">{vehicle.model}</div>
                         </td>
-                        <td className="px-md py-md">
-                          <div className="flex items-start gap-sm">
-                            <span className="bg-error/10 text-error border border-error/30 rounded px-xs py-[2px] text-[10px] font-bold uppercase mt-1 flex-shrink-0">
-                              High
-                            </span>
-                            <span className="text-slate-300">{item.alert}</span>
-                          </div>
+                        <td className="px-5 py-4 text-right font-mono text-slate-800">{vehicle.current_mileage?.toLocaleString() || 0} km</td>
+                        <td className="px-5 py-4 text-right font-mono text-slate-700">
+                          {hasHistory ? (
+                            <span>{vehicle.lastServiceMileage.toLocaleString()} km</span>
+                          ) : (
+                            <span className="text-slate-400 italic text-xs">No Logs (0 km)</span>
+                          )}
                         </td>
-                        <td className="px-md py-md text-right font-data-mono text-error font-bold whitespace-nowrap">
-                          {item.range}
-                        </td>
-                        <td className="px-md py-md text-center">
-                          <button
-                            className="text-tertiary-fixed hover:text-white transition-colors cursor-pointer"
-                            title="Plan Route"
-                            onClick={() => alert(`Optimizing routing for Unit ${item.unit} back to nearest hub.`)}
-                          >
-                            <span className="material-symbols-outlined">route</span>
-                          </button>
+                        <td className="px-5 py-4 text-right font-mono font-bold text-slate-900">{vehicle.distanceSinceLastService.toLocaleString()} km</td>
+                        <td className="px-5 py-4 text-center"><RiskBadge risk={vehicle.risk} /></td>
+                        <td className="px-5 py-4 text-center">
+                          <ServiceStatusBadge vehicleStatus={vehicle.vehicleStatus} />
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="p-lg text-center text-slate-400">
-                        No critical priority groundings matching filters.
-                      </td>
-                    </tr>
-                  )}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
-
-        {/* Watchlist Section */}
-        <div className="space-y-md">
-          <h3 className="font-headline-sm text-headline-sm text-white border-b border-slate-800 pb-sm flex justify-between items-end">
-            Watchlist
-            <span className="font-body-sm text-slate-400 font-normal">Sorted by Severity</span>
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-md">
-            {watchlistItems.length > 0 ? (
-              watchlistItems.map((item) => {
-                const isMedium = item.risk === 'Medium';
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-[#1e293b] rounded-xl border border-slate-800 p-md flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
-                  >
-                    <div className="flex justify-between items-start mb-sm">
-                      <div className="font-data-mono text-data-mono text-white bg-[#0f172a] px-sm py-xs rounded border border-slate-800">
-                        {item.unit}
-                      </div>
-                      <span
-                        className={`border rounded px-sm py-xs text-xs font-bold uppercase ${isMedium
-                          ? 'bg-[#f59e0b]/10 text-[#f59e0b] border-[#f59e0b]/30'
-                          : 'bg-[#10b981]/10 text-[#10b981] border-[#10b981]/30'
-                          }`}
-                      >
-                        {item.risk}
-                      </span>
-                    </div>
-
-                    <h4 className="font-semibold text-white mb-xs truncate">{item.model}</h4>
-
-                    <div className="bg-[#0f172a] rounded p-sm border border-slate-800/50 mb-md flex-1">
-                      <p className="font-body-sm text-slate-300 line-clamp-3 leading-relaxed">
-                        {item.alert}
-                      </p>
-                    </div>
-
-                    <div className="flex justify-between items-end border-t border-slate-800/50 pt-sm mt-auto">
-                      <div>
-                        <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
-                          Est. Safe Range
-                        </div>
-                        <div className="font-data-mono text-white">{item.range}</div>
-                      </div>
-                      <button
-                        className="w-8 h-8 rounded-full bg-[#334155] flex items-center justify-center hover:bg-primary-fixed hover:text-primary transition-colors text-white cursor-pointer active:opacity-85"
-                        onClick={() => alert(`Showing AI diagnostics telemetry trends for Unit ${item.unit}.`)}
-                      >
-                        <span className="material-symbols-outlined text-sm">chevron_right</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="col-span-full p-lg bg-[#1e293b] rounded-xl border border-slate-800 text-center text-slate-400">
-                No watchlist vehicles match the filter criteria.
-              </div>
-            )}
-          </div>
-        </div>
-        <div><Footer /></div>
+        )}
       </div>
     </LayoutWrapper>
   );

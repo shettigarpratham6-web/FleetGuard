@@ -7,7 +7,7 @@ export interface User {
   phone_number?: string;
   role: 'Admin' | 'Fleet Manager' | 'Driver' | 'Service Center' | 'Manager' | 'User';
   profile_picture?: string;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'Pending' | 'Rejected';
   firebase_uid?: string;
   created_at?: string;
   branch_id?: string;

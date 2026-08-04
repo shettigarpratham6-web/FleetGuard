@@ -16,9 +16,12 @@ const auth = async (req, res, next) => {
     }
 
     const token = authHeader.replace('Bearer ', '').trim();
-    if (!token) {
-      return res.status(401).json({ error: 'Authentication required. Token missing.' });
+    if (!token || token === 'null' || token === 'undefined') {
+      return res.status(401).json({ error: 'Authentication required. Token missing or invalid.' });
     }
+
+    // Unverified payload decode to determine issuer/type
+    const decodedUnverified = jwt.decode(token);
 
     // 1. Try Custom JWT Token first
     try {
@@ -34,10 +37,26 @@ const auth = async (req, res, next) => {
         if (result.rows.length > 0) {
           req.user = result.rows[0];
           return next();
+        } else {
+          return res.status(401).json({ error: 'User account associated with this token no longer exists.' });
         }
       }
     } catch (jwtErr) {
-      // If it's an invalid JWT, proceed to try Firebase
+      // Check if it's a backend custom JWT (has `id` in payload and not Google/Firebase issuer)
+      const isFirebaseToken = decodedUnverified && (
+        (decodedUnverified.iss && (decodedUnverified.iss.includes('google.com') || decodedUnverified.iss.includes('firebase'))) ||
+        decodedUnverified.aud === env.FIREBASE_PROJECT_ID ||
+        decodedUnverified.uid ||
+        decodedUnverified.user_id
+      );
+
+      if (decodedUnverified && decodedUnverified.id && !isFirebaseToken) {
+        return res.status(401).json({
+          error: jwtErr.name === 'TokenExpiredError' 
+            ? 'Authentication token has expired. Please log in again.' 
+            : 'Invalid authentication token.'
+        });
+      }
     }
 
     // 2. Try Firebase ID Token fallback
@@ -47,14 +66,14 @@ const auth = async (req, res, next) => {
       if (!admin.apps.length) {
         // Firebase Admin is not initialized (likely missing service account key).
         // For development/demo, we can manually decode the JWT to get the user info.
-        decodedToken = jwt.decode(token);
+        decodedToken = decodedUnverified;
         
-        if (!decodedToken || !decodedToken.uid && !decodedToken.user_id) {
-            return res.status(401).json({ error: 'Invalid authentication token format.' });
+        if (!decodedToken || (!decodedToken.uid && !decodedToken.user_id && !decodedToken.sub && !decodedToken.id)) {
+          return res.status(401).json({ error: 'Invalid authentication token format.' });
         }
         
         // Normalize Firebase token fields
-        decodedToken.uid = decodedToken.uid || decodedToken.user_id;
+        decodedToken.uid = decodedToken.uid || decodedToken.user_id || decodedToken.sub || decodedToken.id;
       } else {
         decodedToken = await admin.auth().verifyIdToken(token);
       }
@@ -104,7 +123,12 @@ const authorize = (roles = []) => {
       return res.status(401).json({ error: 'Authentication required.' });
     }
     
-    if (roles.length && !roles.includes(req.user.role)) {
+    let effectiveRole = req.user.role;
+    if (effectiveRole === 'Manager' && roles.includes('Fleet Manager')) {
+      effectiveRole = 'Fleet Manager';
+    }
+
+    if (roles.length && !roles.includes(effectiveRole)) {
       return res.status(403).json({ error: 'Access forbidden. Insufficient permissions.' });
     }
 

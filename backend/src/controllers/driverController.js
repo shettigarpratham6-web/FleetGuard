@@ -91,3 +91,33 @@ exports.changePassword = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.updateStatus = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!['Active', 'Rejected'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status. Must be Active or Rejected.' });
+        }
+
+        const queryText = `
+            UPDATE users
+            SET status = $1, updated_at = NOW()
+            WHERE id = $2 AND role = 'Driver'
+            RETURNING id, username, email, role, full_name, status, created_at, updated_at
+        `;
+        const result = await db.query(queryText, [status, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Driver not found.' });
+        }
+
+        res.status(200).json({
+            message: `Driver status updated to ${status}`,
+            driver: result.rows[0]
+        });
+    } catch (error) {
+        next(error);
+    }
+};

@@ -1,68 +1,60 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
-import { Notification, User, Vehicle } from '@/types';
-import Footer from '@/components/Footer';
+import { Vehicle, ServiceRecord } from '@/types';
 
 export default function DriverDashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [assignment, setAssignment] = useState<any>(null);
+  const [complianceDocs, setComplianceDocs] = useState<any[]>([]);
+  const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modals state (All states properly initialized)
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const [contactSubject, setContactSubject] = useState('General Query');
-  const [contactMessage, setContactMessage] = useState('');
-  const [contactStatus, setContactStatus] = useState({ type: '', msg: '' });
-  const [contactLoading, setContactLoading] = useState(false);
-
-  const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
-  const [compVehicleId, setCompVehicleId] = useState('');
-  const [compType, setCompType] = useState('Insurance');
-  const [compExpiry, setCompExpiry] = useState('');
-  const [compFile, setCompFile] = useState<File | null>(null);
-  const [compStatus, setCompStatus] = useState({ type: '', msg: '' });
-  const [compLoading, setCompLoading] = useState(false);
-
-  // Additional modal states referenced in header buttons
-  const [isFuelModalOpen, setIsFuelModalOpen] = useState(false);
-  const [fuelGallons, setFuelGallons] = useState('');
-  const [fuelCost, setFuelCost] = useState('');
-  const [fuelOdo, setFuelOdo] = useState('');
-  const [fuelStation, setFuelStation] = useState('');
-  const [fuelStatus, setFuelStatus] = useState({ type: '', msg: '' });
-  const [fuelLoading, setFuelLoading] = useState(false);
-
-  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
-  const [issueVehicleId, setIssueVehicleId] = useState('');
-  const [issueDesc, setIssueDesc] = useState('');
-  const [issuePriority, setIssuePriority] = useState('Medium');
-  const [issueStatus, setIssueStatus] = useState({ type: '', msg: '' });
-  const [issueLoading, setIssueLoading] = useState(false);
+  // New UI states
+  const [showCompliance, setShowCompliance] = useState(true);
+  const [checklist, setChecklist] = useState({
+    tires: null as boolean | null,
+    brakes: null as boolean | null,
+    fluids: null as boolean | null,
+    safety: null as boolean | null
+  });
+  const [newMileage, setNewMileage] = useState<number>(0);
+  const [updatingMileage, setUpdatingMileage] = useState(false);
 
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
       router.push('/login');
       return;
     }
-
     const currentUser = api.auth.getLocalUser();
-    setUser(currentUser);
+    if (currentUser?.role !== 'Driver') {
+      router.push('/dashboard');
+      return;
+    }
 
-    const fetchDashboardData = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const [notifs, vehs] = await Promise.all([
-          api.notifications.getMyNotifications(),
-          api.vehicles.getAll()
-        ]);
-        setNotifications(notifs || []);
-        setVehicles(vehs || []);
+        const myAssignments = await api.assignments?.getAll?.({ driver_id: currentUser.id, status: 'Active' });
+        
+        if (myAssignments && myAssignments.length > 0) {
+          const activeAssignment = myAssignments[0];
+          setAssignment(activeAssignment);
+          
+          const [v, docs, records] = await Promise.all([
+            api.vehicles.getById(activeAssignment.vehicle_id),
+            api.compliance.getAll().catch(() => []),
+            api.services.getAll().catch(() => [])
+          ]);
+          
+          setVehicle(v);
+          setNewMileage(v.current_mileage || 0);
+          setComplianceDocs(docs.filter(d => d.vehicle_id === v.id));
+          setServiceRecords(records.filter(r => r.vehicle_id === v.id).sort((a, b) => new Date(b.service_date).getTime() - new Date(a.service_date).getTime()));
+        }
       } catch (err) {
         console.error('Failed to load driver dashboard data', err);
       } finally {
@@ -70,702 +62,334 @@ export default function DriverDashboardPage() {
       }
     };
 
-    fetchDashboardData();
+    fetchData();
   }, [router]);
-
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      await api.notifications.markAsRead(id);
-      setNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
-      );
-    } catch (err) {
-      console.error('Failed to mark notification as read', err);
-    }
-  };
-
-  const handleContactSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!contactMessage) return;
-
-    setContactLoading(true);
-    setContactStatus({ type: '', msg: '' });
-
-    try {
-      const admins = await api.auth.getUsers('Admin');
-      const managers = await api.auth.getUsers('Fleet Manager');
-      const targetUsers = [...admins, ...managers];
-
-      if (targetUsers.length === 0) {
-        throw new Error('No managers found to contact.');
-      }
-
-      const adminId = targetUsers[0].id;
-
-      await api.notifications.create({
-        user_id: adminId,
-        title: `Message from ${user?.full_name}: ${contactSubject}`,
-        message: contactMessage,
-        notification_type: 'Driver Query'
-      });
-
-      setContactStatus({ type: 'success', msg: 'Message sent successfully to the fleet manager.' });
-      setContactMessage('');
-      setTimeout(() => setIsContactModalOpen(false), 2000);
-    } catch (err: any) {
-      setContactStatus({ type: 'error', msg: err.message || 'Failed to send message.' });
-    } finally {
-      setContactLoading(false);
-    }
-  };
-
-  const handleComplianceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!compVehicleId || !compType || !compExpiry || !compFile) {
-      setCompStatus({ type: 'error', msg: 'Please fill all fields and select a file.' });
-      return;
-    }
-
-    setCompLoading(true);
-    setCompStatus({ type: '', msg: '' });
-
-    try {
-      const formData = new FormData();
-      formData.append('vehicle_id', compVehicleId);
-      formData.append('document_type', compType);
-      formData.append('expiry_date', compExpiry);
-      formData.append('file', compFile);
-
-      await api.compliance.create(formData);
-
-      setCompStatus({ type: 'success', msg: 'Compliance document uploaded successfully.' });
-      setCompFile(null);
-      setCompExpiry('');
-      setTimeout(() => setIsComplianceModalOpen(false), 2000);
-    } catch (err: any) {
-      setCompStatus({ type: 'error', msg: err.message || 'Failed to upload document.' });
-    } finally {
-      setCompLoading(false);
-    }
-  };
-
-  const handleFuelSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fuelGallons || !fuelCost || !fuelOdo) return;
-    
-    setFuelLoading(true);
-    setFuelStatus({ type: '', msg: '' });
-    
-    try {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate API
-      setFuelStatus({ type: 'success', msg: 'Fuel log saved successfully!' });
-      
-      setTimeout(() => {
-        setIsFuelModalOpen(false);
-        setFuelStatus({ type: '', msg: '' });
-        setFuelGallons(''); setFuelCost(''); setFuelOdo(''); setFuelStation('');
-      }, 1500);
-    } catch (err: any) {
-      setFuelStatus({ type: 'error', msg: 'Failed to log fuel.' });
-    } finally {
-      setFuelLoading(false);
-    }
-  };
-
-  const handleIssueSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!issueVehicleId || !issueDesc) return;
-    
-    setIssueLoading(true);
-    setIssueStatus({ type: '', msg: '' });
-    
-    try {
-      const admins = await api.auth.getUsers('Admin');
-      const managers = await api.auth.getUsers('Fleet Manager');
-      const targetUsers = [...admins, ...managers];
-      
-      if (targetUsers.length > 0) {
-        const adminId = targetUsers[0].id;
-        const vInfo = vehicles.find(v => v.id === issueVehicleId);
-        const vName = vInfo ? `${vInfo.manufacturer} ${vInfo.model} (${vInfo.registration_number})` : issueVehicleId;
-        
-        await api.notifications.create({
-          user_id: adminId,
-          title: `Vehicle Issue Reported (${issuePriority} Priority)`,
-          message: `Vehicle: ${vName}. Issue: ${issueDesc}`,
-          notification_type: 'Maintenance Alert'
-        });
-      }
-      
-      setIssueStatus({ type: 'success', msg: 'Issue successfully reported to maintenance.' });
-      
-      setTimeout(() => {
-        setIsIssueModalOpen(false);
-        setIssueStatus({ type: '', msg: '' });
-        setIssueVehicleId(''); setIssueDesc(''); setIssuePriority('Medium');
-      }, 2000);
-    } catch (err: any) {
-      setIssueStatus({ type: 'error', msg: 'Failed to report issue.' });
-    } finally {
-      setIssueLoading(false);
-    }
-  };
-
-  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (loading) {
     return (
       <LayoutWrapper>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 bg-slate-50">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-          <p className="font-semibold text-sm text-slate-600">Loading Driver Portal...</p>
+        <div className="flex justify-center items-center h-[60vh]">
+          <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
         </div>
       </LayoutWrapper>
     );
   }
 
+  if (!vehicle) {
+    return (
+      <LayoutWrapper>
+        <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto bg-slate-50 min-h-screen flex flex-col items-center justify-center">
+          <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-4">
+            <span className="material-symbols-outlined text-3xl text-slate-400">directions_car</span>
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900">No Vehicle Assigned</h2>
+          <p className="text-slate-500">You do not have a vehicle assigned to you currently. Please contact your Fleet Manager.</p>
+        </div>
+      </LayoutWrapper>
+    );
+  }
+
+  const now = new Date();
+  
+  // Find expirations
+  const getDocExpiry = (type: string) => {
+    const doc = complianceDocs.find(d => d.document_type.toLowerCase().includes(type.toLowerCase()));
+    return doc ? doc.expiry_date : null;
+  };
+
+  const insuranceExp = getDocExpiry('insurance');
+  const registrationExp = getDocExpiry('registration') || getDocExpiry('rc');
+  const pollutionExp = getDocExpiry('pollution') || getDocExpiry('puc');
+  const inspectionExp = getDocExpiry('inspection') || getDocExpiry('fitness');
+
+  const docs = [
+    { name: 'INSURANCE', exp: insuranceExp },
+    { name: 'REGISTRATION', exp: registrationExp },
+    { name: 'EMISSIONS', exp: pollutionExp },
+    { name: 'SAFETY INSPECTION', exp: inspectionExp }
+  ].filter(d => d.exp); // only show docs we have data for
+
+  const warnings = docs.filter(d => d.exp && new Date(d.exp) < now);
+  const lastService = serviceRecords.length > 0 ? serviceRecords[0] : null;
+  const isServiceOverdue = lastService?.next_service_date && new Date(lastService.next_service_date) < now;
+
+  const isBlocked = warnings.length > 0 || isServiceOverdue || vehicle.status === 'Maintenance';
+
+  const allPass = checklist.tires && checklist.brakes && checklist.fluids && checklist.safety;
+  const handlePassAll = () => setChecklist({ tires: true, brakes: true, fluids: true, safety: true });
+  
+  const submitChecklist = async () => {
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api'}/checklists`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('fleetguard_token')}`
+        },
+        body: JSON.stringify({
+          vehicle_id: vehicle.id,
+          tyres_ok: checklist.tires,
+          brakes_ok: checklist.brakes,
+          lights_ok: checklist.safety,
+          horn_ok: checklist.safety,
+          mirrors_ok: checklist.safety,
+          remarks: !allPass ? 'Failed some checks. Fluids: ' + checklist.fluids : 'None'
+        })
+      });
+      alert('Checklist logged successfully!');
+    } catch(err) {
+      alert('Failed to log checklist');
+    }
+  };
+
+  const handleUpdateMileage = async () => {
+    if (!vehicle || newMileage < (vehicle.current_mileage || 0)) {
+      alert('Mileage cannot be lower than current mileage.');
+      return;
+    }
+    try {
+      setUpdatingMileage(true);
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api'}/vehicles/${vehicle.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('fleetguard_token')}`
+        },
+        body: JSON.stringify({ current_mileage: newMileage })
+      });
+      setVehicle({ ...vehicle, current_mileage: newMileage });
+      alert('Mileage updated successfully.');
+    } catch (err) {
+      alert('Failed to update mileage.');
+    } finally {
+      setUpdatingMileage(false);
+    }
+  };
+
   return (
     <LayoutWrapper>
-      <div className="p-6 md:p-8 max-w-5xl mx-auto bg-slate-50 min-h-screen text-slate-900 space-y-8">
-
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-200">
+      <div className="p-6 md:p-8 space-y-6 max-w-5xl mx-auto bg-slate-50 min-h-screen">
+        
+        {/* Header */}
+        <div className="flex justify-between items-center border-b border-slate-200 pb-4">
           <div>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Welcome, {user?.full_name || 'Driver'}
-            </h2>
-            <p className="text-sm font-medium text-slate-500 mt-1 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">badge</span>
-              Driver Portal • Safe driving today!
-            </p>
+            <span className="text-xs font-bold text-blue-600 uppercase tracking-widest block mb-1">Driver Console</span>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Driver Duty Dashboard</h1>
+            <p className="text-slate-500 text-sm mt-1">Real-time vehicle assignment compliance & road-legal clearance</p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setIsComplianceModalOpen(true)}
-              className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px] text-blue-600">upload_file</span>
-              Add Compliance
-            </button>
-            <button
-              onClick={() => setIsFuelModalOpen(true)}
-              className="bg-white hover:bg-slate-100 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px] text-blue-600">local_gas_station</span>
-              Log Fuel
-            </button>
-            <button
-              onClick={() => setIsIssueModalOpen(true)}
-              className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">report</span>
-              Report Issue
-            </button>
-          </div>
+          <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-lg text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50">
+            <span className="material-symbols-outlined text-[18px]">refresh</span>
+            Refresh
+          </button>
         </div>
 
-        {/* Action Required Banner */}
-        {unreadCount > 0 && (
-          <div className="bg-gradient-to-r from-rose-500 to-rose-600 rounded-2xl p-6 shadow-lg text-white flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 animate-pulse">
-                <span className="material-symbols-outlined text-[28px] text-white">warning</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold">Action Required</h3>
-                <p className="text-sm font-medium text-rose-100 mt-1">
-                  You have {unreadCount} new alert{unreadCount > 1 ? 's' : ''} regarding your assigned vehicle compliance or maintenance.
+        {/* Compliance Block */}
+        <div className={`rounded-xl shadow-md overflow-hidden relative ${isBlocked ? 'bg-[#b71c1c] text-white' : 'bg-[#00695c] text-white'}`}>
+          <div className="p-6">
+            <div className="flex items-start gap-4 relative z-10">
+              <span className="material-symbols-outlined text-[40px]">{isBlocked ? 'report' : 'verified_user'}</span>
+              <div className="flex-1">
+                <span className="inline-block px-2 py-0.5 bg-white/20 text-white rounded text-[10px] font-bold uppercase tracking-wider mb-2">
+                  {isBlocked ? 'Legal Risk' : 'Clearance Active'}
+                </span>
+                <h2 className="text-2xl font-extrabold mb-1">
+                  {isBlocked ? 'Operation Blocked / Legal Risk' : 'Vehicle Compliant / Road Legal'}
+                </h2>
+                <p className="text-white/90 text-sm max-w-2xl">
+                  {isBlocked 
+                    ? `CRITICAL ALERT: Assigned vehicle ${vehicle.vehicle_number} has compliance violations or is under maintenance. Do not operate on public roads.`
+                    : `SUCCESS: Assigned vehicle ${vehicle.vehicle_number} has passed all digital compliance checks. You are cleared for duty.`}
                 </p>
               </div>
+
+              {/* Floating Vehicle Badge */}
+              <div className="hidden sm:block bg-black/20 rounded-lg p-3 border border-white/10 text-right min-w-[160px]">
+                <p className="text-[10px] uppercase font-bold text-white/60 mb-0.5">Assigned Vehicle</p>
+                <p className="text-xl font-black tracking-wider">{vehicle.vehicle_number}</p>
+                <p className="text-xs text-white/80">{vehicle.model}</p>
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Driver Quick Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-bold text-slate-400 uppercase">Current Mileage</span>
-            <div className="text-2xl font-black text-slate-900 mt-1">45,210 mi</div>
-            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
-              <span className="material-symbols-outlined text-[14px]">check_circle</span> Verified 2 days ago
-            </span>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-bold text-slate-400 uppercase">Fuel Status</span>
-            <div className="text-2xl font-black text-slate-900 mt-1">78%</div>
-            <span className="text-[11px] font-semibold text-blue-600 flex items-center gap-1 mt-1">
-              <span className="material-symbols-outlined text-[14px]">local_gas_station</span> ~320 mi range
-            </span>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-bold text-slate-400 uppercase">Next Service</span>
-            <div className="text-2xl font-black text-slate-900 mt-1">1,200 mi</div>
-            <span className="text-[11px] font-semibold text-amber-600 flex items-center gap-1 mt-1">
-              <span className="material-symbols-outlined text-[14px]">schedule</span> Oil Change Due
-            </span>
-          </div>
-
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-bold text-slate-400 uppercase">Safety Score</span>
-            <div className="text-2xl font-black text-emerald-600 mt-1">98 / 100</div>
-            <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 mt-1">
-              <span className="material-symbols-outlined text-[14px]">star</span> Excellent Driver
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Notifications Feed */}
-          <div className="lg:col-span-2 space-y-6">
-            <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-blue-600">notifications_active</span>
-              Recent Alerts & Messages
-            </h3>
-
-            <div className="space-y-4">
-              {notifications.length > 0 ? (
-                notifications.map((notif) => {
-                  const isCompliance = notif.notification_type === 'Compliance Alert' || notif.title.toLowerCase().includes('expir');
-                  const isMaintenance = notif.notification_type === 'Maintenance Alert' || notif.title.toLowerCase().includes('service');
-
-                  let icon = 'notifications';
-                  let iconColor = 'text-blue-600';
-                  let bgColor = 'bg-blue-50';
-
-                  if (isCompliance) {
-                    icon = 'gavel';
-                    iconColor = 'text-rose-600';
-                    bgColor = 'bg-rose-50';
-                  } else if (isMaintenance) {
-                    icon = 'build';
-                    iconColor = 'text-amber-600';
-                    bgColor = 'bg-amber-50';
-                  }
-
-                  return (
-                    <div
-                      key={notif.id}
-                      className={`relative bg-white border ${notif.is_read ? 'border-slate-200' : 'border-blue-300 ring-1 ring-blue-300'} rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow group overflow-hidden`}
-                    >
-                      {!notif.is_read && (
-                        <div className="absolute top-0 right-0 w-0 h-0 border-t-[40px] border-l-[40px] border-t-blue-500 border-l-transparent">
-                          <span className="material-symbols-outlined text-white text-[14px] absolute -top-[34px] -left-[18px]">new_releases</span>
+            
+            <div className="mt-6 border-t border-white/20 pt-4">
+              <button onClick={() => setShowCompliance(!showCompliance)} className="flex items-center gap-1 text-sm font-bold text-white/90 hover:text-white transition-colors cursor-pointer">
+                <span className="material-symbols-outlined text-[18px]">{showCompliance ? 'expand_less' : 'expand_more'}</span>
+                {showCompliance ? 'Hide' : 'Show'} Compliance Breakdown ({docs.length} documents checked)
+              </button>
+              
+              {showCompliance && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  {docs.map(doc => {
+                    const isExp = new Date(doc.exp) < now;
+                    return (
+                      <div key={doc.name} className={`rounded-lg p-3 border ${isExp ? 'bg-black/20 border-red-400' : 'bg-black/10 border-white/10'}`}>
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-white/90 mb-2">
+                          <span className={`material-symbols-outlined text-[16px] ${isExp ? 'text-red-300' : 'text-emerald-400'}`}>
+                            {isExp ? 'warning' : 'check_circle'}
+                          </span>
+                          {doc.name}
                         </div>
-                      )}
-
-                      <div className="flex gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${bgColor} ${notif.is_read ? 'opacity-60' : ''}`}>
-                          <span className={`material-symbols-outlined text-[24px] ${iconColor}`}>{icon}</span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start mb-1">
-                            <h4 className={`text-base font-bold ${notif.is_read ? 'text-slate-700' : 'text-slate-900'}`}>
-                              {notif.title}
-                            </h4>
-                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap ml-4">
-                              {new Date(notif.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <p className={`text-sm leading-relaxed mb-4 ${notif.is_read ? 'text-slate-500' : 'text-slate-700 font-medium'}`}>
-                            {notif.message}
-                          </p>
-
-                          <div className="flex items-center gap-3">
-                            {!notif.is_read ? (
-                              <button
-                                onClick={() => handleMarkAsRead(notif.id)}
-                                className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">done_all</span>
-                                Mark as Acknowledged
-                              </button>
-                            ) : (
-                              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                                Acknowledged
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex justify-between items-end mt-4">
+                          <span className={`text-[11px] font-black uppercase tracking-wider ${isExp ? 'text-red-300' : 'text-emerald-400'}`}>
+                            {isExp ? 'Expired' : 'Valid'}
+                          </span>
+                          <span className="text-[10px] text-white/60">Exp: {new Date(doc.exp).toLocaleDateString()}</span>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 shadow-sm">
-                  <span className="material-symbols-outlined text-[48px] text-slate-300 mb-3 block">inbox</span>
-                  <p className="text-sm font-medium">You have no active alerts. You're all caught up!</p>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Quick Info Sidebar */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">
-                My Assigned Vehicle
-              </h3>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                  <span className="material-symbols-outlined text-[28px]">directions_car</span>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mb-1">Active Assignment</p>
-                  <p className="text-sm font-bold text-slate-900">Assigned Fleet Vehicle</p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                You can add compliance documents for any of your branch vehicles using the "Add Compliance" button above.
-              </p>
+        {/* Assigned Duty Details */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-6">
+          <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-widest mb-4">Assigned Duty Details</h3>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">License Plate</p>
+              <p className="font-extrabold text-blue-700">{vehicle.vehicle_number}</p>
             </div>
+            
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Make & Model</p>
+              <p className="font-bold text-slate-900 text-sm">{vehicle.manufacturer} {vehicle.model}</p>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">({vehicle.manufacturing_year || '2023'})</p>
+            </div>
+            
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Registration #</p>
+              <p className="font-mono text-xs font-bold text-slate-700 truncate">{vehicle.registration_number || 'N/A'}</p>
+            </div>
+            
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Assignment</p>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 mt-1">
+                {assignment.status || 'Active'}
+              </span>
+            </div>
+          </div>
 
-            <div className="bg-blue-50 rounded-2xl border border-blue-100 shadow-sm p-6 text-center">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
-                <span className="material-symbols-outlined text-blue-600">support_agent</span>
+          <div className="mt-4 md:w-[48%]">
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100 flex flex-col justify-between h-full">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Current Mileage</p>
+              <div className="flex gap-2">
+                <input 
+                  type="number" 
+                  value={newMileage}
+                  onChange={(e) => setNewMileage(Number(e.target.value))}
+                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                />
+                <button 
+                  onClick={handleUpdateMileage}
+                  disabled={updatingMileage}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#1d4ed8] hover:bg-blue-800 text-white text-xs font-bold rounded-lg transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[16px]">edit</span>
+                  {updatingMileage ? '...' : 'Update'}
+                </button>
               </div>
-              <h4 className="text-sm font-bold text-slate-900 mb-2">Need Assistance?</h4>
-              <p className="text-xs text-slate-600 font-medium mb-4 leading-relaxed">
-                Contact your fleet manager immediately for any compliance issues, part requests, or breakdowns.
-              </p>
-              <button
-                onClick={() => setIsContactModalOpen(true)}
-                className="w-full bg-blue-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm hover:bg-blue-700 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined text-[16px]">call</span>
-                Contact Fleet Manager
-              </button>
             </div>
           </div>
         </div>
-        {/* COMPLIANCE UPLOAD MODAL */}
-        {/* COMPLIANCE UPLOAD MODAL */}
-        {isComplianceModalOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto"
-            onClick={() => setIsComplianceModalOpen(false)}
-          >
-            <div
-              className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0"
-              style={{ width: '100%', maxWidth: '28rem' }}
-              onClick={(e) => e.stopPropagation()}
+
+        {/* Pre-Trip Checklist */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <div className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-wider mb-1">
+                <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
+                Pre-Trip Safety Check
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-900">Vehicle Duty Checklist</h3>
+              <p className="text-sm text-slate-500 mt-1">Fast 4-item tap-through inspection before departure</p>
+            </div>
+            <button onClick={handlePassAll} className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 bg-emerald-50 rounded-full text-xs font-bold hover:bg-emerald-100 transition-colors shadow-sm cursor-pointer">
+              <span className="material-symbols-outlined text-[16px]">bolt</span>
+              All Pass
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {/* Tires */}
+            <div className={`p-4 rounded-xl border flex flex-col md:flex-row justify-between md:items-center gap-4 ${checklist.tires === true ? 'bg-emerald-50/50 border-emerald-200' : checklist.tires === false ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex gap-3 items-start md:items-center">
+                <span className={`material-symbols-outlined mt-0.5 md:mt-0 ${checklist.tires === true ? 'text-emerald-500' : checklist.tires === false ? 'text-red-500' : 'text-slate-400'}`}>trip_origin</span>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">Tires & Lights</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Tread depth, tire pressure, headlights, brake lights & turn signals</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setChecklist(p => ({...p, tires: true}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.tires === true ? 'bg-[#00897b] text-white border-[#00897b]' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}><span className="material-symbols-outlined text-[16px]">check_circle</span> PASS</button>
+                <button onClick={() => setChecklist(p => ({...p, tires: false}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.tires === false ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><span className="material-symbols-outlined text-[16px]">warning</span> FAIL</button>
+              </div>
+            </div>
+
+            {/* Brakes */}
+            <div className={`p-4 rounded-xl border flex flex-col md:flex-row justify-between md:items-center gap-4 ${checklist.brakes === true ? 'bg-emerald-50/50 border-emerald-200' : checklist.brakes === false ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex gap-3 items-start md:items-center">
+                <span className={`material-symbols-outlined mt-0.5 md:mt-0 ${checklist.brakes === true ? 'text-emerald-500' : checklist.brakes === false ? 'text-red-500' : 'text-slate-400'}`}>error</span>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">Brake System</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Foot brake responsiveness, air brake pressure & emergency parking brake</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setChecklist(p => ({...p, brakes: true}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.brakes === true ? 'bg-[#00897b] text-white border-[#00897b]' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}><span className="material-symbols-outlined text-[16px]">check_circle</span> PASS</button>
+                <button onClick={() => setChecklist(p => ({...p, brakes: false}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.brakes === false ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><span className="material-symbols-outlined text-[16px]">warning</span> FAIL</button>
+              </div>
+            </div>
+
+            {/* Fluids */}
+            <div className={`p-4 rounded-xl border flex flex-col md:flex-row justify-between md:items-center gap-4 ${checklist.fluids === true ? 'bg-emerald-50/50 border-emerald-200' : checklist.fluids === false ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex gap-3 items-start md:items-center">
+                <span className={`material-symbols-outlined mt-0.5 md:mt-0 ${checklist.fluids === true ? 'text-emerald-500' : checklist.fluids === false ? 'text-red-500' : 'text-slate-400'}`}>water_drop</span>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">Fluid Levels</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Engine oil level, radiator coolant, windshield washer fluid</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setChecklist(p => ({...p, fluids: true}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.fluids === true ? 'bg-[#00897b] text-white border-[#00897b]' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}><span className="material-symbols-outlined text-[16px]">check_circle</span> PASS</button>
+                <button onClick={() => setChecklist(p => ({...p, fluids: false}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.fluids === false ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><span className="material-symbols-outlined text-[16px]">warning</span> FAIL</button>
+              </div>
+            </div>
+
+            {/* Safety */}
+            <div className={`p-4 rounded-xl border flex flex-col md:flex-row justify-between md:items-center gap-4 ${checklist.safety === true ? 'bg-emerald-50/50 border-emerald-200' : checklist.safety === false ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="flex gap-3 items-start md:items-center">
+                <span className={`material-symbols-outlined mt-0.5 md:mt-0 ${checklist.safety === true ? 'text-emerald-500' : checklist.safety === false ? 'text-red-500' : 'text-slate-400'}`}>health_and_safety</span>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">Safety Equipment</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Seatbelts operational, fire extinguisher charged, reflective triangles</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setChecklist(p => ({...p, safety: true}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.safety === true ? 'bg-[#00897b] text-white border-[#00897b]' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}><span className="material-symbols-outlined text-[16px]">check_circle</span> PASS</button>
+                <button onClick={() => setChecklist(p => ({...p, safety: false}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.safety === false ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><span className="material-symbols-outlined text-[16px]">warning</span> FAIL</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center mt-6 pt-6 border-t border-slate-100">
+            {allPass ? (
+              <span className="px-5 py-2 bg-emerald-100 text-emerald-800 font-extrabold text-sm rounded-full border border-emerald-200 shadow-sm">Overall: PASS</span>
+            ) : (
+              <span className="px-5 py-2 bg-slate-100 text-slate-600 font-extrabold text-sm rounded-full border border-slate-200">Pending Selection</span>
+            )}
+            <button 
+              onClick={submitChecklist}
+              disabled={isBlocked || checklist.tires === null || checklist.brakes === null || checklist.fluids === null || checklist.safety === null}
+              className="px-8 py-3 bg-[#00897b] hover:bg-[#00796b] text-white font-extrabold rounded-lg disabled:opacity-50 transition-colors shadow-md cursor-pointer"
             >
-              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg">upload_file</span>
-                  Upload Document
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsComplianceModalOpen(false)}
-                  className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-
-              <div className="p-6">
-                {compStatus.msg && (
-                  <div className={`p-3 rounded-xl mb-5 text-sm font-semibold flex items-center gap-2 ${compStatus.type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
-                    <span className="material-symbols-outlined text-[18px]">
-                      {compStatus.type === 'error' ? 'error' : 'check_circle'}
-                    </span>
-                    {compStatus.msg}
-                  </div>
-                )}
-
-                <form onSubmit={handleComplianceSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Select Vehicle</label>
-                    <select
-                      value={compVehicleId}
-                      onChange={(e) => setCompVehicleId(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-blue-500"
-                      required
-                    >
-                      <option value="">-- Choose Vehicle --</option>
-                      {vehicles.map((v: any) => (
-                        <option key={v.id} value={v.id}>
-                          {v.manufacturer} {v.model} ({v.license_plate || v.registration_number || v.id})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Document Type</label>
-                    <select
-                      value={compType}
-                      onChange={(e) => setCompType(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-blue-500"
-                    >
-                      <option value="Insurance">Insurance</option>
-                      <option value="Registration">Registration</option>
-                      <option value="Inspection">Inspection</option>
-                      <option value="Permit">Permit</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Expiry Date</label>
-                    <input
-                      type="date"
-                      value={compExpiry}
-                      onChange={(e) => setCompExpiry(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Upload File</label>
-                    <input
-                      type="file"
-                      onChange={(e) => setCompFile(e.target.files ? e.target.files[0] : null)}
-                      className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsComplianceModalOpen(false)}
-                      className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={compLoading}
-                      className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2"
-                    >
-                      {compLoading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Uploading...
-                        </>
-                      ) : 'Submit Document'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+              Log Checklist ({allPass ? 'PASS' : 'FAIL'})
+            </button>
           </div>
-        )}
+        </div>
 
-        {/* CONTACT MANAGER MODAL */}
-        {isContactModalOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto"
-            onClick={() => setIsContactModalOpen(false)}
-          >
-            <div
-              className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0"
-              style={{ width: '100%', maxWidth: '28rem' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg">
-                    support_agent
-                  </span>
-                  Contact Manager
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsContactModalOpen(false)}
-                  className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer"
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-
-              {/* Body */}
-              <div className="p-6">
-                {contactStatus?.msg && (
-                  <div
-                    className={`p-3 rounded-xl mb-5 text-sm font-semibold flex items-center gap-2 ${contactStatus.type === 'error'
-                        ? 'bg-rose-50 text-rose-600'
-                        : 'bg-emerald-50 text-emerald-700'
-                      }`}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {contactStatus.type === 'error' ? 'error' : 'check_circle'}
-                    </span>
-                    {contactStatus.msg}
-                  </div>
-                )}
-
-                <form onSubmit={handleContactSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                      Subject
-                    </label>
-                    <select
-                      value={contactSubject}
-                      onChange={(e) => setContactSubject(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="General Query">General Query</option>
-                      <option value="Compliance Issue">Compliance Issue</option>
-                      <option value="Breakdown / Repair">Breakdown / Repair</option>
-                      <option value="Shift Schedule">Shift Schedule</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                      Message
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={contactMessage}
-                      onChange={(e) => setContactMessage(e.target.value)}
-                      placeholder="Describe your inquiry or issue..."
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsContactModalOpen(false)}
-                      className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={contactLoading}
-                      className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2"
-                    >
-                      {contactLoading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        'Send Message'
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* LOG FUEL MODAL */}
-        {isFuelModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto" onClick={() => setIsFuelModalOpen(false)}>
-            <div className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0" style={{ width: '100%', maxWidth: '28rem' }} onClick={(e) => e.stopPropagation()}>
-              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg">local_gas_station</span>
-                  Log Fuel
-                </h3>
-                <button type="button" onClick={() => setIsFuelModalOpen(false)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer">
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-              <div className="p-6">
-                {fuelStatus.msg && (
-                  <div className={`p-3 rounded-xl mb-5 text-sm font-semibold flex items-center gap-2 ${fuelStatus.type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
-                    <span className="material-symbols-outlined text-[18px]">{fuelStatus.type === 'error' ? 'error' : 'check_circle'}</span>
-                    {fuelStatus.msg}
-                  </div>
-                )}
-                <form onSubmit={handleFuelSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Gallons/Liters</label>
-                      <input type="number" step="0.01" value={fuelGallons} onChange={(e) => setFuelGallons(e.target.value)} required placeholder="e.g. 15.4" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Total Cost ($)</label>
-                      <input type="number" step="0.01" value={fuelCost} onChange={(e) => setFuelCost(e.target.value)} required placeholder="e.g. 45.00" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Odometer (mi)</label>
-                      <input type="number" value={fuelOdo} onChange={(e) => setFuelOdo(e.target.value)} required placeholder="e.g. 45210" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Gas Station</label>
-                      <input type="text" value={fuelStation} onChange={(e) => setFuelStation(e.target.value)} required placeholder="e.g. Shell #442" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-3 pt-4 mt-2">
-                    <button type="button" onClick={() => setIsFuelModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer">Cancel</button>
-                    <button type="submit" disabled={fuelLoading} className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2">
-                      {fuelLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</> : 'Save Log'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* REPORT ISSUE MODAL */}
-        {isIssueModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto" onClick={() => setIsIssueModalOpen(false)}>
-            <div className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0" style={{ width: '100%', maxWidth: '28rem' }} onClick={(e) => e.stopPropagation()}>
-              <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-rose-600 bg-rose-50 p-1.5 rounded-lg">report</span>
-                  Report Vehicle Issue
-                </h3>
-                <button type="button" onClick={() => setIsIssueModalOpen(false)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer">
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              </div>
-              <div className="p-6">
-                {issueStatus.msg && (
-                  <div className={`p-3 rounded-xl mb-5 text-sm font-semibold flex items-center gap-2 ${issueStatus.type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}`}>
-                    <span className="material-symbols-outlined text-[18px]">{issueStatus.type === 'error' ? 'error' : 'check_circle'}</span>
-                    {issueStatus.msg}
-                  </div>
-                )}
-                <form onSubmit={handleIssueSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Select Vehicle</label>
-                    <select value={issueVehicleId} onChange={(e) => setIssueVehicleId(e.target.value)} required className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500">
-                      <option value="">-- Choose Vehicle --</option>
-                      {vehicles.map(v => <option key={v.id} value={v.id}>{v.manufacturer} {v.model} ({v.registration_number})</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Issue Priority</label>
-                    <select value={issuePriority} onChange={(e) => setIssuePriority(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500">
-                      <option value="Low">Low - Minor cosmetic issue</option>
-                      <option value="Medium">Medium - Needs attention soon</option>
-                      <option value="High">High - Safety concern or broken part</option>
-                      <option value="Critical">Critical - Do Not Drive</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Describe Issue</label>
-                    <textarea rows={3} value={issueDesc} onChange={(e) => setIssueDesc(e.target.value)} required placeholder="e.g. Check engine light came on during trip." className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500" />
-                  </div>
-                  <div className="flex justify-end gap-3 pt-4 mt-2">
-                    <button type="button" onClick={() => setIsIssueModalOpen(false)} className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer">Cancel</button>
-                    <button type="submit" disabled={issueLoading} className="px-5 py-2.5 text-sm font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-all shadow-md shadow-rose-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2">
-                      {issueLoading ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Submitting...</> : 'Submit Issue'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
-        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

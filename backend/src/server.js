@@ -20,15 +20,32 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
     try {
         if (typeof initDb === 'function') {
-            await initDb();
+            // Database is already initialized via Supabase SQL Editor
+            // await initDb();
         }
 
-        app.listen(PORT, () => {
-            console.log(`🚀 Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-            console.log(`🌐 API URL: http://localhost:${PORT}`);
+        let currentPort = parseInt(PORT, 10);
 
-            startExpiryAlertJob();
-        });
+        const listenOnPort = (portToTry) => {
+            const server = app.listen(portToTry, () => {
+                console.log(`🚀 Server is running in ${process.env.NODE_ENV || 'development'} mode on port ${portToTry}`);
+                console.log(`🌐 API URL: http://localhost:${portToTry}`);
+
+                startExpiryAlertJob();
+            });
+
+            server.on('error', (err) => {
+                if (err.code === 'EADDRINUSE') {
+                    console.warn(`⚠️ Port ${portToTry} is occupied. Retrying automatically on port ${portToTry + 1}...`);
+                    listenOnPort(portToTry + 1);
+                } else {
+                    console.error('❌ CRITICAL: Server failed to start:', err);
+                    process.exit(1);
+                }
+            });
+        };
+
+        listenOnPort(currentPort);
     } catch (error) {
         console.error('❌ CRITICAL: Server failed to start due to database initialization error:', error);
         process.exit(1);

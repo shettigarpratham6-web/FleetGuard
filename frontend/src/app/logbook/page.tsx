@@ -29,31 +29,45 @@ export default function LogbookPage() {
     station: ''
   });
 
-  // Mock data for the driver's logbook
-  const [fuelLogs, setFuelLogs] = useState([
-    { id: 1, date: '2026-07-30', gallons: 15.4, cost: 58.50, odometer: 45210, station: 'Shell #442' },
-    { id: 2, date: '2026-07-28', gallons: 14.2, cost: 53.20, odometer: 44890, station: 'Chevron' },
-    { id: 3, date: '2026-07-25', gallons: 16.0, cost: 59.99, odometer: 44550, station: 'Exxon' },
-  ]);
-
-  const [inspections, setInspections] = useState([
-    { id: 1, date: '2026-07-31', status: 'Passed', notes: 'All systems normal. Tire pressure good.', vehicle: 'Ford Transit 250' },
-    { id: 2, date: '2026-07-30', status: 'Passed', notes: 'Topped up windshield washer fluid.', vehicle: 'Ford Transit 250' },
-    { id: 3, date: '2026-07-29', status: 'Warning', notes: 'Rear right tire pressure slightly low.', vehicle: 'Ford Transit 250' },
-  ]);
+  // Real checklist data from backend
+  const [fuelLogs, setFuelLogs] = useState<any[]>([]);
+  const [inspections, setInspections] = useState<any[]>([]);
 
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
       router.push('/login');
       return;
     }
+    const currentUser = api.auth.getLocalUser();
+    if (currentUser) {
+      if (['Admin', 'Fleet Manager', 'Manager'].includes(currentUser.role)) {
+        router.push('/dashboard');
+        return;
+      }
+      if (currentUser.role === 'Service Center') {
+        router.push('/mechanic');
+        return;
+      }
+    }
 
     const fetchInitialData = async () => {
       try {
         const currentUser = api.auth.getLocalUser();
         setUser(currentUser);
-        const fetchedVehicles = await api.vehicles.getAll();
+        const [fetchedVehicles, myChecklists] = await Promise.all([
+          api.vehicles.getAll(),
+          api.checklists.getMyChecklists()
+        ]);
         setVehicles(fetchedVehicles || []);
+        // Map checklists into inspection display format
+        const mappedInspections = (myChecklists || []).map((c: any) => ({
+          id: c.id,
+          date: c.checklist_date,
+          status: (c.tyres_ok && c.brakes_ok && c.lights_ok && c.horn_ok && c.mirrors_ok) ? 'Passed' : 'Warning',
+          notes: c.remarks || 'Pre-trip checklist completed.',
+          vehicle: c.vehicle_number || 'Vehicle'
+        }));
+        setInspections(mappedInspections);
       } catch (err) {
         console.error('Failed to load logbook data', err);
       } finally {
@@ -82,12 +96,24 @@ export default function LogbookPage() {
       const vehicleName = `${selectedVehicle.manufacturer} ${selectedVehicle.model}`;
 
       if (entryType === 'inspection') {
+        // Submit to real API
+        const allPassed = formData.status === 'Passed';
+        await api.checklists.create({
+          vehicle_id: formData.vehicleId,
+          tyres_ok: allPassed,
+          brakes_ok: allPassed,
+          lights_ok: allPassed,
+          horn_ok: allPassed,
+          mirrors_ok: allPassed,
+          remarks: formData.notes || undefined
+        });
+        const matchedVehicle = vehicles.find(v => v.id === formData.vehicleId) || { manufacturer: 'Unknown', model: 'Vehicle' };
         const newInsp = {
           id: Date.now(),
           date: formData.date,
           status: formData.status,
           notes: formData.notes || 'Routine check.',
-          vehicle: vehicleName
+          vehicle: `${matchedVehicle.manufacturer} ${matchedVehicle.model}`
         };
         setInspections([newInsp, ...inspections]);
       } else {

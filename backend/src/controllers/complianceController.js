@@ -324,7 +324,7 @@ exports.getVehicleComplianceStatus = async (req, res, next) => {
     const result = await db.query(queryText, [vehicleId]);
     const documents = result.rows;
 
-    const mandatoryTypes = ['Insurance', 'Inspection', 'PUC', 'Fitness Certificate'];
+    const mandatoryTypes = ['Insurance', 'PUC', 'Fitness Certificate'];
     const latestDocs = {};
 
     // Get the latest document for each type

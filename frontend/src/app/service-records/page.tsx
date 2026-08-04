@@ -26,6 +26,11 @@ export default function ServiceRecordsPage() {
       router.push('/login');
       return;
     }
+    const currentUser = api.auth.getLocalUser();
+    if (currentUser && currentUser.role === 'Driver') {
+      router.push('/driver');
+      return;
+    }
 
     const loadData = async () => {
       try {

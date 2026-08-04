@@ -1,206 +1,181 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
-import { mockHistoricalServices } from '@/data/mockDb';
-import Footer from '@/components/Footer';
+import { Wrench, Clock, CheckCircle2 } from 'lucide-react';
+import HistoryCard from '@/components/service/HistoryCard';
 
 export default function HistoricalRecordsPage() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [records, setRecords] = useState<any[]>(mockHistoricalServices);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // Fixed: Added missing state
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
+  const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchHistoricalRecords = async () => {
+    if (!api.auth.isAuthenticated()) {
+      router.push('/login');
+      return;
+    }
+    const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await api.historicalServices.getAll();
-        if (data && Array.isArray(data) && data.length > 0) {
-          setRecords(data);
+        
+        // Fetch vehicles and both types of service records
+        const [vehiclesData, historicalData, liveData] = await Promise.all([
+          api.vehicles.getAll(),
+          api.historicalServices.getAll().catch(() => ({ records: [] })),
+          api.services.getAll().catch(() => [])
+        ]);
+        
+        if (vehiclesData && Array.isArray(vehiclesData)) {
+          setVehicles(vehiclesData);
+          if (vehiclesData.length > 0) {
+            setSelectedVehicleId(vehiclesData[0].id);
+          }
         }
+        
+        // Combine historical records and live service records
+        let allRecords: any[] = [];
+        if (historicalData && Array.isArray(historicalData)) allRecords = [...allRecords, ...historicalData];
+        else if (historicalData?.records) allRecords = [...allRecords, ...historicalData.records];
+
+        if (liveData && Array.isArray(liveData)) allRecords = [...allRecords, ...liveData];
+        else if ((liveData as any)?.records) allRecords = [...allRecords, ...(liveData as any).records];
+
+        setRecords(allRecords);
       } catch (err: any) {
-        console.error('Error fetching historical records:', err);
-        setError(err?.message || 'Failed to fetch historical records. Showing fallback data.');
+        console.error('Error fetching data:', err);
+        setError(err?.message || 'Failed to fetch data.');
       } finally {
         setLoading(false);
       }
     };
-    fetchHistoricalRecords();
-  }, []);
+    fetchData();
+  }, [router]);
 
-  // Filtering Logic
   const filteredRecords = records.filter((record) => {
+    if (selectedVehicleId && record.vehicle_id !== selectedVehicleId) {
+      return false;
+    }
     const query = searchQuery.toLowerCase();
     return (
-      (record.description || '').toLowerCase().includes(query) ||
-      (record.remarks || '').toLowerCase().includes(query) ||
-      (record.vehicle_id || '').toLowerCase().includes(query) ||
-      (record.vehicle_number || '').toLowerCase().includes(query)
+      (record.description || record.service_type || '').toLowerCase().includes(query) ||
+      (record.remarks || record.notes || record.work_performed || '').toLowerCase().includes(query)
     );
-  });
+  }).sort((a, b) => new Date(b.service_date).getTime() - new Date(a.service_date).getTime());
 
-  if (loading) {
-    return (
-      <LayoutWrapper>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="font-body-md text-on-surface-variant">Loading historical records...</p>
-        </div>
-      </LayoutWrapper>
-    );
-  }
+  const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
 
   return (
-    <LayoutWrapper
-      searchPlaceholder="Search records..."
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-    >
-      <div className="p-margin-mobile md:p-margin-desktop flex-1 flex flex-col gap-lg max-w-[1600px] mx-auto w-full">
-
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-md border-b border-outline-variant/30 pb-md">
-          <div>
-            <h2 className="font-display-lg text-display-lg text-primary">Historical Records</h2>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-sm">
-              Manage legacy and manually entered maintenance data.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-sm">
-            <button className="flex items-center gap-xs px-md py-sm bg-surface-container border border-outline-variant rounded-lg text-on-surface font-label-md hover:bg-surface-container-high transition-colors cursor-pointer">
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                filter_list
-              </span>
-              Filter
-            </button>
-            <button
-              onClick={() => alert('Bulk migration tool launched. Upload legacy CSV files.')}
-              className="flex items-center gap-xs px-md py-sm bg-surface-container border border-outline-variant rounded-lg text-on-surface font-label-md hover:bg-surface-container-high transition-colors cursor-pointer"
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
-                upload_file
-              </span>
-              Bulk Import
-            </button>
-          </div>
+    <LayoutWrapper>
+      <div className="p-6 md:p-8 space-y-8 max-w-[1400px] mx-auto min-h-screen text-slate-900">
+        
+        {/* Header Section */}
+        <div className="pb-6 border-b border-slate-200">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-2">Service History</h1>
+          <p className="text-sm font-medium text-slate-500">
+            Track and manage all historical and actively completed maintenance data across the fleet.
+          </p>
         </div>
 
-        {/* Error Alert Display */}
-        {error && (
-          <div className="p-md rounded-xl bg-error-container/10 border border-error-container/30 text-error text-body-md flex items-center gap-sm">
-            <span className="material-symbols-outlined text-[20px]">error</span>
-            {error}
-          </div>
-        )}
-
-        {/* Data Table Card */}
-        <div className="bg-surface rounded-lg border border-outline-variant shadow-sm overflow-hidden flex-1 flex flex-col">
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
-              <thead className="bg-surface-container-low sticky top-0 z-10 shadow-[0_1px_0_0_#e4e2e3]">
-                <tr className="text-on-surface-variant font-label-md text-label-md uppercase">
-                  <th className="py-md px-lg font-medium">Date</th>
-                  <th className="py-md px-lg font-medium">Asset ID</th>
-                  <th className="py-md px-lg font-medium">Service Description</th>
-                  <th className="py-md px-lg font-medium">Entered By</th>
-                  <th className="py-md px-lg font-medium text-right">Mileage</th>
-                  <th className="py-md px-lg font-medium">Remarks</th>
-                  <th className="py-md px-lg font-medium">Status</th>
-                  <th className="py-md px-lg font-medium text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant bg-surface-container-lowest font-data-mono text-data-mono">
-                {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record, index) => (
-                    <tr
-                      key={record.id || index}
-                      className="hover:bg-surface-container-lowest transition-colors group"
-                    >
-                      <td className="py-md px-lg text-on-surface">
-                        {record.service_date ? new Date(record.service_date).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td className="py-md px-lg">
-                        <div className="flex items-center gap-sm">
-                          <div className="w-2 h-2 rounded-full bg-primary"></div>
-                          <span className="font-body-md font-semibold text-primary">
-                            {record.vehicle_number || record.vehicle_id || 'N/A'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-md px-lg font-body-md text-on-surface">
-                        {record.description || 'N/A'}
-                      </td>
-                      <td className="py-md px-lg text-on-surface-variant">
-                        {record.entered_by_username || 'SYS_MIG_001'}
-                      </td>
-                      <td className="py-md px-lg text-right text-on-surface">
-                        {record.mileage?.toLocaleString() || 0} mi
-                      </td>
-                      <td className="py-md px-lg text-on-surface-variant font-body-sm">
-                        {record.remarks || 'N/A'}
-                      </td>
-                      <td className="py-md px-lg">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold bg-[#e0f2fe] text-[#0369a1]">
-                          Archived
-                        </span>
-                      </td>
-                      <td className="py-md px-lg text-center">
-                        <div className="flex justify-center gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className="p-1 rounded hover:bg-surface-container-high text-on-surface-variant cursor-pointer"
-                            title="Edit"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">edit</span>
-                          </button>
-                          <button
-                            className="p-1 rounded hover:bg-surface-container-high text-error cursor-pointer"
-                            title="Delete"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">delete</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="p-lg text-center text-on-surface-variant">
-                      No historical records match your search query.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination Footer */}
-          <div className="p-md border-t border-outline-variant bg-surface-container-lowest flex items-center justify-between mt-auto">
-            <span className="font-body-sm text-body-sm text-on-surface-variant">
-              Showing {filteredRecords.length} of {records.length} records
-            </span>
-            <div className="flex gap-sm">
-              <button
-                className="px-sm py-1 border border-outline-variant rounded bg-surface hover:bg-surface-container text-on-surface font-body-sm disabled:opacity-50"
-                disabled
+        <div className="flex flex-col gap-8 flex-1">
+          {/* Top Controls: Vehicle Selector & Search */}
+          <div className="flex flex-col md:flex-row gap-6 bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
+            <div className="flex-1 min-w-0">
+              <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">Select Vehicle</label>
+              <select
+                value={selectedVehicleId}
+                onChange={(e) => {
+                  setSelectedVehicleId(e.target.value);
+                  setExpandedRecordId(null);
+                }}
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
               >
-                Prev
-              </button>
-              <button
-                className="px-sm py-1 border border-outline-variant rounded bg-surface hover:bg-surface-container text-on-surface font-body-sm disabled:opacity-50"
-                disabled
-              >
-                Next
-              </button>
+                <option value="">All Vehicles</option>
+                {vehicles.map(v => (
+                  <option key={v.id} value={v.id}>{v.vehicle_number} — {v.make} {v.model}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 min-w-0">
+              <label className="block text-[11px] font-extrabold text-slate-500 uppercase tracking-widest mb-2">Search Records</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                <input
+                  type="text"
+                  placeholder="Search by keyword, type, or notes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                />
+              </div>
             </div>
           </div>
+
+          {/* Service History Timeline Card */}
+          {selectedVehicleId && selectedVehicle ? (
+            <div className="bg-white rounded-[24px] border border-slate-200 overflow-hidden flex-1 flex flex-col shadow-sm">
+              <div className="bg-slate-50 border-b border-slate-200 px-8 py-5 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100 shadow-sm shrink-0">
+                    <Wrench size={24} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-extrabold text-slate-900 tracking-tight truncate">Service History Timeline</h3>
+                    <p className="text-xs font-bold text-slate-500 mt-0.5 truncate">{selectedVehicle.make} {selectedVehicle.model} ({selectedVehicle.vehicle_number})</p>
+                  </div>
+                </div>
+                <div className="px-4 py-1.5 bg-white border border-slate-200 text-blue-700 text-[11px] font-black rounded-lg tracking-widest uppercase shadow-sm whitespace-nowrap">
+                  {filteredRecords.length} Records
+                </div>
+              </div>
+
+              <div className="p-8 md:p-12 relative flex-1 bg-white">
+                {filteredRecords.length > 0 ? (
+                  <div className="relative border-l-2 border-slate-200 ml-4 space-y-8">
+                    {filteredRecords.map((record, index) => {
+                      const isLatest = index === 0;
+                      const isExpanded = expandedRecordId === (record.id || index.toString());
+                      return (
+                        <HistoryCard 
+                          key={record.id || index}
+                          record={record}
+                          index={index}
+                          isLatest={isLatest}
+                          isExpanded={isExpanded}
+                          toggleExpand={() => setExpandedRecordId(isExpanded ? null : (record.id || index.toString()))}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-20">
+                    <div className="w-20 h-20 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Clock size={36} className="text-slate-400" />
+                    </div>
+                    <h4 className="text-xl font-extrabold text-slate-900 tracking-tight">No History Found</h4>
+                    <p className="text-sm font-medium text-slate-500 mt-2 max-w-sm mx-auto">There are no service records available for this vehicle yet. Once a service is completed, it will appear here.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-[24px] border border-slate-200 flex-1 flex flex-col items-center justify-center py-24 shadow-sm">
+              <div className="w-24 h-24 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                <Wrench size={48} className="text-blue-200" />
+              </div>
+              <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">Select a Vehicle</h3>
+              <p className="text-sm font-medium text-slate-500 mt-3 max-w-md text-center">Choose a vehicle from the dropdown above to view its complete service history timeline.</p>
+            </div>
+          )}
         </div>
-        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

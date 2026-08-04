@@ -34,7 +34,7 @@ export default function CreateVehiclePage() {
       return;
     }
     const currentUser = api.auth.getLocalUser();
-    if (!currentUser || !['Admin', 'Fleet Manager'].includes(currentUser.role)) {
+    if (!currentUser || !['Admin', 'Fleet Manager', 'Manager'].includes(currentUser.role)) {
       router.push('/dashboard');
       return;
     }

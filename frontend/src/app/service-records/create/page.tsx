@@ -64,6 +64,8 @@ export default function CreateServiceRecordPage() {
 
   useEffect(() => {
     if (!api.auth.isAuthenticated()) { router.push('/login'); return; }
+    const currentUser = api.auth.getLocalUser();
+    if (currentUser && currentUser.role === 'Driver') { router.push('/driver'); return; }
     const loadData = async () => {
       try {
         setLoading(true);

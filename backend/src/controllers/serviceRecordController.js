@@ -87,11 +87,40 @@ exports.createServiceRecord = async (req, res, next) => {
       await db.query('UPDATE vehicles SET current_mileage = $1 WHERE id = $2', [parsedMileage, vehicle_id]);
     }
 
-    // 5. Recalculate Maintenance Risk
+    // 5. Recalculate Maintenance Risk (Resets distance-since-last-service clock)
     await recalculateMaintenanceRisk(vehicle_id);
 
+    // 6. Reset & Extend Compliance Clock Automatically (Single-Action Completion Workflow)
+    const targetExpiryDate = next_service_date || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
+    
+    try {
+      const compDocCheck = await db.query(
+        `SELECT id FROM compliance_documents 
+         WHERE vehicle_id = $1 AND (document_type ILIKE '%maintenance%' OR document_type ILIKE '%inspection%' OR document_type ILIKE '%fitness%' OR document_type ILIKE '%safety%')
+         LIMIT 1`,
+        [vehicle_id]
+      );
+
+      if (compDocCheck.rows.length > 0) {
+        await db.query(
+          `UPDATE compliance_documents 
+           SET expiry_date = $1, issue_date = $2, updated_at = NOW() 
+           WHERE id = $3`,
+          [targetExpiryDate, service_date, compDocCheck.rows[0].id]
+        );
+      } else {
+        await db.query(
+          `INSERT INTO compliance_documents (vehicle_id, document_type, document_number, issue_date, expiry_date)
+           VALUES ($1, 'Maintenance & Safety Certificate', $2, $3, $4)`,
+          [vehicle_id, `CERT-${Date.now().toString().slice(-6)}`, service_date, targetExpiryDate]
+        );
+      }
+    } catch (compErr) {
+      console.warn('Auto compliance clock reset notice:', compErr.message);
+    }
+
     res.status(201).json({
-      message: 'Service record added successfully',
+      message: 'Service record logged and compliance clocks reset successfully.',
       record: serviceRecord
     });
   } catch (error) {
@@ -99,6 +128,9 @@ exports.createServiceRecord = async (req, res, next) => {
       safeUnlinkFile(req.file.path);
     }
     if (error.code === '23514') {
+      if (error.message && (error.message.includes('next_service_mileage') || error.message.includes('service_records_check'))) {
+        return res.status(400).json({ error: 'Next service mileage must be greater than or equal to current service mileage.' });
+      }
       if (error.message && error.message.includes('current_mileage')) {
         return res.status(400).json({ error: 'Current mileage cannot be negative.' });
       }
@@ -107,9 +139,6 @@ exports.createServiceRecord = async (req, res, next) => {
       }
       if (error.message && error.message.includes('parts_cost')) {
         return res.status(400).json({ error: 'Parts cost cannot be negative.' });
-      }
-      if (error.message && error.message.includes('next_service_mileage')) {
-        return res.status(400).json({ error: 'Next service mileage must be greater than or equal to current service mileage.' });
       }
     }
     next(error);
@@ -318,6 +347,9 @@ exports.updateServiceRecord = async (req, res, next) => {
       safeUnlinkFile(req.file.path);
     }
     if (error.code === '23514') {
+      if (error.message && (error.message.includes('next_service_mileage') || error.message.includes('service_records_check'))) {
+        return res.status(400).json({ error: 'Next service mileage must be greater than or equal to current service mileage.' });
+      }
       if (error.message && error.message.includes('current_mileage')) {
         return res.status(400).json({ error: 'Current mileage cannot be negative.' });
       }
@@ -326,9 +358,6 @@ exports.updateServiceRecord = async (req, res, next) => {
       }
       if (error.message && error.message.includes('parts_cost')) {
         return res.status(400).json({ error: 'Parts cost cannot be negative.' });
-      }
-      if (error.message && error.message.includes('next_service_mileage')) {
-        return res.status(400).json({ error: 'Next service mileage must be greater than or equal to current service mileage.' });
       }
     }
     next(error);

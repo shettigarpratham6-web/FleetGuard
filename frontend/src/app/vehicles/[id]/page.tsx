@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle, ServiceRecord, MaintenanceRisk } from '@/types';
+import Footer from '@/components/Footer';
 
 export default function VehicleDetailsPage() {
   const params = useParams();
@@ -13,14 +14,38 @@ export default function VehicleDetailsPage() {
 
   const [vehicle, setVehicle] = useState<Vehicle & { compliance_documents?: any[] } | null>(null);
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Add Compliance Modal State
+  const [isAddDocOpen, setIsAddDocOpen] = useState(false);
+  const [docType, setDocType] = useState('Insurance');
+  const [docNumber, setDocNumber] = useState('');
+  const [docExpiry, setDocExpiry] = useState('');
+  const [submittingDoc, setSubmittingDoc] = useState(false);
   const [risk, setRisk] = useState<MaintenanceRisk | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Additional states for vehicle assignment and compliance check
+  const [userRole, setUserRole] = useState<string>('Driver');
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [activeAssignment, setActiveAssignment] = useState<any | null>(null);
+  const [complianceStatus, setComplianceStatus] = useState<any | null>(null);
+  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [overrideReason, setOverrideReason] = useState('');
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignError, setAssignError] = useState('');
 
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
       router.push('/login');
       return;
+    }
+
+    const currentUser = api.auth.getLocalUser();
+    if (currentUser) {
+      setUserRole(currentUser.role);
     }
 
     const fetchVehicleDetails = async () => {
@@ -30,15 +55,21 @@ export default function VehicleDetailsPage() {
         const vData = await api.vehicles.getById(id);
         setVehicle(vData);
 
-        // Fetch service records and risks
-        const [servicesData, risksData] = await Promise.all([
+        // Fetch service records, risks, active assignment, and overall compliance status
+        const [servicesData, risksData, activeAssignData, compStatusData, driversData] = await Promise.all([
           api.services.getAll(),
-          api.risks.getAll()
+          api.risks.getAll(),
+          api.assignments.getAll({ vehicle_id: id, status: 'Active' }),
+          api.compliance.getVehicleStatus(id),
+          currentUser && ['Admin', 'Fleet Manager', 'Manager'].includes(currentUser.role) ? api.auth.getUsers('Driver', 'Active') : Promise.resolve([])
         ]);
 
         // Filter for this specific vehicle
         setServiceRecords(servicesData.filter(sr => sr.vehicle_id === id));
         setRisk(risksData.find(r => r.vehicle_id === id) || null);
+        setActiveAssignment(activeAssignData && activeAssignData.length > 0 ? activeAssignData[0] : null);
+        setComplianceStatus(compStatusData);
+        setDrivers(driversData || []);
 
       } catch (err: any) {
         console.error('Error fetching vehicle details:', err);
@@ -50,6 +81,118 @@ export default function VehicleDetailsPage() {
 
     fetchVehicleDetails();
   }, [id, router]);
+
+  const handleAssignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDriverId) {
+      setAssignError('Please select a driver.');
+      return;
+    }
+
+    const isNonCompliant = complianceStatus?.overall_status === 'Non-Compliant';
+    if (isNonCompliant && !overrideReason.trim()) {
+      setAssignError('This vehicle is non-compliant. A manager override reason is required.');
+      return;
+    }
+
+    setAssignLoading(true);
+    setAssignError('');
+
+    try {
+      let overrideLogId = '';
+      if (isNonCompliant) {
+        const overrideRes = await api.overrideLogs.create({
+          vehicle_id: id,
+          reason: overrideReason.trim()
+        });
+        overrideLogId = overrideRes.overrideLog.id;
+      }
+
+      await api.assignments.create({
+        vehicle_id: id,
+        driver_id: selectedDriverId,
+        override_used: isNonCompliant,
+        override_log_id: overrideLogId || undefined
+      });
+
+      // Reset state
+      setIsAssignModalOpen(false);
+      setSelectedDriverId('');
+      setOverrideReason('');
+      
+      // Refresh page data
+      const vData = await api.vehicles.getById(id);
+      setVehicle(vData);
+      const [activeAssignData, compStatusData] = await Promise.all([
+        api.assignments.getAll({ vehicle_id: id, status: 'Active' }),
+        api.compliance.getVehicleStatus(id)
+      ]);
+      setActiveAssignment(activeAssignData && activeAssignData.length > 0 ? activeAssignData[0] : null);
+      setComplianceStatus(compStatusData);
+
+    } catch (err: any) {
+      setAssignError(err.message || 'Failed to assign vehicle.');
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  const handleReturnVehicle = async () => {
+    if (!activeAssignment) return;
+    if (!confirm('Are you sure you want to log return of this vehicle?')) return;
+
+    setLoading(true);
+    try {
+      await api.assignments.returnVehicle(activeAssignment.id);
+      
+      // Refresh page data
+      const vData = await api.vehicles.getById(id);
+      setVehicle(vData);
+      const [activeAssignData, compStatusData] = await Promise.all([
+        api.assignments.getAll({ vehicle_id: id, status: 'Active' }),
+        api.compliance.getVehicleStatus(id)
+      ]);
+      setActiveAssignment(activeAssignData && activeAssignData.length > 0 ? activeAssignData[0] : null);
+      setComplianceStatus(compStatusData);
+    } catch (err: any) {
+      alert(err.message || 'Failed to return vehicle.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCompliance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docExpiry || !docType) return;
+    setSubmittingDoc(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api'}/compliance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('fleetguard_token')}`
+        },
+        body: JSON.stringify({
+          vehicle_id: id,
+          document_type: docType,
+          document_number: docNumber,
+          expiry_date: docExpiry,
+          status: 'Valid'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add document');
+      
+      alert('Compliance document added successfully!');
+      setIsAddDocOpen(false);
+      // Reload page to get new data
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSubmittingDoc(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -69,7 +212,7 @@ export default function VehicleDetailsPage() {
           <span className="material-symbols-outlined text-[64px] text-slate-300 mb-4">error</span>
           <h2 className="text-xl font-bold text-slate-700 mb-2">Vehicle Not Found</h2>
           <p className="text-sm text-slate-500 mb-6">{error || 'The requested vehicle could not be loaded.'}</p>
-          <button onClick={() => router.back()} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold">
+          <button onClick={() => router.back()} className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold border-0 cursor-pointer">
             Go Back
           </button>
         </div>
@@ -94,7 +237,7 @@ export default function VehicleDetailsPage() {
         <div className="pb-4 border-b border-slate-200 flex items-center justify-between">
           <button
             onClick={() => router.back()}
-            className="text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-2 font-bold text-sm cursor-pointer"
+            className="text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-2 font-bold text-sm cursor-pointer border-0 bg-transparent"
           >
             <span className="material-symbols-outlined text-[18px]">arrow_back</span>
             Back to Fleet
@@ -119,6 +262,27 @@ export default function VehicleDetailsPage() {
             </p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
+            {['Admin', 'Fleet Manager', 'Manager'].includes(userRole) && (
+              <>
+                {activeAssignment ? (
+                  <button
+                    onClick={handleReturnVehicle}
+                    className="flex items-center gap-2 px-4 py-2.5 text-white bg-rose-600 hover:bg-rose-700 rounded-xl text-[13px] font-semibold shadow-md cursor-pointer border-0 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">assignment_return</span>
+                    Return Vehicle
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsAssignModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-xl text-[13px] font-semibold shadow-md cursor-pointer border-0 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">person_add</span>
+                    Assign Driver
+                  </button>
+                )}
+              </>
+            )}
             <Link href="/service-records/create">
               <button className="flex items-center gap-2 px-4 py-2.5 text-white rounded-xl text-[13px] font-semibold shadow-md cursor-pointer btn-scale border-0 focus-ring hover:opacity-90 transition-all" style={{ background: 'linear-gradient(135deg, #091426 0%, #1e3a5f 100%)' }}>
                 <span className="material-symbols-outlined text-[16px]" aria-hidden="true">add</span>
@@ -128,8 +292,31 @@ export default function VehicleDetailsPage() {
           </div>
         </div>
 
+        {/* Active Assignment Info Banner */}
+        {activeAssignment && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 shadow-xs flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0 animate-pulse">
+                <span className="material-symbols-outlined">badge</span>
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 text-sm">Active Vehicle Assignment</h4>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Assigned to <span className="font-semibold">{activeAssignment.driver_name}</span> ({activeAssignment.driver_email}) by {activeAssignment.assigned_by_name} on {new Date(activeAssignment.assigned_date).toLocaleDateString()}
+                </p>
+                {activeAssignment.override_used && (
+                  <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold border border-amber-200">
+                    <span className="material-symbols-outlined text-[12px]">warning</span>
+                    Assigned via Manager Override
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Vehicle Stats Summary (Bento Grid) */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Main Info Card (Spans 2 columns) */}
           <div className="md:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex gap-6 items-center relative overflow-hidden group hover:shadow-md transition-shadow">
             <div className="w-24 h-24 rounded-2xl bg-blue-50 flex-shrink-0 border border-blue-100 flex items-center justify-center text-blue-600">
@@ -250,7 +437,7 @@ export default function VehicleDetailsPage() {
                               ${Number(record.total_cost).toFixed(2)}
                             </span>
                             <Link href={`/service-records/${record.id}`}>
-                              <button className="mt-2 text-blue-600 hover:underline text-xs font-bold flex items-center gap-1 ml-auto transition-colors cursor-pointer">
+                              <button className="mt-2 text-blue-600 hover:underline text-xs font-bold flex items-center gap-1 ml-auto transition-colors cursor-pointer border-0 bg-transparent">
                                 <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                                 View Details
                               </button>
@@ -291,10 +478,35 @@ export default function VehicleDetailsPage() {
           <div className="space-y-6">
             {/* Compliance Documents Section */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-emerald-600">verified_user</span>
-                Compliance & Documents
-              </h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-emerald-600">verified_user</span>
+                  Compliance & Documents
+                </h3>
+                {['Admin', 'Fleet Manager', 'Manager'].includes(userRole) && (
+                  <button onClick={() => setIsAddDocOpen(true)} className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 transition-colors cursor-pointer">
+                    + Add
+                  </button>
+                )}
+              </div>
+
+              {/* Overall compliance status banner */}
+              {complianceStatus && (
+                <div className={`p-4 rounded-xl border mb-4 flex items-center gap-3 ${complianceStatus.overall_status === 'Compliant' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+                  <span className="material-symbols-outlined shrink-0">
+                    {complianceStatus.overall_status === 'Compliant' ? 'check_circle' : 'cancel'}
+                  </span>
+                  <div>
+                    <p className="font-bold text-xs uppercase">Overall Status: {complianceStatus.overall_status}</p>
+                    {complianceStatus.missing_documents && complianceStatus.missing_documents.length > 0 && (
+                      <p className="text-[10px] mt-0.5 font-semibold">Missing: {complianceStatus.missing_documents.join(', ')}</p>
+                    )}
+                    {complianceStatus.expired_documents && complianceStatus.expired_documents.length > 0 && (
+                      <p className="text-[10px] mt-0.5 font-semibold">Expired: {complianceStatus.expired_documents.map((d: any) => d.document_type).join(', ')}</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-3">
                 {complianceDocs.length > 0 ? (
@@ -321,7 +533,7 @@ export default function VehicleDetailsPage() {
                             Exp: {new Date(doc.expiry_date).toLocaleDateString()}
                           </span>
                           {doc.file_url && (
-                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
+                            <a href={`http://127.0.0.1:5001${doc.file_url}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
                               View <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                             </a>
                           )}
@@ -335,7 +547,7 @@ export default function VehicleDetailsPage() {
                   </div>
                 )}
               </div>
-              <button className="w-full mt-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors flex items-center justify-center gap-2">
+              <button className="w-full mt-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors flex items-center justify-center gap-2 cursor-pointer">
                 <span className="material-symbols-outlined text-[16px]">upload_file</span>
                 Upload Document
               </button>
@@ -360,6 +572,97 @@ export default function VehicleDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* ASSIGN DRIVER MODAL */}
+      {isAssignModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto" onClick={() => setIsAssignModalOpen(false)}>
+          <div className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg font-bold">person_add</span>
+                Assign Driver to Vehicle
+              </h3>
+              <button onClick={() => setIsAssignModalOpen(false)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer border-0 bg-transparent">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignSubmit} className="p-6 space-y-4">
+              {assignError && (
+                <div className="p-3 rounded-xl text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-100 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">error</span>
+                  {assignError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">Select Driver</label>
+                <select
+                  value={selectedDriverId}
+                  onChange={(e) => setSelectedDriverId(e.target.value)}
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">-- Choose Driver --</option>
+                  {drivers.map((driver: any) => (
+                    <option key={driver.id} value={driver.id}>
+                      {driver.full_name} ({driver.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {complianceStatus?.overall_status === 'Non-Compliant' && (
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
+                  <div className="flex gap-2 text-amber-800">
+                    <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">warning</span>
+                    <div>
+                      <p className="font-bold text-xs uppercase">Compliance Override Required</p>
+                      <p className="text-[11px] mt-0.5">
+                        This vehicle has expired or missing compliance documents. Assigning it requires a manager override justification.
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-amber-800 mb-1">Reason for Override *</label>
+                    <textarea
+                      value={overrideReason}
+                      onChange={(e) => setOverrideReason(e.target.value)}
+                      required
+                      placeholder="Provide details on why this vehicle must be assigned despite non-compliance..."
+                      rows={3}
+                      className="w-full bg-white border border-amber-300 rounded-lg p-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAssignModalOpen(false)}
+                  className="px-5 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer border-0"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={assignLoading}
+                  className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-500/20 disabled:opacity-50 cursor-pointer border-0 flex items-center gap-2"
+                >
+                  {assignLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Assigning...
+                    </>
+                  ) : 'Assign Driver'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      <div className="mt-8"><Footer /></div>
     </LayoutWrapper>
   );
 }

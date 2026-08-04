@@ -41,9 +41,10 @@ const checkAndSendExpiryAlerts = async () => {
       LEFT JOIN assignments a ON a.vehicle_id = cd.vehicle_id AND a.assignment_status = 'Active'
       WHERE cd.status = 'Valid'
         AND (
-          cd.expiry_date = CURRENT_DATE + INTERVAL '10 days' OR
+          cd.expiry_date = CURRENT_DATE + INTERVAL '30 days' OR
+          cd.expiry_date = CURRENT_DATE + INTERVAL '15 days' OR
           cd.expiry_date = CURRENT_DATE + INTERVAL '7 days' OR
-          cd.expiry_date = CURRENT_DATE + INTERVAL '5 days'
+          cd.expiry_date < CURRENT_DATE
         )
     `;
 
@@ -56,8 +57,12 @@ const checkAndSendExpiryAlerts = async () => {
       const diffTime = expDate - today;
       const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      const title = `${doc.document_type} Expiring in ${days} Days`;
-      const message = `The ${doc.document_type} (No: ${doc.document_number || 'N/A'}) for vehicle ${doc.vehicle_number} (${doc.registration_number}) is expiring on ${expDate.toLocaleDateString()} (${days} days remaining). Please renew it immediately.`;
+      const title = days <= 0
+        ? `OVERDUE: ${doc.document_type} Has Expired`
+        : `${doc.document_type} Expiring in ${days} Days`;
+      const message = days <= 0
+        ? `The ${doc.document_type} (No: ${doc.document_number || 'N/A'}) for vehicle ${doc.vehicle_number} (${doc.registration_number}) expired on ${expDate.toLocaleDateString()}. This vehicle is NON-COMPLIANT and cannot be assigned without an override. Please renew immediately.`
+        : `The ${doc.document_type} (No: ${doc.document_number || 'N/A'}) for vehicle ${doc.vehicle_number} (${doc.registration_number}) is expiring on ${expDate.toLocaleDateString()} (${days} days remaining). Please renew it before expiry.`;
 
       // Recipient uploader/owner or assigned driver
       const targetUserId = doc.driver_id || doc.uploaded_by;
@@ -88,9 +93,10 @@ const checkAndSendExpiryAlerts = async () => {
       LEFT JOIN assignments a ON a.vehicle_id = sr.vehicle_id AND a.assignment_status = 'Active'
       WHERE sr.next_service_date IS NOT NULL
         AND (
-          sr.next_service_date = CURRENT_DATE + INTERVAL '10 days' OR
+          sr.next_service_date = CURRENT_DATE + INTERVAL '30 days' OR
+          sr.next_service_date = CURRENT_DATE + INTERVAL '15 days' OR
           sr.next_service_date = CURRENT_DATE + INTERVAL '7 days' OR
-          sr.next_service_date = CURRENT_DATE + INTERVAL '5 days'
+          sr.next_service_date < CURRENT_DATE
         )
     `;
 
@@ -103,8 +109,12 @@ const checkAndSendExpiryAlerts = async () => {
       const diffTime = nextDate - today;
       const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      const title = `Scheduled Maintenance in ${days} Days`;
-      const message = `Vehicle ${service.vehicle_number} (${service.registration_number}) has a scheduled ${service.service_type || 'Routine Maintenance'} on ${nextDate.toLocaleDateString()} (${days} days remaining). Please prepare the vehicle for maintenance.`;
+      const title = days <= 0
+        ? `OVERDUE: Scheduled Maintenance Missed`
+        : `Scheduled Maintenance in ${days} Days`;
+      const message = days <= 0
+        ? `Vehicle ${service.vehicle_number} (${service.registration_number}) has a MISSED ${service.service_type || 'Routine Maintenance'} that was due on ${nextDate.toLocaleDateString()}. Please schedule service immediately.`
+        : `Vehicle ${service.vehicle_number} (${service.registration_number}) has a scheduled ${service.service_type || 'Routine Maintenance'} on ${nextDate.toLocaleDateString()} (${days} days remaining). Please prepare the vehicle for maintenance.`;
 
       const targetUserId = service.driver_id || service.mechanic_id;
 
