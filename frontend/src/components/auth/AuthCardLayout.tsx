@@ -45,7 +45,8 @@ export default function AuthCardLayout({
       label: 'Admin',
       email: 'admin@fleetguard.com',
       pass: 'admin123',
-      icon: '🛡️',
+      iconName: 'admin_panel_settings',
+      iconColor: 'text-blue-600 bg-blue-50',
       description: 'System Governance'
     },
     {
@@ -53,7 +54,8 @@ export default function AuthCardLayout({
       label: 'Fleet Manager',
       email: 'manager@fleetguard.com',
       pass: 'manager123',
-      icon: '💼',
+      iconName: 'analytics',
+      iconColor: 'text-amber-600 bg-amber-50',
       description: 'Fleet Analytics'
     },
     {
@@ -61,7 +63,8 @@ export default function AuthCardLayout({
       label: 'Driver',
       email: 'driver@fleetguard.com',
       pass: 'driver123',
-      icon: '🚗',
+      iconName: 'local_shipping',
+      iconColor: 'text-emerald-600 bg-emerald-50',
       description: 'Vehicle Assignments'
     },
     {
@@ -69,7 +72,8 @@ export default function AuthCardLayout({
       label: 'Service Center',
       email: 'mechanic@fleetguard.com',
       pass: 'mechanic123',
-      icon: '🔧',
+      iconName: 'build',
+      iconColor: 'text-purple-600 bg-purple-50',
       description: 'Service Queue'
     }
   ];
@@ -92,11 +96,11 @@ export default function AuthCardLayout({
     }
   ];
 
-  // Auto-slide every 2 seconds
+  // Auto-slide every 3 seconds
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % slides.length);
-    }, 2000);
+    }, 3000);
     return () => clearInterval(timer);
   }, [slides.length]);
 
@@ -155,14 +159,16 @@ export default function AuthCardLayout({
                         setEmail(card.email);
                         setPassword(card.pass);
                       }}
-                      className={`p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between relative ${
+                      className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between relative ${
                         isSelected
                           ? 'border-2 border-blue-600 bg-blue-50/70 shadow-md shadow-blue-500/10 ring-2 ring-blue-500/20'
                           : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100 hover:border-slate-300'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xl">{card.icon}</span>
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${card.iconColor}`}>
+                          <span className="material-symbols-outlined text-[18px]">{card.iconName}</span>
+                        </div>
                         {isSelected ? (
                           <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
                             ✓
@@ -171,7 +177,7 @@ export default function AuthCardLayout({
                           <span className="w-4 h-4 rounded-full border border-slate-300"></span>
                         )}
                       </div>
-                      <div className="mt-2">
+                      <div className="mt-2.5">
                         <div className="text-xs font-extrabold text-slate-900">{card.label}</div>
                         <div className="text-[10px] font-medium text-slate-500 mt-0.5">{card.description}</div>
                       </div>
@@ -202,9 +208,7 @@ export default function AuthCardLayout({
                 <div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                      </svg>
+                      <span className="material-symbols-outlined text-[18px]">mail</span>
                     </div>
                     <input
                       required
@@ -221,9 +225,7 @@ export default function AuthCardLayout({
                 <div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
+                      <span className="material-symbols-outlined text-[18px]">lock</span>
                     </div>
                     <input
                       required
@@ -291,73 +293,85 @@ export default function AuthCardLayout({
             </div>
           </div>
 
-          {/* Right Column: Vibrant Blue Banner & Graphic */}
-          <div className="w-full bg-gradient-to-br from-[#1B63F4] via-[#2563EB] to-[#1D4ED8] p-6 md:p-8 lg:p-10 text-white flex flex-col items-center justify-between text-center relative overflow-hidden min-w-0">
-            {/* Concentric Glow Rings */}
+          {/* Right Column: Vibrant Blue Banner & Rich Graphic */}
+          <div className="w-full bg-gradient-to-br from-[#1B63F4] via-[#2563EB] to-[#1D4ED8] p-8 lg:p-10 text-white flex flex-col justify-between text-center relative overflow-hidden min-w-0">
+            {/* Background Glow Elements */}
             <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full border border-white/10 pointer-events-none"></div>
             <div className="absolute -bottom-10 -right-10 w-72 h-72 rounded-full border border-white/10 pointer-events-none"></div>
 
             {/* App Mockup Graphic */}
-            <div className="relative z-10 my-auto flex justify-center py-4 w-full">
-              <div className="w-full max-w-[280px] bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl text-slate-900 border border-white/20 transform hover:-translate-y-1 transition-transform mx-auto">
-                {/* macOS dots */}
-                <div className="flex items-center gap-1.5 mb-3">
-                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+            <div className="relative z-10 my-auto flex justify-center py-2 w-full">
+              <div className="w-full max-w-[320px] bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl text-slate-900 border border-white/30 transform hover:-translate-y-1 transition-transform mx-auto">
+                {/* macOS dots & Live Indicator */}
+                <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                  </div>
+                  <span className="text-[10px] font-extrabold text-blue-600 flex items-center gap-1 uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                    Live Operations
+                  </span>
                 </div>
 
-                {/* Mini List */}
-                <div className="space-y-2.5">
+                {/* Rich Fleet Activity Cards */}
+                <div className="space-y-2 text-left">
                   <div className="p-2.5 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-100">
                     <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-rose-100 flex items-center justify-center text-xs">🚗</span>
+                      <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                        <span className="material-symbols-outlined text-[16px]">local_shipping</span>
+                      </div>
                       <div>
-                        <div className="h-2 w-16 bg-slate-300 rounded"></div>
-                        <div className="h-1.5 w-10 bg-slate-200 rounded mt-1"></div>
+                        <div className="text-[11px] font-extrabold text-slate-900">Heavy Truck #TR-402</div>
+                        <div className="text-[9px] font-semibold text-slate-400">Route #40 - Active</div>
                       </div>
                     </div>
-                    <span className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px] text-blue-600 font-bold">🚗</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Compliant</span>
                   </div>
 
                   <div className="p-2.5 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-100">
                     <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-xs">🚛</span>
+                      <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+                        <span className="material-symbols-outlined text-[16px]">warning</span>
+                      </div>
                       <div>
-                        <div className="h-2 w-14 bg-slate-300 rounded"></div>
-                        <div className="h-1.5 w-8 bg-slate-200 rounded mt-1"></div>
+                        <div className="text-[11px] font-extrabold text-slate-900">Delivery Van #VN-108</div>
+                        <div className="text-[9px] font-semibold text-slate-400">PUC Renewal Pending</div>
                       </div>
                     </div>
-                    <span className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] text-emerald-600 font-bold">🚛</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">3 Days</span>
                   </div>
 
                   <div className="p-2.5 bg-slate-50 rounded-xl flex items-center justify-between border border-slate-100">
                     <div className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-xs">🔧</span>
+                      <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                        <span className="material-symbols-outlined text-[16px]">build</span>
+                      </div>
                       <div>
-                        <div className="h-2 w-18 bg-slate-300 rounded"></div>
-                        <div className="h-1.5 w-12 bg-slate-200 rounded mt-1"></div>
+                        <div className="text-[11px] font-extrabold text-slate-900">Express EV #EC-55</div>
+                        <div className="text-[9px] font-semibold text-slate-400">Scheduled Service</div>
                       </div>
                     </div>
-                    <span className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center text-[10px] text-amber-600 font-bold">🔧</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">In Shop</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Banner Text Content with 2-Second Slide Animation */}
-            <div className="relative z-10 text-center flex flex-col items-center justify-center space-y-2.5 mt-3 min-h-[130px] w-full max-w-md mx-auto">
-              <div key={activeSlide} className="w-full text-center mx-auto px-3 animate-fade-in transition-all duration-500">
-                <h2 className="text-center text-xl md:text-2xl font-extrabold tracking-tight leading-snug text-white text-balance drop-shadow-sm mx-auto">
+            {/* Banner Text Content with Block Width */}
+            <div className="relative z-10 w-full text-center mt-6 px-4 pb-2">
+              <div key={activeSlide} className="w-full block animate-fade-in">
+                <h2 className="text-xl md:text-2xl font-extrabold tracking-tight text-white leading-snug w-full block text-center mb-2 font-sans">
                   {slides[activeSlide].title}
                 </h2>
-                <p className="text-center text-xs md:text-sm text-blue-100/95 font-medium leading-normal mt-1.5 text-balance line-clamp-2 mx-auto">
+                <p className="text-xs md:text-sm text-blue-100 font-medium text-center leading-relaxed w-full block max-w-[420px] mx-auto mb-3 font-sans">
                   {slides[activeSlide].subtitle}
                 </p>
               </div>
 
-              {/* Interactive 3 Dots Indicator (Every 2s Auto Slides) */}
-              <div className="pt-2 flex items-center justify-center gap-2 mx-auto">
+              {/* Interactive 3 Dots Indicator */}
+              <div className="flex items-center justify-center gap-2 my-3 w-full">
                 {slides.map((_, idx) => (
                   <button
                     key={idx}
@@ -373,7 +387,7 @@ export default function AuthCardLayout({
                 ))}
               </div>
               
-              <p className="text-center text-[10px] md:text-[11px] font-extrabold uppercase tracking-widest text-blue-200/90 pt-0.5 mx-auto">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-blue-200 text-center w-full block pt-1 font-sans">
                 {slides[activeSlide].tagline}
               </p>
             </div>
