@@ -5,6 +5,45 @@ import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle, ServiceRecord } from '@/types';
 
+interface CheckItem {
+  id: 'engine' | 'tires' | 'brakes' | 'lights';
+  title: string;
+  subtitle: string;
+  icon: string;
+  priority: 'Critical' | 'Required';
+}
+
+const CHECKS_LIST: CheckItem[] = [
+  {
+    id: 'engine',
+    title: 'Engine & Battery Health',
+    subtitle: 'Engine oil dipstick level, radiator coolant & battery terminal tightness',
+    icon: 'build',
+    priority: 'Critical'
+  },
+  {
+    id: 'tires',
+    title: 'Tire Condition & Pressure',
+    subtitle: 'PSI pressure across all road wheels, tread depth & spare tire state',
+    icon: 'trip_origin',
+    priority: 'Critical'
+  },
+  {
+    id: 'brakes',
+    title: 'Brakes & Emergency System',
+    subtitle: 'Foot brake pedal firmness, air pressure buildup & parking handbrake',
+    icon: 'error',
+    priority: 'Critical'
+  },
+  {
+    id: 'lights',
+    title: 'Lighting, Signals & Mirrors',
+    subtitle: 'High/low headlights, turn indicators, side mirrors & windshield wipers',
+    icon: 'light_mode',
+    priority: 'Required'
+  }
+];
+
 export default function DriverDashboardPage() {
   const router = useRouter();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -13,14 +52,22 @@ export default function DriverDashboardPage() {
   const [serviceRecords, setServiceRecords] = useState<ServiceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // New UI states
+  // Compliance Breakdown Drawer Toggle
   const [showCompliance, setShowCompliance] = useState(true);
-  const [checklist, setChecklist] = useState({
-    tires: null as boolean | null,
-    brakes: null as boolean | null,
-    fluids: null as boolean | null,
-    safety: null as boolean | null
+
+  // 4 Pre-Trip Checklist Items State
+  const [checklist, setChecklist] = useState<Record<string, boolean | null>>({
+    engine: null,
+    tires: null,
+    brakes: null,
+    lights: null
   });
+
+  const [checkNotes, setCheckNotes] = useState<Record<string, string>>({});
+  const [generalRemarks, setGeneralRemarks] = useState('');
+  const [submittingChecklist, setSubmittingChecklist] = useState(false);
+
+  // Odometer / Mileage States
   const [newMileage, setNewMileage] = useState<number>(0);
   const [updatingMileage, setUpdatingMileage] = useState(false);
 
@@ -78,7 +125,7 @@ export default function DriverDashboardPage() {
   if (!vehicle) {
     return (
       <LayoutWrapper>
-        <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto bg-slate-50 min-h-screen flex flex-col items-center justify-center">
+        <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto bg-slate-50 min-h-screen flex flex-col items-center justify-center text-center">
           <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-4">
             <span className="material-symbols-outlined text-3xl text-slate-400">directions_car</span>
           </div>
@@ -91,7 +138,7 @@ export default function DriverDashboardPage() {
 
   const now = new Date();
   
-  // Find expirations
+  // Find document expirations
   const getDocExpiry = (type: string) => {
     const doc = complianceDocs.find(d => d.document_type.toLowerCase().includes(type.toLowerCase()));
     return doc ? doc.expiry_date : null;
@@ -107,7 +154,7 @@ export default function DriverDashboardPage() {
     { name: 'REGISTRATION', exp: registrationExp },
     { name: 'EMISSIONS', exp: pollutionExp },
     { name: 'SAFETY INSPECTION', exp: inspectionExp }
-  ].filter(d => d.exp); // only show docs we have data for
+  ].filter(d => d.exp);
 
   const warnings = docs.filter(d => d.exp && new Date(d.exp) < now);
   const lastService = serviceRecords.length > 0 ? serviceRecords[0] : null;
@@ -115,12 +162,37 @@ export default function DriverDashboardPage() {
 
   const isBlocked = warnings.length > 0 || isServiceOverdue || vehicle.status === 'Maintenance';
 
-  const allPass = checklist.tires && checklist.brakes && checklist.fluids && checklist.safety;
-  const handlePassAll = () => setChecklist({ tires: true, brakes: true, fluids: true, safety: true });
+  // Checklist helper calculations
+  const totalCount = CHECKS_LIST.length;
+  const answeredCount = Object.values(checklist).filter(v => v !== null).length;
+  const passedCount = Object.values(checklist).filter(v => v === true).length;
+  const failedCount = Object.values(checklist).filter(v => v === false).length;
+
+  const allPass = passedCount === totalCount;
+  const isAllAnswered = answeredCount === totalCount;
+
+  const handlePassAll = () => {
+    setChecklist({ engine: true, tires: true, brakes: true, lights: true });
+  };
+
+  const handleReset = () => {
+    setChecklist({ engine: null, tires: null, brakes: null, lights: null });
+    setCheckNotes({});
+  };
   
   const submitChecklist = async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api'}/checklists`, {
+      setSubmittingChecklist(true);
+      
+      const failedNotes = CHECKS_LIST.filter(c => checklist[c.id] === false)
+        .map(c => `${c.title}${checkNotes[c.id] ? `: ${checkNotes[c.id]}` : ''}`)
+        .join('; ');
+
+      const compiledRemarks = failedCount > 0 
+        ? `Issues flagged: ${failedNotes}. ${generalRemarks}`.trim()
+        : (generalRemarks || 'All checks passed.');
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api'}/checklists`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -128,17 +200,25 @@ export default function DriverDashboardPage() {
         },
         body: JSON.stringify({
           vehicle_id: vehicle.id,
-          tyres_ok: checklist.tires,
-          brakes_ok: checklist.brakes,
-          lights_ok: checklist.safety,
-          horn_ok: checklist.safety,
-          mirrors_ok: checklist.safety,
-          remarks: !allPass ? 'Failed some checks. Fluids: ' + checklist.fluids : 'None'
+          tyres_ok: checklist.tires ?? true,
+          brakes_ok: checklist.brakes ?? true,
+          lights_ok: checklist.lights ?? true,
+          horn_ok: checklist.lights ?? true,
+          mirrors_ok: checklist.lights ?? true,
+          remarks: compiledRemarks,
+          status: failedCount > 0 ? 'Issues Reported' : 'Completed'
         })
       });
-      alert('Checklist logged successfully!');
-    } catch(err) {
-      alert('Failed to log checklist');
+
+      if (!response.ok) {
+        throw new Error('Failed to submit checklist');
+      }
+
+      alert('Pre-trip duty checklist submitted successfully!');
+    } catch(err: any) {
+      alert(err.message || 'Failed to log checklist');
+    } finally {
+      setSubmittingChecklist(false);
     }
   };
 
@@ -177,25 +257,37 @@ export default function DriverDashboardPage() {
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Driver Duty Dashboard</h1>
             <p className="text-slate-500 text-sm mt-1">Real-time vehicle assignment compliance & road-legal clearance</p>
           </div>
-          <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-lg text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50">
+          <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-lg text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer">
             <span className="material-symbols-outlined text-[18px]">refresh</span>
             Refresh
           </button>
         </div>
 
-        {/* Compliance Block */}
-        <div className={`rounded-xl shadow-md overflow-hidden relative ${isBlocked ? 'bg-[#b71c1c] text-white' : 'bg-[#00695c] text-white'}`}>
-          <div className="p-6">
-            <div className="flex items-start gap-4 relative z-10">
-              <span className="material-symbols-outlined text-[40px]">{isBlocked ? 'report' : 'verified_user'}</span>
+        {/* Compliance Clearance Banner Block - Realistic Crimson & Emerald Tones */}
+        <div className={`rounded-2xl shadow-xl overflow-hidden relative border transition-all duration-300 ${
+          isBlocked 
+            ? 'bg-gradient-to-r from-red-950 via-rose-900 to-red-950 text-white border-rose-800/80' 
+            : 'bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-950 text-white border-emerald-800/80'
+        }`}>
+          <div className="p-6 md:p-7 relative z-10">
+            <div className="flex items-start gap-4">
+              <div className={`p-3 rounded-2xl ${
+                isBlocked ? 'bg-rose-500/20 text-rose-300 border border-rose-400/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+              }`}>
+                <span className="material-symbols-outlined text-[36px]">{isBlocked ? 'report' : 'verified_user'}</span>
+              </div>
               <div className="flex-1">
-                <span className="inline-block px-2 py-0.5 bg-white/20 text-white rounded text-[10px] font-bold uppercase tracking-wider mb-2">
-                  {isBlocked ? 'Legal Risk' : 'Clearance Active'}
+                <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider mb-2 border shadow-sm ${
+                  isBlocked 
+                    ? 'bg-rose-500/25 text-rose-200 border-rose-400/30 backdrop-blur-md' 
+                    : 'bg-emerald-500/25 text-emerald-200 border-emerald-400/30 backdrop-blur-md'
+                }`}>
+                  {isBlocked ? 'LEGAL RISK' : 'CLEARANCE ACTIVE'}
                 </span>
-                <h2 className="text-2xl font-extrabold mb-1">
+                <h2 className="text-2xl font-black text-white tracking-tight mb-1">
                   {isBlocked ? 'Operation Blocked / Legal Risk' : 'Vehicle Compliant / Road Legal'}
                 </h2>
-                <p className="text-white/90 text-sm max-w-2xl">
+                <p className="text-slate-200 text-xs sm:text-sm max-w-2xl font-medium leading-relaxed">
                   {isBlocked 
                     ? `CRITICAL ALERT: Assigned vehicle ${vehicle.vehicle_number} has compliance violations or is under maintenance. Do not operate on public roads.`
                     : `SUCCESS: Assigned vehicle ${vehicle.vehicle_number} has passed all digital compliance checks. You are cleared for duty.`}
@@ -203,36 +295,51 @@ export default function DriverDashboardPage() {
               </div>
 
               {/* Floating Vehicle Badge */}
-              <div className="hidden sm:block bg-black/20 rounded-lg p-3 border border-white/10 text-right min-w-[160px]">
-                <p className="text-[10px] uppercase font-bold text-white/60 mb-0.5">Assigned Vehicle</p>
-                <p className="text-xl font-black tracking-wider">{vehicle.vehicle_number}</p>
-                <p className="text-xs text-white/80">{vehicle.model}</p>
+              <div className="hidden sm:block bg-black/35 backdrop-blur-md rounded-xl p-3.5 border border-white/20 text-right min-w-[160px] shadow-sm">
+                <p className="text-[10px] uppercase font-black text-slate-300 tracking-wider mb-0.5">Assigned Vehicle</p>
+                <p className="text-xl font-black text-white tracking-wider font-mono">{vehicle.vehicle_number}</p>
+                <p className="text-xs text-slate-200 font-bold">{vehicle.model}</p>
               </div>
             </div>
             
-            <div className="mt-6 border-t border-white/20 pt-4">
-              <button onClick={() => setShowCompliance(!showCompliance)} className="flex items-center gap-1 text-sm font-bold text-white/90 hover:text-white transition-colors cursor-pointer">
+            {/* Compliance Breakdown Accordion Header */}
+            <div className="mt-6 border-t border-white/15 pt-4">
+              <button 
+                onClick={() => setShowCompliance(!showCompliance)} 
+                className="flex items-center gap-1.5 text-xs font-extrabold text-slate-200 hover:text-white transition-colors cursor-pointer"
+              >
                 <span className="material-symbols-outlined text-[18px]">{showCompliance ? 'expand_less' : 'expand_more'}</span>
                 {showCompliance ? 'Hide' : 'Show'} Compliance Breakdown ({docs.length} documents checked)
               </button>
               
+              {/* Compliance Cards Grid - Realistic Glass & White Cards */}
               {showCompliance && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                   {docs.map(doc => {
                     const isExp = new Date(doc.exp) < now;
                     return (
-                      <div key={doc.name} className={`rounded-lg p-3 border ${isExp ? 'bg-black/20 border-red-400' : 'bg-black/10 border-white/10'}`}>
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-white/90 mb-2">
-                          <span className={`material-symbols-outlined text-[16px] ${isExp ? 'text-red-300' : 'text-emerald-400'}`}>
+                      <div 
+                        key={doc.name} 
+                        className={`rounded-xl p-4 shadow-md bg-white/95 backdrop-blur-md text-slate-900 border-2 ${
+                          isExp ? 'border-rose-500' : 'border-emerald-500'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs font-black text-slate-900 mb-2">
+                          <span className={`material-symbols-outlined text-[20px] ${isExp ? 'text-rose-600' : 'text-emerald-600'}`}>
                             {isExp ? 'warning' : 'check_circle'}
                           </span>
-                          {doc.name}
+                          <span className="truncate">{doc.name}</span>
                         </div>
-                        <div className="flex justify-between items-end mt-4">
-                          <span className={`text-[11px] font-black uppercase tracking-wider ${isExp ? 'text-red-300' : 'text-emerald-400'}`}>
+
+                        <div className="flex justify-between items-center mt-4 pt-2 border-t border-slate-100">
+                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded ${
+                            isExp ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          }`}>
                             {isExp ? 'Expired' : 'Valid'}
                           </span>
-                          <span className="text-[10px] text-white/60">Exp: {new Date(doc.exp).toLocaleDateString()}</span>
+                          <span className="text-[11px] font-mono font-extrabold text-slate-700">
+                            Exp: {new Date(doc.exp).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
                     );
@@ -243,49 +350,49 @@ export default function DriverDashboardPage() {
           </div>
         </div>
 
-        {/* Assigned Duty Details */}
+        {/* Assigned Duty Details & Mileage */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-6">
           <h3 className="text-[11px] font-black text-slate-700 uppercase tracking-widest mb-4">Assigned Duty Details</h3>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">License Plate</p>
-              <p className="font-extrabold text-blue-700">{vehicle.vehicle_number}</p>
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-200">
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">License Plate</p>
+              <p className="font-extrabold text-blue-700 text-base font-mono">{vehicle.vehicle_number}</p>
             </div>
             
-            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Make & Model</p>
-              <p className="font-bold text-slate-900 text-sm">{vehicle.manufacturer} {vehicle.model}</p>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">({vehicle.manufacturing_year || '2023'})</p>
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-200">
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Make & Model</p>
+              <p className="font-extrabold text-slate-900 text-sm">{vehicle.manufacturer} {vehicle.model}</p>
+              <p className="text-xs text-slate-600 font-semibold mt-0.5">({vehicle.manufacturing_year || '2023'})</p>
             </div>
             
-            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Registration #</p>
-              <p className="font-mono text-xs font-bold text-slate-700 truncate">{vehicle.registration_number || 'N/A'}</p>
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-200">
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Registration #</p>
+              <p className="font-mono text-xs font-bold text-slate-800 truncate">{vehicle.registration_number || 'N/A'}</p>
             </div>
             
-            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Assignment</p>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 mt-1">
-                {assignment.status || 'Active'}
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-200">
+              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Assignment</p>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 mt-1">
+                {assignment?.status || 'Active'}
               </span>
             </div>
           </div>
 
           <div className="mt-4 md:w-[48%]">
-            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-100 flex flex-col justify-between h-full">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Current Mileage</p>
+            <div className="bg-[#f8fafc] rounded-xl p-4 border border-slate-200 flex flex-col justify-between h-full">
+              <p className="text-[10px] font-extrabold text-slate-600 uppercase tracking-widest mb-2">Current Mileage</p>
               <div className="flex gap-2">
                 <input 
                   type="number" 
                   value={newMileage}
                   onChange={(e) => setNewMileage(Number(e.target.value))}
-                  className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-extrabold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-inner"
                 />
                 <button 
                   onClick={handleUpdateMileage}
                   disabled={updatingMileage}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-[#1d4ed8] hover:bg-blue-800 text-white text-xs font-bold rounded-lg transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#1d4ed8] hover:bg-blue-800 text-white text-xs font-extrabold rounded-lg transition-colors shadow-sm cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">edit</span>
                   {updatingMileage ? '...' : 'Update'}
@@ -295,99 +402,162 @@ export default function DriverDashboardPage() {
           </div>
         </div>
 
-        {/* Pre-Trip Checklist */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-6">
-          <div className="flex justify-between items-center mb-6">
+        {/* Pre-Trip Safety & Duty Checklist */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-6 space-y-5">
+          
+          {/* Header & Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
-              <div className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-wider mb-1">
-                <span className="material-symbols-outlined text-[16px]">assignment_turned_in</span>
+              <div className="flex items-center gap-2 text-blue-600 text-xs font-extrabold uppercase tracking-wider mb-1">
+                <span className="material-symbols-outlined text-[18px]">assignment_turned_in</span>
                 Pre-Trip Safety Check
               </div>
               <h3 className="text-xl font-extrabold text-slate-900">Vehicle Duty Checklist</h3>
-              <p className="text-sm text-slate-500 mt-1">Fast 4-item tap-through inspection before departure</p>
+              <p className="text-xs text-slate-600 mt-0.5 font-medium">
+                Fast 4-item inspection • {answeredCount} of {totalCount} answered ({passedCount} Passed, {failedCount} Failed)
+              </p>
             </div>
-            <button onClick={handlePassAll} className="flex items-center gap-1.5 px-4 py-2 border border-emerald-200 text-emerald-700 bg-emerald-50 rounded-full text-xs font-bold hover:bg-emerald-100 transition-colors shadow-sm cursor-pointer">
-              <span className="material-symbols-outlined text-[16px]">bolt</span>
-              All Pass
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handlePassAll} 
+                className="flex items-center gap-1.5 px-4 py-2 border border-emerald-300 text-emerald-800 bg-emerald-50 rounded-full text-xs font-black hover:bg-emerald-100 transition-colors shadow-sm cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">bolt</span>
+                All Pass
+              </button>
+              <button 
+                onClick={handleReset} 
+                className="px-3.5 py-2 border border-slate-300 text-slate-700 bg-slate-100 rounded-full text-xs font-extrabold hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Reset
+              </button>
+            </div>
           </div>
 
+          {/* Progress Bar Track */}
+          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex border border-slate-200">
+            <div className="bg-emerald-500 h-full transition-all duration-300" style={{ width: `${(passedCount / totalCount) * 100}%` }} />
+            <div className="bg-rose-500 h-full transition-all duration-300" style={{ width: `${(failedCount / totalCount) * 100}%` }} />
+          </div>
+
+          {/* 4 Table Row Cards */}
           <div className="space-y-3">
-            {/* Tires */}
-            <div className={`p-4 rounded-xl border flex flex-col md:flex-row justify-between md:items-center gap-4 ${checklist.tires === true ? 'bg-emerald-50/50 border-emerald-200' : checklist.tires === false ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
-              <div className="flex gap-3 items-start md:items-center">
-                <span className={`material-symbols-outlined mt-0.5 md:mt-0 ${checklist.tires === true ? 'text-emerald-500' : checklist.tires === false ? 'text-red-500' : 'text-slate-400'}`}>trip_origin</span>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Tires & Lights</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Tread depth, tire pressure, headlights, brake lights & turn signals</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setChecklist(p => ({...p, tires: true}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.tires === true ? 'bg-[#00897b] text-white border-[#00897b]' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}><span className="material-symbols-outlined text-[16px]">check_circle</span> PASS</button>
-                <button onClick={() => setChecklist(p => ({...p, tires: false}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.tires === false ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><span className="material-symbols-outlined text-[16px]">warning</span> FAIL</button>
-              </div>
-            </div>
+            {CHECKS_LIST.map((item) => {
+              const status = checklist[item.id];
+              const isPassed = status === true;
+              const isFailed = status === false;
 
-            {/* Brakes */}
-            <div className={`p-4 rounded-xl border flex flex-col md:flex-row justify-between md:items-center gap-4 ${checklist.brakes === true ? 'bg-emerald-50/50 border-emerald-200' : checklist.brakes === false ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
-              <div className="flex gap-3 items-start md:items-center">
-                <span className={`material-symbols-outlined mt-0.5 md:mt-0 ${checklist.brakes === true ? 'text-emerald-500' : checklist.brakes === false ? 'text-red-500' : 'text-slate-400'}`}>error</span>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Brake System</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Foot brake responsiveness, air brake pressure & emergency parking brake</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setChecklist(p => ({...p, brakes: true}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.brakes === true ? 'bg-[#00897b] text-white border-[#00897b]' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}><span className="material-symbols-outlined text-[16px]">check_circle</span> PASS</button>
-                <button onClick={() => setChecklist(p => ({...p, brakes: false}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.brakes === false ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><span className="material-symbols-outlined text-[16px]">warning</span> FAIL</button>
-              </div>
-            </div>
+              return (
+                <div 
+                  key={item.id}
+                  className={`p-4 rounded-xl border transition-all duration-200 flex flex-col space-y-3 ${
+                    isPassed 
+                      ? 'bg-emerald-50/70 border-emerald-300 border-l-4 border-l-emerald-600 shadow-sm' 
+                      : isFailed 
+                      ? 'bg-rose-50/70 border-rose-300 border-l-4 border-l-rose-600 shadow-sm' 
+                      : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div className="flex gap-3.5 items-start md:items-center">
+                      <span className={`material-symbols-outlined text-2xl mt-0.5 md:mt-0 ${
+                        isPassed ? 'text-emerald-700' : isFailed ? 'text-rose-700' : 'text-slate-500'
+                      }`}>
+                        {item.icon}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-black text-slate-900 text-sm">{item.title}</span>
+                          <span className={`px-2 py-0.2 rounded text-[9px] font-black uppercase tracking-wider ${
+                            item.priority === 'Critical' ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-blue-100 text-blue-800 border border-blue-200'
+                          }`}>
+                            {item.priority}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 font-medium">{item.subtitle}</p>
+                      </div>
+                    </div>
 
-            {/* Fluids */}
-            <div className={`p-4 rounded-xl border flex flex-col md:flex-row justify-between md:items-center gap-4 ${checklist.fluids === true ? 'bg-emerald-50/50 border-emerald-200' : checklist.fluids === false ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
-              <div className="flex gap-3 items-start md:items-center">
-                <span className={`material-symbols-outlined mt-0.5 md:mt-0 ${checklist.fluids === true ? 'text-emerald-500' : checklist.fluids === false ? 'text-red-500' : 'text-slate-400'}`}>water_drop</span>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Fluid Levels</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Engine oil level, radiator coolant, windshield washer fluid</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setChecklist(p => ({...p, fluids: true}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.fluids === true ? 'bg-[#00897b] text-white border-[#00897b]' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}><span className="material-symbols-outlined text-[16px]">check_circle</span> PASS</button>
-                <button onClick={() => setChecklist(p => ({...p, fluids: false}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.fluids === false ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><span className="material-symbols-outlined text-[16px]">warning</span> FAIL</button>
-              </div>
-            </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button 
+                        onClick={() => setChecklist(p => ({ ...p, [item.id]: true }))} 
+                        className={`px-5 py-2 rounded-lg text-xs font-black border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                          isPassed 
+                            ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-300 hover:bg-emerald-700' 
+                            : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-50'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">check_circle</span> PASS
+                      </button>
+                      <button 
+                        onClick={() => setChecklist(p => ({ ...p, [item.id]: false }))} 
+                        className={`px-5 py-2 rounded-lg text-xs font-black border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                          isFailed 
+                            ? 'bg-rose-600 text-white border-rose-600 ring-2 ring-rose-300 hover:bg-rose-700' 
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50 hover:text-rose-700'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">warning</span> FAIL
+                      </button>
+                    </div>
+                  </div>
 
-            {/* Safety */}
-            <div className={`p-4 rounded-xl border flex flex-col md:flex-row justify-between md:items-center gap-4 ${checklist.safety === true ? 'bg-emerald-50/50 border-emerald-200' : checklist.safety === false ? 'bg-red-50/50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
-              <div className="flex gap-3 items-start md:items-center">
-                <span className={`material-symbols-outlined mt-0.5 md:mt-0 ${checklist.safety === true ? 'text-emerald-500' : checklist.safety === false ? 'text-red-500' : 'text-slate-400'}`}>health_and_safety</span>
-                <div>
-                  <p className="font-bold text-slate-900 text-sm">Safety Equipment</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Seatbelts operational, fire extinguisher charged, reflective triangles</p>
+                  {/* Inline failure comment box */}
+                  {isFailed && (
+                    <div className="pt-2 border-t border-rose-200">
+                      <input
+                        type="text"
+                        placeholder="Describe issue (e.g. low pressure, oil leak)..."
+                        value={checkNotes[item.id] || ''}
+                        onChange={(e) => setCheckNotes({ ...checkNotes, [item.id]: e.target.value })}
+                        className="w-full px-3 py-1.5 bg-white border border-rose-300 rounded-lg text-xs text-rose-950 font-medium focus:outline-none focus:ring-2 focus:ring-rose-400"
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => setChecklist(p => ({...p, safety: true}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.safety === true ? 'bg-[#00897b] text-white border-[#00897b]' : 'bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}><span className="material-symbols-outlined text-[16px]">check_circle</span> PASS</button>
-                <button onClick={() => setChecklist(p => ({...p, safety: false}))} className={`px-5 py-2 rounded-lg text-xs font-bold border transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm ${checklist.safety === false ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}><span className="material-symbols-outlined text-[16px]">warning</span> FAIL</button>
-              </div>
-            </div>
+              );
+            })}
           </div>
 
-          <div className="flex justify-between items-center mt-6 pt-6 border-t border-slate-100">
+          {/* General Remarks input */}
+          <div className="pt-2">
+            <input 
+              type="text" 
+              value={generalRemarks}
+              onChange={(e) => setGeneralRemarks(e.target.value)}
+              placeholder="Additional comments or remarks (optional)..."
+              className="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-medium text-slate-900 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Footer Submit Bar */}
+          <div className="flex justify-between items-center mt-6 pt-5 border-t border-slate-100">
             {allPass ? (
-              <span className="px-5 py-2 bg-emerald-100 text-emerald-800 font-extrabold text-sm rounded-full border border-emerald-200 shadow-sm">Overall: PASS</span>
+              <span className="px-5 py-2 bg-emerald-100 text-emerald-900 font-black text-sm rounded-full border border-emerald-300 shadow-sm">
+                Overall: PASS
+              </span>
+            ) : answeredCount > 0 ? (
+              <span className={`px-5 py-2 font-black text-sm rounded-full border shadow-sm ${
+                failedCount > 0 ? 'bg-rose-100 text-rose-900 border-rose-300' : 'bg-amber-100 text-amber-900 border-amber-300'
+              }`}>
+                Overall: {failedCount > 0 ? 'FAIL' : 'INCOMPLETE'}
+              </span>
             ) : (
-              <span className="px-5 py-2 bg-slate-100 text-slate-600 font-extrabold text-sm rounded-full border border-slate-200">Pending Selection</span>
+              <span className="px-5 py-2 bg-slate-100 text-slate-700 font-extrabold text-sm rounded-full border border-slate-300">
+                Pending Selection
+              </span>
             )}
+
             <button 
               onClick={submitChecklist}
-              disabled={isBlocked || checklist.tires === null || checklist.brakes === null || checklist.fluids === null || checklist.safety === null}
-              className="px-8 py-3 bg-[#00897b] hover:bg-[#00796b] text-white font-extrabold rounded-lg disabled:opacity-50 transition-colors shadow-md cursor-pointer"
+              disabled={isBlocked || !isAllAnswered || submittingChecklist}
+              className="px-8 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm rounded-lg disabled:opacity-50 transition-colors shadow-md cursor-pointer flex items-center gap-2"
             >
-              Log Checklist ({allPass ? 'PASS' : 'FAIL'})
+              {submittingChecklist ? 'Logging...' : `Log Checklist (${allPass ? 'PASS' : 'FAIL'})`}
             </button>
           </div>
+
         </div>
 
       </div>

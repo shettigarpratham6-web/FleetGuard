@@ -57,36 +57,36 @@ export default function PredictiveMaintenance() {
     try {
       setLoading(true);
       setError(null);
-      const [vData, sData] = await Promise.all([
+      const [vData, rData, sData] = await Promise.all([
         api.vehicles.getAll(),
-        api.historicalServices?.getAll?.().catch(() => []) || Promise.resolve([])
+        api.risks.getAll().catch(() => []),
+        api.services.getAll().catch(() => [])
       ]);
       
       const allVehicles = vData || [];
-      const allServices = Array.isArray(sData) ? sData : (sData?.services || []);
+      const backendRisks = rData || [];
+      const liveServices = Array.isArray(sData) ? sData : (sData as any)?.records || [];
       
-      // Map last service to vehicles
+      // Map backend maintenance risks directly to vehicles
       const mappedVehicles = allVehicles.map((v: any) => {
-        const vServices = allServices.filter((s: any) => s.vehicle_id === v.id);
+        const riskObj = backendRisks.find((r: any) => r.vehicle_id === v.id);
+        const vServices = liveServices.filter((s: any) => s.vehicle_id === v.id);
         vServices.sort((a: any, b: any) => new Date(b.service_date).getTime() - new Date(a.service_date).getTime());
         const lastService = vServices[0];
         
-        let last_service_mileage = lastService ? lastService.current_mileage : (v.current_mileage ? Math.max(0, v.current_mileage - Math.floor(Math.random() * 15000)) : 0);
-        let distance = Math.max(0, (v.current_mileage || 0) - last_service_mileage);
+        const last_service_mileage = riskObj ? Number(riskObj.last_service_mileage) : (lastService ? Number(lastService.current_mileage) : 0);
+        const distance = riskObj && riskObj.remaining_distance !== undefined 
+          ? Math.max(0, (v.current_mileage || 0) - last_service_mileage)
+          : Math.max(0, (v.current_mileage || 0) - last_service_mileage);
         
-        let risk_level = 'LOW';
-        if (distance > 10000) risk_level = 'HIGH';
-        else if (distance > 8000) risk_level = 'MEDIUM';
-
-        if (v.maintenance_risk && v.maintenance_risk !== 'Unknown') {
-          risk_level = v.maintenance_risk.toUpperCase();
-        }
+        let risk_level = (riskObj?.risk_level || v.maintenance_status || v.maintenance_risk || 'Low').toUpperCase();
 
         return {
           ...v,
           lastServiceMileage: last_service_mileage,
           distanceSinceLastService: distance,
           risk: risk_level,
+          summary: riskObj?.summary || null,
           vehicleStatus: v.status || 'Active'
         };
       });
@@ -169,6 +169,32 @@ export default function PredictiveMaintenance() {
             icon={<Wrench className="w-5 h-5" />}
             variant="warning"
           />
+        </div>
+
+        {/* Rule-Based Threshold Engine Info Banner */}
+        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-2xl p-5 shadow-sm border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-500/20 text-blue-300 border border-blue-400/30 tracking-wider">
+                Rule-Based Risk Signal
+              </span>
+              <h3 className="text-sm font-bold text-white">Mileage & Interval Threshold Engine</h3>
+            </div>
+            <p className="text-xs text-slate-300">
+              Evaluates current mileage against last service records and recommended maintenance intervals (<span className="text-emerald-400 font-semibold">10,000 km</span> standard / <span className="text-amber-300 font-semibold">7,500 km</span> for vehicles &gt;5 years old).
+            </p>
+          </div>
+          <div className="flex items-center gap-4 text-xs font-semibold shrink-0 bg-slate-800/80 px-4 py-2.5 rounded-xl border border-slate-700/50">
+            <div className="flex items-center gap-1.5 text-emerald-400">
+              <div className="w-2 h-2 rounded-full bg-emerald-400"></div> Low (&gt;1,000 km)
+            </div>
+            <div className="flex items-center gap-1.5 text-amber-300">
+              <div className="w-2 h-2 rounded-full bg-amber-300"></div> Med (&le;1,000 km)
+            </div>
+            <div className="flex items-center gap-1.5 text-rose-400">
+              <div className="w-2 h-2 rounded-full bg-rose-400"></div> High (&le;0 km)
+            </div>
+          </div>
         </div>
 
         {/* Filters */}

@@ -252,6 +252,7 @@ const initDb = async () => {
         driver_id UUID REFERENCES users(id),
         assigned_by UUID REFERENCES users(id),
         assignment_date TIMESTAMPTZ DEFAULT NOW(),
+        start_date TIMESTAMPTZ DEFAULT NOW(),
         return_date TIMESTAMPTZ,
         assignment_status VARCHAR(30) DEFAULT 'Active' CHECK (
           assignment_status IN (
@@ -264,6 +265,7 @@ const initDb = async () => {
         override_log_id UUID,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE assignments ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ DEFAULT NOW();
     `);
 
     // 4g. Create checklists table
@@ -295,6 +297,22 @@ const initDb = async () => {
         is_read BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+    `);
+
+    // 4i. Create alert_settings table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS alert_settings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        setting_key VARCHAR(50) UNIQUE NOT NULL DEFAULT 'global',
+        lead_days INTEGER[] DEFAULT '{30, 15, 7}',
+        enable_email_alerts BOOLEAN DEFAULT TRUE,
+        enable_in_app_alerts BOOLEAN DEFAULT TRUE,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      INSERT INTO alert_settings (setting_key, lead_days, enable_email_alerts, enable_in_app_alerts)
+      VALUES ('global', '{30, 15, 7}', TRUE, TRUE)
+      ON CONFLICT (setting_key) DO NOTHING;
     `);
 
     // 5. Create indexes

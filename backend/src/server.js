@@ -15,13 +15,12 @@ for (const envPath of envPaths) {
 const app = require('./app');
 const initDb = require('./config/initDb');
 const startExpiryAlertJob = require('./jobs/expiryAlertJob');
-// initExpiryCron disabled to remove google notification flow
+
 const PORT = process.env.PORT || 5000;
 const startServer = async () => {
     try {
         if (typeof initDb === 'function') {
-            // Database is already initialized via Supabase SQL Editor
-            // await initDb();
+            await initDb();
         }
 
         let currentPort = parseInt(PORT, 10);

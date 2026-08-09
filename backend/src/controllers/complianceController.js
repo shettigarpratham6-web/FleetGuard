@@ -23,6 +23,26 @@ exports.createDocument = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid vehicle ID. Vehicle does not exist.' });
     }
 
+    // Discard / Replace any existing document of the same document_type for this vehicle
+    const existingDocs = await db.query(
+      'SELECT id, file_url FROM compliance_documents WHERE vehicle_id = $1 AND document_type = $2',
+      [vehicle_id, document_type]
+    );
+
+    for (const oldDoc of existingDocs.rows) {
+      if (oldDoc.file_url) {
+        const oldFilePath = path.join(__dirname, '../..', oldDoc.file_url);
+        if (fs.existsSync(oldFilePath)) {
+          try {
+            fs.unlinkSync(oldFilePath);
+          } catch (e) {
+            console.warn('Could not delete old file:', e.message);
+          }
+        }
+      }
+      await db.query('DELETE FROM compliance_documents WHERE id = $1', [oldDoc.id]);
+    }
+
     // File URL format (relative path)
     const file_url = req.file ? `/uploads/${req.file.filename}` : null;
 
@@ -77,10 +97,20 @@ exports.getDocumentsByVehicle = async (req, res, next) => {
       FROM compliance_documents cd
       LEFT JOIN users u ON cd.uploaded_by = u.id
       WHERE cd.vehicle_id = $1
-      ORDER BY cd.expiry_date ASC
+      ORDER BY cd.expiry_date DESC
     `;
     const result = await db.query(queryText, [vehicleId]);
-    res.status(200).json({ documents: result.rows });
+
+    // Keep only the latest document per document_type to discard old replaced entries
+    const latestMap = new Map();
+    for (const doc of result.rows) {
+      if (!latestMap.has(doc.document_type)) {
+        latestMap.set(doc.document_type, doc);
+      }
+    }
+    const deduplicatedDocs = Array.from(latestMap.values());
+
+    res.status(200).json({ documents: deduplicatedDocs });
   } catch (error) {
     next(error);
   }
@@ -117,10 +147,21 @@ exports.getAllDocuments = async (req, res, next) => {
       queryText += ' WHERE ' + conditions.join(' AND ');
     }
 
-    queryText += ' ORDER BY cd.expiry_date ASC';
+    queryText += ' ORDER BY cd.expiry_date DESC';
 
     const result = await db.query(queryText, params);
-    res.status(200).json({ documents: result.rows });
+    
+    // Deduplicate so only the latest document per (vehicle_id, document_type) is returned
+    const latestMap = new Map();
+    for (const doc of result.rows) {
+      const key = `${doc.vehicle_id}_${doc.document_type}`;
+      if (!latestMap.has(key)) {
+        latestMap.set(key, doc);
+      }
+    }
+    const deduplicatedDocs = Array.from(latestMap.values());
+
+    res.status(200).json({ documents: deduplicatedDocs });
   } catch (error) {
     next(error);
   }
@@ -178,7 +219,11 @@ exports.updateDocument = async (req, res, next) => {
       if (currentDoc.file_url) {
         const oldFilePath = path.join(__dirname, '../..', currentDoc.file_url);
         if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath);
+          try {
+            fs.unlinkSync(oldFilePath);
+          } catch (e) {
+            console.warn('Could not delete old file:', e.message);
+          }
         }
       }
     }
@@ -201,55 +246,6 @@ exports.updateDocument = async (req, res, next) => {
     ]);
 
     const updatedDoc = result.rows[0];
-
-    // Check if the updated expiry_date is exactly 10, 5, or 2 days from now
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const expDate = new Date(updatedDoc.expiry_date);
-      expDate.setHours(0, 0, 0, 0);
-      const diffTime = expDate - today;
-      const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if ([10, 7, 5].includes(daysRemaining)) {
-        const title = `${updatedDoc.document_type} Expiring in ${daysRemaining} Days`;
-        const message = `The ${updatedDoc.document_type} (No: ${updatedDoc.document_number || 'N/A'}) is expiring on ${expDate.toLocaleDateString()} (${daysRemaining} days remaining). Please renew it immediately.`;
-
-        // 1. Fetch uploader details
-        const uploaderRes = await db.query('SELECT id, email, full_name FROM users WHERE id = $1', [updatedDoc.uploaded_by]);
-        const uploader = uploaderRes.rows[0];
-
-        // 2. Fetch active driver for the vehicle
-        const driverRes = await db.query(`
-          SELECT u.id, u.email, u.full_name 
-          FROM assignments a 
-          JOIN users u ON a.driver_id = u.id 
-          WHERE a.vehicle_id = $1 AND a.assignment_status = 'Active'
-          LIMIT 1
-        `, [updatedDoc.vehicle_id]);
-        const driver = driverRes.rows[0];
-
-        // 3. Fetch all Admin users
-        const adminRes = await db.query("SELECT id, email, full_name FROM users WHERE role = 'Admin'");
-        const admins = adminRes.rows;
-
-        // Insert in-app notifications
-        const userIds = new Set();
-        admins.forEach(a => userIds.add(a.id));
-        if (uploader) userIds.add(uploader.id);
-        if (driver) userIds.add(driver.id);
-
-        for (const userId of userIds) {
-          await db.query(`
-            INSERT INTO notifications (user_id, vehicle_id, title, message, notification_type)
-            VALUES ($1, $2, $3, $4, $5)
-          `, [userId, updatedDoc.vehicle_id, title, message, 'Compliance Alert']);
-        }
-        console.log(`[Compliance Update Alert] In-app notifications generated for ${daysRemaining} days remaining.`);
-      }
-    } catch (err) {
-      console.error('⚠️ Could not process instant alert on update:', err.message);
-    }
 
     res.status(200).json({
       message: 'Compliance document updated successfully',
@@ -285,7 +281,11 @@ exports.deleteDocument = async (req, res, next) => {
     if (deletedDoc.file_url) {
       const filePath = path.join(__dirname, '../..', deletedDoc.file_url);
       if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+        try {
+          fs.unlinkSync(filePath);
+        } catch (e) {
+          console.warn('Could not delete physical file:', e.message);
+        }
       }
     }
 
@@ -369,4 +369,3 @@ exports.getVehicleComplianceStatus = async (req, res, next) => {
     next(error);
   }
 };
-

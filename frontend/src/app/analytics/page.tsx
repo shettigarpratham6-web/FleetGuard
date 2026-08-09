@@ -16,12 +16,13 @@ export default function FleetAnalytics() {
     if (showLoading) setLoading(true);
     setError(null);
     try {
-      // Fetch vehicles, compliance documents, live services, and historical services
-      const [vData, cData, liveServicesData, histServicesData] = await Promise.all([
+      // Fetch vehicles, compliance documents, live services, historical services, and maintenance risks as per DOCS
+      const [vData, cData, liveServicesData, histServicesData, risksData] = await Promise.all([
         api.vehicles.getAll().catch(() => []),
         api.compliance.getAll().catch(() => []),
         api.services.getAll().catch(() => []),
-        api.historicalServices?.getAll?.().catch(() => []) || Promise.resolve([])
+        api.historicalServices?.getAll?.().catch(() => []) || Promise.resolve([]),
+        api.risks.getAll().catch(() => [])
       ]);
 
       const now = new Date();
@@ -30,11 +31,20 @@ export default function FleetAnalytics() {
 
       const vehicles = vData || [];
       const compliance = cData || [];
+      const risks = risksData || [];
 
       const liveRecords = Array.isArray(liveServicesData) ? liveServicesData : (liveServicesData as any)?.records || [];
       const histRecords = Array.isArray(histServicesData) ? histServicesData : (histServicesData as any)?.services || (histServicesData as any)?.records || [];
 
-      const allServiceRecords = [...liveRecords, ...histRecords];
+      // Consolidate unique service records
+      const serviceMap = new Map<string, any>();
+      [...liveRecords, ...histRecords].forEach((r: any, idx: number) => {
+        const key = r.id || `idx-${idx}`;
+        if (!serviceMap.has(key)) {
+          serviceMap.set(key, r);
+        }
+      });
+      const allServiceRecords = Array.from(serviceMap.values());
 
       let expiredVehiclesCount = 0;
       let upcomingExpiryVehiclesCount = 0;
@@ -51,18 +61,18 @@ export default function FleetAnalytics() {
         else if (hasUpcoming) upcomingExpiryVehiclesCount++;
       });
 
-      // Calculate total maintenance cost across all service records
-      let totalMaintenanceCost = allServiceRecords.reduce((acc: number, curr: any) => {
-        const recordCost = Number(curr.total_cost) || Number(curr.cost) || (Number(curr.labour_cost || 0) + Number(curr.parts_cost || 0));
+      // Calculate total maintenance cost strictly across all service records as per DATABASE_SCHEMA.md
+      const totalMaintenanceCost = allServiceRecords.reduce((acc: number, curr: any) => {
+        const recordCost = curr.total_cost !== undefined && curr.total_cost !== null && !isNaN(Number(curr.total_cost))
+          ? Number(curr.total_cost)
+          : (curr.cost !== undefined && curr.cost !== null && !isNaN(Number(curr.cost))
+              ? Number(curr.cost)
+              : (Number(curr.labour_cost || 0) + Number(curr.parts_cost || 0)));
         return acc + recordCost;
       }, 0);
 
-      // If no cost records exist yet in fresh database, calculate realistic fleet baseline estimation
-      if (totalMaintenanceCost === 0 && vehicles.length > 0) {
-        totalMaintenanceCost = vehicles.length * 14500;
-      }
-
-      const highRiskVehicles = vehicles.filter((v: any) => v.maintenance_risk === 'High').length;
+      // High-Risk Vehicles count directly from maintenance_risks as per DATABASE_SCHEMA.md
+      const highRiskVehicles = risks.filter((r: any) => r.risk_level === 'High' || r.risk_level === 'HIGH').length;
 
       const metricsData = {
         totalVehicles: vehicles.length,
@@ -70,11 +80,12 @@ export default function FleetAnalytics() {
         expiredVehicles: expiredVehiclesCount,
         upcomingExpiryVehicles: upcomingExpiryVehiclesCount,
         totalMaintenanceCost: totalMaintenanceCost,
-        highRiskVehicles: highRiskVehicles
+        highRiskVehicles: highRiskVehicles,
+        allServiceRecords: allServiceRecords
       };
 
       setMetrics(metricsData);
-      setPredictiveData(vehicles);
+      setPredictiveData(allServiceRecords);
     } catch (err: any) {
       setError(err.message || 'Unable to load analytics.');
     } finally {

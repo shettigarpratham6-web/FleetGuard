@@ -26,6 +26,68 @@ export default function VehiclesPage() {
   const [submittingDoc, setSubmittingDoc] = useState(false);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [branchFilter, setBranchFilter] = useState('ALL');
+
+  const [editForm, setEditForm] = useState({
+    vehicle_number: '',
+    registration_number: '',
+    manufacturer: '',
+    model: '',
+    manufacturing_year: '',
+    fuel_type: 'Diesel',
+    current_mileage: '',
+    status: 'Available'
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editSuccessMsg, setEditSuccessMsg] = useState('');
+  const [editErrorMsg, setEditErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (selectedVehicleId) {
+      const selV = vehicles.find(v => v.id === selectedVehicleId);
+      if (selV) {
+        setEditForm({
+          vehicle_number: selV.vehicle_number || '',
+          registration_number: selV.registration_number || '',
+          manufacturer: selV.manufacturer || '',
+          model: selV.model || '',
+          manufacturing_year: (selV.manufacturing_year || (selV as any).year || '').toString(),
+          fuel_type: selV.fuel_type || 'Diesel',
+          current_mileage: (selV.current_mileage || 0).toString(),
+          status: selV.status || 'Available'
+        });
+        setEditSuccessMsg('');
+        setEditErrorMsg('');
+      }
+    }
+  }, [selectedVehicleId, vehicles]);
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedVehicleId) return;
+    setSavingEdit(true);
+    setEditSuccessMsg('');
+    setEditErrorMsg('');
+
+    try {
+      const targetV = vehicles.find(v => v.id === selectedVehicleId);
+      await api.vehicles.update(selectedVehicleId, {
+        ...editForm,
+        manufacturing_year: editForm.manufacturing_year ? parseInt(editForm.manufacturing_year, 10) : undefined,
+        current_mileage: editForm.current_mileage ? parseInt(editForm.current_mileage, 10) : 0,
+        branch_id: (targetV as any)?.branch_id || (targetV as any)?.branch?.id
+      } as any);
+
+      setEditSuccessMsg('Vehicle details updated successfully!');
+      await fetchVehicles();
+    } catch (err: any) {
+      setEditErrorMsg(err.message || 'Failed to update vehicle details.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
       router.push('/login');
@@ -45,7 +107,7 @@ export default function VehiclesPage() {
       setLoading(true);
       const [vData, uData, aData, cData] = await Promise.all([
         api.vehicles.getAll(),
-        api.auth.getUsers('Driver'),
+        api.auth.getUsers().catch(() => []),
         api.assignments?.getAll?.() || Promise.resolve([]),
         api.compliance.getAll().catch(() => [])
       ]);
@@ -73,6 +135,16 @@ export default function VehiclesPage() {
     }
   };
 
+  const handleDeleteComplianceDoc = async (docId: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    try {
+      await api.compliance.delete(docId);
+      setComplianceDocs(prev => prev.filter(d => d.id !== docId));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete document');
+    }
+  };
+
   const handleAddCompliance = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!docExpiry || !docType || !selectedVehicleId) return;
@@ -90,10 +162,13 @@ export default function VehiclesPage() {
       
       const addedDoc = await api.compliance.create(formData);
       
-      alert('Compliance document added successfully!');
+      alert('Compliance document uploaded & replaced successfully!');
       
-      // Update local state without reloading
-      setComplianceDocs(prev => [...prev, addedDoc]);
+      // Update local state by discarding old document of the same document_type for this vehicle
+      setComplianceDocs(prev => [
+        ...prev.filter(d => !(d.vehicle_id === selectedVehicleId && d.document_type === docType)),
+        addedDoc
+      ]);
       setDocType('Insurance');
       setDocNumber('');
       setDocExpiry('');
@@ -107,6 +182,20 @@ export default function VehiclesPage() {
 
   const now = new Date();
 
+  // Extract unique branches for filter dropdown
+  const uniqueBranches = Array.from(new Set(vehicles.map(v => (v as any).branch_name || (v as any).branch || 'Main Branch').filter(Boolean)));
+
+  const filteredVehicles = vehicles.filter(vehicle => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q || 
+      vehicle.vehicle_number.toLowerCase().includes(q) ||
+      (vehicle.model && vehicle.model.toLowerCase().includes(q)) ||
+      (vehicle.manufacturer && vehicle.manufacturer.toLowerCase().includes(q));
+    const vehicleBranch = (vehicle as any).branch_name || (vehicle as any).branch || 'Main Branch';
+    const matchesBranch = branchFilter === 'ALL' || vehicleBranch === branchFilter;
+    return matchesSearch && matchesBranch;
+  });
+
   return (
     <LayoutWrapper>
       <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto bg-slate-50 min-h-screen">
@@ -116,7 +205,7 @@ export default function VehiclesPage() {
             <p className="text-sm text-slate-500 mt-1">Manage fleet assets, update details, and monitor status.</p>
           </div>
           <Link href="/vehicles/create">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-colors">
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-colors cursor-pointer">
               <span className="material-symbols-outlined text-[18px]">add</span>
               Register Vehicle
             </button>
@@ -125,13 +214,40 @@ export default function VehiclesPage() {
         
         {error && <div className="text-red-600 bg-red-50 p-3 rounded-xl border border-red-200 text-sm font-bold">{error}</div>}
 
+        {/* Filter Controls: Search & Branch Filter */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="relative flex-1 w-full">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+            <input
+              type="text"
+              placeholder="Search by license plate, make, or model..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-xs font-extrabold text-slate-500 uppercase tracking-wider shrink-0">Filter Branch:</span>
+            <select
+              value={branchFilter}
+              onChange={e => setBranchFilter(e.target.value)}
+              className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="ALL">All Branches</option>
+              {uniqueBranches.map(branch => (
+                <option key={branch} value={branch}>{branch}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex justify-center items-center h-40">
             <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
           </div>
-        ) : vehicles.length === 0 ? (
+        ) : filteredVehicles.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-500">
-            No vehicles registered yet.
+            No vehicles match the selected criteria.
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -148,19 +264,34 @@ export default function VehiclesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {vehicles.map(vehicle => {
-                    const assignment = assignments.find(a => a.vehicle_id === vehicle.id && a.status === 'Active');
-                    const driver = users.find(u => u.id === assignment?.driver_id);
+                  {filteredVehicles.map(vehicle => {
+                    const assignment = assignments.find(a => a.vehicle_id === vehicle.id && (a.assignment_status === 'Active' || a.status === 'Active'));
+                    const driverObj = users.find(u => u.id === assignment?.driver_id);
+                    const driverName = assignment?.driver_name || driverObj?.full_name || driverObj?.username;
                     
                     const vDocs = complianceDocs.filter(d => d.vehicle_id === vehicle.id);
                     const issues = vDocs.filter(d => new Date(d.expiry_date) < now);
+                    const mYear = vehicle.manufacturing_year || (vehicle as any).year;
 
                     return (
                       <tr key={vehicle.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 font-bold text-slate-900">{vehicle.vehicle_number}</td>
-                        <td className="px-6 py-4">{vehicle.model} ({vehicle.year})</td>
+                        <td className="px-6 py-4 font-bold text-slate-900">
+                          <Link href={`/vehicles/${vehicle.id}`} className="hover:text-blue-600 transition-colors">
+                            {vehicle.vehicle_number}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4">{vehicle.model} {mYear ? `(${mYear})` : ''}</td>
                         <td className="px-6 py-4 font-mono">{vehicle.current_mileage?.toLocaleString() || 0}</td>
-                        <td className="px-6 py-4">{driver?.full_name || <span className="text-slate-400">Unassigned</span>}</td>
+                        <td className="px-6 py-4">
+                          {driverName ? (
+                            <span className="inline-flex items-center gap-1 font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg text-xs border border-blue-200">
+                              <span className="material-symbols-outlined text-[14px]">person</span>
+                              {driverName}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-medium italic text-xs">Unassigned</span>
+                          )}
+                        </td>
                         <td className="px-6 py-4">
                           {issues.length > 0 ? (
                             <span className="text-red-600 text-xs font-bold flex items-center gap-1">
@@ -181,12 +312,12 @@ export default function VehiclesPage() {
                           >
                             Docs
                           </button>
-                          <button 
-                            onClick={() => { setSelectedVehicleId(vehicle.id); setModalTab('profile'); }}
-                            className="text-emerald-600 font-bold hover:underline text-[13px] transition-colors cursor-pointer"
+                          <Link 
+                            href={`/vehicles/${vehicle.id}`}
+                            className="text-emerald-600 font-bold hover:underline text-[13px] transition-colors cursor-pointer inline-block"
                           >
                             Profile
-                          </button>
+                          </Link>
                           <button 
                             onClick={() => { setSelectedVehicleId(vehicle.id); setModalTab('edit'); }}
                             className="text-amber-600 font-bold hover:underline text-[13px] transition-colors cursor-pointer"
@@ -397,19 +528,190 @@ export default function VehiclesPage() {
                       <p className="font-semibold text-slate-800">{vehicles.find(v => v.id === selectedVehicleId)?.status}</p>
                     </div>
                   </div>
+                  <div className="mt-6 pt-4 border-t border-slate-200 flex justify-end">
+                    <Link 
+                      href={`/vehicles/${selectedVehicleId}`}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition-colors shadow-xs"
+                    >
+                      <span>Go to Full Profile Page</span>
+                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </Link>
+                  </div>
                 </div>
               </div>
             )}
 
             {modalTab === 'edit' && (
-              <div className="flex-1 overflow-y-auto p-8 flex items-center justify-center">
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center max-w-md">
-                  <span className="material-symbols-outlined text-amber-500 text-4xl mb-2">construction</span>
-                  <h4 className="text-lg font-black text-slate-900 mb-2">Quick Edit Mode</h4>
-                  <p className="text-sm font-medium text-slate-600 mb-4">You can update the basic details for {vehicles.find(v => v.id === selectedVehicleId)?.vehicle_number} right here. (UI Implementation Pending)</p>
-                  <button onClick={() => setModalTab('profile')} className="bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-amber-700 transition-colors">
+              <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-slate-50/50">
+                {/* Yellow Amber Notice Banner - Fixed Width & Layout */}
+                <div className="w-full max-w-3xl mx-auto mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center shadow-sm flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-3">
+                    <span className="material-symbols-outlined text-amber-600 text-3xl">construction</span>
+                  </div>
+                  <h4 className="w-full text-lg font-extrabold text-slate-900 mb-1 text-center block">Quick Edit Mode</h4>
+                  <p className="w-full text-sm font-medium text-amber-900/90 text-center leading-relaxed mb-4 block" style={{ whiteSpace: 'normal', wordBreak: 'normal', width: '100%' }}>
+                    You can update the basic details for <span className="font-bold text-slate-900">{vehicles.find(v => v.id === selectedVehicleId)?.vehicle_number}</span> right here.
+                  </p>
+                  <button 
+                    type="button"
+                    onClick={() => setModalTab('profile')} 
+                    className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer border-0 inline-block"
+                  >
                     Back to Profile
                   </button>
+                </div>
+
+                <div className="max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
+                  <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                      <span className="material-symbols-outlined text-[22px]">edit_note</span>
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-slate-900">Edit Vehicle Specification</h4>
+                      <p className="text-xs font-medium text-slate-500">Update registration, model year, status, or mileage parameters.</p>
+                    </div>
+                  </div>
+
+                  {editSuccessMsg && (
+                    <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                      {editSuccessMsg}
+                    </div>
+                  )}
+
+                  {editErrorMsg && (
+                    <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px]">error</span>
+                      {editErrorMsg}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSaveEdit} className="space-y-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Vehicle Number</label>
+                        <input
+                          type="text"
+                          required
+                          value={editForm.vehicle_number}
+                          onChange={e => setEditForm({ ...editForm, vehicle_number: e.target.value })}
+                          className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Registration Number / VIN</label>
+                        <input
+                          type="text"
+                          required
+                          value={editForm.registration_number}
+                          onChange={e => setEditForm({ ...editForm, registration_number: e.target.value })}
+                          className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Manufacturer</label>
+                        <input
+                          type="text"
+                          required
+                          value={editForm.manufacturer}
+                          onChange={e => setEditForm({ ...editForm, manufacturer: e.target.value })}
+                          className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Model</label>
+                        <input
+                          type="text"
+                          required
+                          value={editForm.model}
+                          onChange={e => setEditForm({ ...editForm, model: e.target.value })}
+                          className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Manufacturing Year</label>
+                        <input
+                          type="number"
+                          min="1990"
+                          max={new Date().getFullYear()}
+                          value={editForm.manufacturing_year}
+                          onChange={e => setEditForm({ ...editForm, manufacturing_year: e.target.value })}
+                          className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Fuel Type</label>
+                        <select
+                          value={editForm.fuel_type}
+                          onChange={e => setEditForm({ ...editForm, fuel_type: e.target.value })}
+                          className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium"
+                        >
+                          <option value="Diesel">Diesel</option>
+                          <option value="Petrol">Petrol</option>
+                          <option value="EV">Electric (EV)</option>
+                          <option value="CNG">CNG</option>
+                          <option value="Hybrid">Hybrid</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Current Mileage (km)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editForm.current_mileage}
+                          onChange={e => setEditForm({ ...editForm, current_mileage: e.target.value })}
+                          className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-mono"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">Operational Status</label>
+                        <select
+                          value={editForm.status}
+                          onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                          className="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        >
+                          <option value="Available">Available</option>
+                          <option value="Assigned">Assigned</option>
+                          <option value="Maintenance">Maintenance</option>
+                          <option value="Inactive">Inactive</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setModalTab('profile')}
+                        className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={savingEdit}
+                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-sm disabled:opacity-50 transition-colors cursor-pointer border-0 flex items-center gap-2"
+                      >
+                        {savingEdit ? (
+                          <>
+                            <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Saving Changes...
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-symbols-outlined text-[16px]">save</span>
+                            Save Changes
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
             )}

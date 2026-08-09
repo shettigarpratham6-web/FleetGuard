@@ -43,8 +43,9 @@ export default function HistoricalRecordsPage() {
         
         // Combine historical records and live service records
         let allRecords: any[] = [];
-        if (historicalData && Array.isArray(historicalData)) allRecords = [...allRecords, ...historicalData];
-        else if (historicalData?.records) allRecords = [...allRecords, ...historicalData.records];
+        const histObj = historicalData as any;
+        if (histObj && Array.isArray(histObj)) allRecords = [...allRecords, ...histObj];
+        else if (histObj?.records) allRecords = [...allRecords, ...histObj.records];
 
         if (liveData && Array.isArray(liveData)) allRecords = [...allRecords, ...liveData];
         else if ((liveData as any)?.records) allRecords = [...allRecords, ...(liveData as any).records];
@@ -156,23 +157,35 @@ export default function HistoricalRecordsPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-20">
-                    <div className="w-20 h-20 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="text-center py-20 max-w-[420px] w-full mx-auto flex flex-col items-center">
+                    <div className="w-20 h-20 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center mb-4">
                       <Clock size={36} className="text-slate-400" />
                     </div>
-                    <h4 className="text-xl font-extrabold text-slate-900 tracking-tight">No History Found</h4>
-                    <p className="text-sm font-medium text-slate-500 mt-2 max-w-sm mx-auto">There are no service records available for this vehicle yet. Once a service is completed, it will appear here.</p>
+                    <h4 className="text-xl font-extrabold text-slate-900 tracking-tight mb-2">No History Found</h4>
+                    <p 
+                      className="text-sm font-medium text-slate-500 w-full leading-relaxed block" 
+                      style={{ maxWidth: '400px', whiteSpace: 'normal', wordBreak: 'normal', overflowWrap: 'break-word' }}
+                    >
+                      There are no service records available for this vehicle yet. Once a service is completed, it will appear here.
+                    </p>
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-[24px] border border-slate-200 flex-1 flex flex-col items-center justify-center py-24 shadow-sm">
-              <div className="w-24 h-24 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center mb-6 shadow-sm">
-                <Wrench size={48} className="text-blue-200" />
+            <div className="bg-white rounded-[24px] border border-slate-200 flex-1 flex flex-col justify-center py-24 px-6 shadow-sm w-full">
+              <div className="max-w-[480px] w-full mx-auto text-center flex flex-col items-center">
+                <div className="w-24 h-24 bg-slate-50 border border-slate-200 rounded-full flex items-center justify-center mb-6 shadow-sm">
+                  <Wrench size={48} className="text-blue-200" />
+                </div>
+                <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight w-full mb-3">Select a Vehicle</h3>
+                <p 
+                  className="text-sm font-medium text-slate-500 w-full leading-relaxed block mx-auto" 
+                  style={{ maxWidth: '450px', whiteSpace: 'normal', wordBreak: 'normal', overflowWrap: 'break-word' }}
+                >
+                  Choose a vehicle from the dropdown above to view its complete service history timeline.
+                </p>
               </div>
-              <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">Select a Vehicle</h3>
-              <p className="text-sm font-medium text-slate-500 mt-3 max-w-md text-center">Choose a vehicle from the dropdown above to view its complete service history timeline.</p>
             </div>
           )}
         </div>

@@ -42,21 +42,24 @@ export default function ServiceQueuePage() {
     e.preventDefault();
     if (!selectedVehicle) return;
     try {
-      // Create service record and update vehicle status back to Active
-      await api.service.createRecord({
+      // Create service record and update vehicle status back to Available
+      await api.services.create({
         vehicle_id: selectedVehicle.id,
         service_type: serviceType,
-        service_date: new Date().toISOString(),
-        cost: Number(cost),
-        parts_replaced: parts,
+        service_date: new Date().toISOString().split('T')[0],
+        current_mileage: selectedVehicle.current_mileage || 0,
+        labour_cost: Number(cost) || 0,
+        parts_cost: 0,
+        parts_changed: parts,
         description: remarks,
-        next_service_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        next_service_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       });
       await api.vehicles.update(selectedVehicle.id, { status: 'Available' });
       setIsModalOpen(false);
       fetchQueue();
-    } catch (err) {
-      alert("Failed to complete service");
+    } catch (err: any) {
+      console.error('Error completing service:', err);
+      alert(err.message || "Failed to complete service");
     }
   };
 

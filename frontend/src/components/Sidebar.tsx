@@ -33,9 +33,10 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
   const baseItems = [];
 
-  // All authenticated users can access dashboard
+  // Main Dashboard link
   if (userRole) {
-    baseItems.push({ name: 'Dashboard', icon: 'dashboard', href: '/dashboard' });
+    const dashboardHref = isDriver ? '/driver' : (isMechanic ? '/mechanic' : '/dashboard');
+    baseItems.push({ name: 'Dashboard', icon: 'dashboard', href: dashboardHref });
   }
 
   // Fleet managers and admins have full fleet management capability
@@ -50,18 +51,22 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
   // Drivers specific items
   if (isDriver) {
-    baseItems.push({ name: 'My Vehicles', icon: 'directions_car', href: '/driver' });
-    baseItems.push({ name: 'Compliance', icon: 'verified_user', href: '/driver' });
+    baseItems.push({ name: 'My Vehicles', icon: 'directions_car', href: '/driver/my-vehicles' });
+    baseItems.push({ name: 'Compliance', icon: 'verified_user', href: '/driver/compliance' });
   }
 
   // Mechanics specific items
   if (isMechanic) {
     baseItems.push({ name: 'Service Logs', icon: 'build', href: '/historical-records' });
+    baseItems.push({ name: 'Service Records', icon: 'assignment', href: '/service-records' });
   }
 
-  // Admin panel and notifications
+  // System Settings & Notifications
+  if (isAdmin || isFleetManager) {
+    baseItems.push({ name: 'System Settings', icon: 'settings', href: '/settings' });
+  }
+
   if (isAdmin) {
-    baseItems.push({ name: 'Admin Panel', icon: 'settings', href: '/admin' });
     baseItems.push({ name: 'Notifications', icon: 'notifications', href: '/notifications' });
     baseItems.push({ name: 'Export Reports', icon: 'description', href: '/reports' });
   }
@@ -131,7 +136,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         {/* Navigation list */}
         <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 space-y-1" aria-label="Sidebar">
           {baseItems.map((item, index) => {
-            const isActive = pathname?.startsWith(item.href) || false;
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname?.startsWith(item.href));
             return (
               <Link
                 key={item.name}

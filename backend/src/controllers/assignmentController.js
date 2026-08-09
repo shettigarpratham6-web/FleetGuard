@@ -2,8 +2,9 @@ const db = require('../config/db');
 
 exports.createAssignment = async (req, res, next) => {
   try {
-    const { vehicle_id, driver_id, return_date, override_used, override_log_id } = req.body;
+    const { vehicle_id, driver_id, start_date, assignment_date, return_date, override_used, override_log_id } = req.body;
     const assigned_by = req.user.id;
+    const effectiveStartDate = start_date || assignment_date || new Date().toISOString();
 
     if (!vehicle_id || !driver_id) {
       return res.status(400).json({ error: 'Vehicle ID and Driver ID are required.' });
@@ -127,15 +128,16 @@ exports.createAssignment = async (req, res, next) => {
     // Insert assignment
     const insertQuery = `
       INSERT INTO assignments (
-        vehicle_id, driver_id, assigned_by, return_date, override_used, override_log_id, assignment_status
+        vehicle_id, driver_id, assigned_by, assignment_date, start_date, return_date, override_used, override_log_id, assignment_status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, 'Active')
+      VALUES ($1, $2, $3, $4, $4, $5, $6, $7, 'Active')
       RETURNING *
     `;
     const assignmentResult = await db.query(insertQuery, [
       vehicle_id,
       driver_id,
       assigned_by,
+      effectiveStartDate,
       return_date || null,
       override_used || false,
       override_log_id || null

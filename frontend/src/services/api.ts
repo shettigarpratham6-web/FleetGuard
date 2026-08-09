@@ -327,27 +327,6 @@ export const api = {
     }
   },
 
-  // Risks API
-  risks: {
-    getAll: async () => {
-      const res = await fetch(`${API_BASE_URL}/maintenance-risks`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      const data = await handleResponse<{ risks: MaintenanceRisk[] }>(res);
-      return data.risks;
-    },
-
-    getByVehicle: async (vehicleId: string) => {
-      const res = await fetch(`${API_BASE_URL}/maintenance-risks/vehicle/${vehicleId}`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      const data = await handleResponse<{ risks: MaintenanceRisk[] }>(res);
-      return data.risks;
-    }
-  },
-
   // Notifications API
   notifications: {
     getMyNotifications: async () => {
@@ -378,6 +357,28 @@ export const api = {
       });
       const data = await handleResponse<{ message: string; notification: Notification }>(res);
       return data.notification;
+    },
+    getSettings: async () => {
+      const res = await fetch(`${API_BASE_URL}/notifications/settings`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ settings: { lead_days: number[]; enable_email_alerts: boolean; enable_in_app_alerts: boolean } }>(res);
+      return data.settings;
+    },
+    updateSettings: async (settings: { lead_days: number[]; enable_email_alerts?: boolean; enable_in_app_alerts?: boolean }) => {
+      const res = await fetch(`${API_BASE_URL}/notifications/settings`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(settings),
+      });
+      return handleResponse<{ message: string; settings: any }>(res);
+    },
+    triggerExpiryScan: async () => {
+      const res = await fetch(`${API_BASE_URL}/notifications/trigger-expiry-scan`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse<{ message: string; details: any }>(res);
     }
   },
 
@@ -433,6 +434,13 @@ export const api = {
         missing_documents?: string[];
         documents?: any[];
       }>(res);
+    },
+    delete: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/compliance/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse<{ message: string; document: any }>(res);
     },
   },
 
@@ -548,4 +556,65 @@ export const api = {
       return handleResponse<{ message: string; driver: any }>(res);
     }
   },
+
+  serviceQueue: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/maintenance/service-queue`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ success?: boolean; data?: any[]; queue?: any[] } | any[]>(res);
+      if (Array.isArray(data)) return data;
+      return (data as any)?.data || (data as any)?.queue || [];
+    }
+  },
+
+  risks: {
+    getAll: async (riskLevel?: string) => {
+      let url = `${API_BASE_URL}/maintenance-risks`;
+      if (riskLevel) url += `?risk_level=${riskLevel}`;
+      const res = await fetch(url, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ risks: any[] }>(res);
+      return data.risks || [];
+    },
+    getByVehicle: async (vehicleId: string) => {
+      const res = await fetch(`${API_BASE_URL}/maintenance-risks/${vehicleId}`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ risk: any }>(res);
+      return data.risk;
+    },
+    recalculate: async (vehicle_id?: string) => {
+      const res = await fetch(`${API_BASE_URL}/maintenance-risks/recalculate`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ vehicle_id }),
+      });
+      return handleResponse<any>(res);
+    }
+  },
+
+  triggerExpiryScan: async () => {
+    const res = await fetch(`${API_BASE_URL}/notifications/trigger-expiry-scan`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<any>(res);
+  },
+  getSettings: async () => {
+    const res = await fetch(`${API_BASE_URL}/notifications/settings`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleResponse<{ settings: any }>(res);
+    return data.settings;
+  },
+  updateSettings: async (settings: any) => {
+    const res = await fetch(`${API_BASE_URL}/notifications/settings`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(settings),
+    });
+    return handleResponse<any>(res);
+  }
 };
