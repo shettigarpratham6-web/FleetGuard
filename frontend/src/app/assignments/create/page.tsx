@@ -449,10 +449,10 @@ export default function CreateAssignmentPage() {
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { cat: 'Urgent Delivery Dispatch', icon: '⚡' },
-                      { cat: 'Temporary Safety Clearance', icon: '⏳' },
-                      { cat: 'Emergency Backup Assignment', icon: '🚨' },
-                      { cat: 'Manager Duty Release', icon: '🛡️' }
+                      { cat: 'High-Priority Fleet Dispatch', icon: '🚀' },
+                      { cat: 'Technical Safety Waiver', icon: '🛠️' },
+                      { cat: 'Emergency Backup Deployment', icon: '⚠️' },
+                      { cat: 'Senior Supervisor Override', icon: '📋' }
                     ].map(item => (
                       <button
                         key={item.cat}

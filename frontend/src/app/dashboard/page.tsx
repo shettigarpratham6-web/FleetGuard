@@ -348,7 +348,11 @@ export default function DashboardPage() {
                       const isExpired = vDocs.some(d => new Date(d.expiry_date) < now);
                       const assignment = activeAssignments.find(a => a.vehicle_id === v.id);
                       const driver = assignment ? users.find(u => u.id === assignment.driver_id) : null;
+                      const driverName = assignment?.driver_name || driver?.full_name || null;
                       const vSpend = allServiceRecords.filter(s => s.vehicle_id === v.id).reduce((sum, r) => sum + getRecordCost(r), 0);
+
+                      const isAssigned = Boolean(assignment && driverName);
+                      let displayStatus = isExpired ? 'EXPIRED' : (isAssigned ? 'ASSIGNED' : ((v.status as string).toUpperCase() === 'ASSIGNED' ? 'AVAILABLE' : v.status));
 
                       return (
                         <tr key={v.id} className="hover:bg-slate-50 transition-colors">
@@ -359,13 +363,15 @@ export default function DashboardPage() {
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                               isExpired || v.status === 'Maintenance'
                                 ? 'bg-rose-100 text-rose-800'
+                                : isAssigned
+                                ? 'bg-blue-100 text-blue-800'
                                 : 'bg-emerald-100 text-emerald-800'
                             }`}>
-                              {isExpired ? 'Expired' : v.status}
+                              {displayStatus}
                             </span>
                           </td>
                           <td className="px-4 py-3 font-bold text-slate-800">
-                            {driver?.full_name || 'Unassigned'}
+                            {driverName || 'Unassigned'}
                           </td>
                           <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
                             ${vSpend.toLocaleString()}

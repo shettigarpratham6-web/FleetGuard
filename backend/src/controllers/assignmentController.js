@@ -125,6 +125,14 @@ exports.createAssignment = async (req, res, next) => {
       return res.status(400).json({ error: 'This vehicle is already assigned to a driver.' });
     }
 
+    // Ensure assignment_date & start_date columns exist in PostgreSQL database
+    try {
+      await db.query("ALTER TABLE assignments ADD COLUMN IF NOT EXISTS assignment_date TIMESTAMPTZ DEFAULT NOW()");
+      await db.query("ALTER TABLE assignments ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ DEFAULT NOW()");
+    } catch (e) {
+      console.warn("Could not alter assignments table:", e.message);
+    }
+
     // Insert assignment
     const insertQuery = `
       INSERT INTO assignments (

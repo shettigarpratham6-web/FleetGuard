@@ -277,19 +277,29 @@ exports.getVehicleById = async (req, res, next) => {
 exports.updateVehicle = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const {
-      vehicle_number,
-      registration_number,
-      vehicle_type,
-      manufacturer,
-      model,
-      manufacturing_year,
-      fuel_type,
-      current_mileage,
-      purchase_date,
-      branch_id,
-      status
-    } = req.body;
+
+    // Check if vehicle exists
+    const existingRes = await db.query('SELECT * FROM vehicles WHERE id = $1', [id]);
+    if (existingRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Vehicle not found.' });
+    }
+    const existing = existingRes.rows[0];
+
+    const vehicle_number = req.body.vehicle_number !== undefined ? req.body.vehicle_number : existing.vehicle_number;
+    const registration_number = req.body.registration_number !== undefined ? req.body.registration_number : existing.registration_number;
+    const vehicle_type = req.body.vehicle_type !== undefined ? req.body.vehicle_type : existing.vehicle_type;
+    const manufacturer = req.body.manufacturer !== undefined ? req.body.manufacturer : existing.manufacturer;
+    const model = req.body.model !== undefined ? req.body.model : existing.model;
+    const manufacturing_year = req.body.manufacturing_year !== undefined 
+      ? (req.body.manufacturing_year ? parseInt(req.body.manufacturing_year, 10) : null) 
+      : existing.manufacturing_year;
+    const fuel_type = req.body.fuel_type !== undefined ? req.body.fuel_type : existing.fuel_type;
+    const current_mileage = req.body.current_mileage !== undefined 
+      ? parseInt(req.body.current_mileage, 10) 
+      : existing.current_mileage;
+    const purchase_date = req.body.purchase_date !== undefined ? req.body.purchase_date : existing.purchase_date;
+    const branch_id = req.body.branch_id !== undefined ? req.body.branch_id : existing.branch_id;
+    const status = req.body.status !== undefined ? req.body.status : existing.status;
 
     if (!vehicle_number || !registration_number || !branch_id) {
       return res.status(400).json({ error: 'Vehicle number, registration number, and branch ID are required.' });
@@ -315,18 +325,14 @@ exports.updateVehicle = async (req, res, next) => {
       vehicle_type,
       manufacturer,
       model,
-      manufacturing_year ? parseInt(manufacturing_year, 10) : null,
+      manufacturing_year,
       fuel_type,
-      current_mileage ? parseInt(current_mileage, 10) : 0,
+      current_mileage,
       purchase_date || null,
       branch_id,
       status || 'Available',
       id
     ]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Vehicle not found.' });
-    }
 
     res.status(200).json({
       message: 'Vehicle updated successfully',

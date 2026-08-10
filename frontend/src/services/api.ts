@@ -349,6 +349,13 @@ export const api = {
       });
       return await handleResponse<{ message: string; notification: Notification }>(res);
     },
+    markAllAsRead: async () => {
+      const res = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      });
+      return await handleResponse<{ message: string; count: number }>(res);
+    },
     create: async (notificationData: { user_id: string; vehicle_id?: string; title: string; message: string; notification_type?: string }) => {
       const res = await fetch(`${API_BASE_URL}/notifications`, {
         method: 'POST',

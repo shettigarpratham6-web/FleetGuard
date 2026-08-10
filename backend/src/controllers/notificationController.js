@@ -114,6 +114,26 @@ exports.markAsRead = async (req, res, next) => {
   }
 };
 
+exports.markAllAsRead = async (req, res, next) => {
+  try {
+    const user_id = req.user.id;
+    const queryText = `
+      UPDATE notifications
+      SET is_read = TRUE
+      WHERE user_id = $1 AND is_read = FALSE
+      RETURNING *
+    `;
+    const result = await db.query(queryText, [user_id]);
+
+    res.status(200).json({
+      message: 'All notifications marked as read successfully',
+      count: result.rowCount
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.deleteNotification = async (req, res, next) => {
   try {
     const { id } = req.params;
