@@ -171,32 +171,6 @@ export default function PredictiveMaintenance() {
           />
         </div>
 
-        {/* Rule-Based Threshold Engine Info Banner */}
-        <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-2xl p-5 shadow-sm border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-500/20 text-blue-300 border border-blue-400/30 tracking-wider">
-                Rule-Based Risk Signal
-              </span>
-              <h3 className="text-sm font-bold text-white">Mileage & Interval Threshold Engine</h3>
-            </div>
-            <p className="text-xs text-slate-300">
-              Evaluates current mileage against last service records and recommended maintenance intervals (<span className="text-emerald-400 font-semibold">10,000 km</span> standard / <span className="text-amber-300 font-semibold">7,500 km</span> for vehicles &gt;5 years old).
-            </p>
-          </div>
-          <div className="flex items-center gap-4 text-xs font-semibold shrink-0 bg-slate-800/80 px-4 py-2.5 rounded-xl border border-slate-700/50">
-            <div className="flex items-center gap-1.5 text-emerald-400">
-              <div className="w-2 h-2 rounded-full bg-emerald-400"></div> Low (&gt;1,000 km)
-            </div>
-            <div className="flex items-center gap-1.5 text-amber-300">
-              <div className="w-2 h-2 rounded-full bg-amber-300"></div> Med (&le;1,000 km)
-            </div>
-            <div className="flex items-center gap-1.5 text-rose-400">
-              <div className="w-2 h-2 rounded-full bg-rose-400"></div> High (&le;0 km)
-            </div>
-          </div>
-        </div>
-
         {/* Filters */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
           <div className="relative flex-1 max-w-lg w-full">

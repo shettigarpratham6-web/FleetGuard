@@ -266,6 +266,7 @@ const initDb = async () => {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
       ALTER TABLE assignments ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE assignments ADD COLUMN IF NOT EXISTS assignment_date TIMESTAMPTZ DEFAULT NOW();
     `);
 
     // 4g. Create checklists table
@@ -362,6 +363,19 @@ const initDb = async () => {
       BEFORE UPDATE ON service_records
       FOR EACH ROW
       EXECUTE FUNCTION update_vehicle_timestamp();
+    `);
+
+    // Sync vehicle status with active driver assignments
+    await client.query(`
+      UPDATE vehicles 
+      SET status = 'Available' 
+      WHERE status = 'Assigned' 
+        AND id NOT IN (SELECT vehicle_id FROM assignments WHERE assignment_status = 'Active');
+      
+      UPDATE vehicles 
+      SET status = 'Assigned' 
+      WHERE status != 'Maintenance' 
+        AND id IN (SELECT vehicle_id FROM assignments WHERE assignment_status = 'Active');
     `);
 
     await client.query('COMMIT');

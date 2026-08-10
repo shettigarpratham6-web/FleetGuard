@@ -344,8 +344,8 @@ export default function VehiclesPage() {
 
       {/* Unified Quick Compliance Manager Modal */}
       {selectedVehicleId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto" onClick={() => setSelectedVehicleId(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-[95vw] max-w-5xl shrink-0 my-auto overflow-hidden flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
               <div>
                 <h3 className="text-xl font-black text-slate-900">Manage Compliance</h3>

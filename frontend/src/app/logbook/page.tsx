@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
-import Footer from '@/components/Footer';
 import { api } from '@/services/api';
 
 export default function LogbookPage() {
@@ -440,8 +439,6 @@ export default function LogbookPage() {
             </div>
           </div>
         )}
-
-        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

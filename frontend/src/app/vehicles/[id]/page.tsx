@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle, ServiceRecord, MaintenanceRisk } from '@/types';
-import Footer from '@/components/Footer';
 
 export default function VehicleDetailsPage() {
   const params = useParams();
@@ -427,9 +426,44 @@ export default function VehicleDetailsPage() {
                             <h4 className="text-lg font-bold text-slate-900">
                               {record.service_type}
                             </h4>
-                            <p className="text-sm font-medium text-slate-600 mt-2">
-                              {record.description}
-                            </p>
+                            {(() => {
+                              let workText = record.description || 'General maintenance completed.';
+                              let mechanicName = '';
+                              let centerName = '';
+
+                              if (record.description && typeof record.description === 'string' && record.description.trim().startsWith('{')) {
+                                try {
+                                  const parsed = JSON.parse(record.description);
+                                  workText = parsed.work || parsed.description || parsed.notes || 'General maintenance completed.';
+                                  mechanicName = parsed.mechanic || '';
+                                  centerName = parsed.center || '';
+                                } catch (e) {}
+                              }
+
+                              return (
+                                <>
+                                  <p className="text-sm font-semibold text-slate-700 mt-2">
+                                    {workText}
+                                  </p>
+                                  {(centerName || mechanicName) && (
+                                    <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+                                      {centerName && (
+                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                                          <span className="material-symbols-outlined text-[14px] text-blue-600">store</span>
+                                          {centerName}
+                                        </span>
+                                      )}
+                                      {mechanicName && (
+                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                                          <span className="material-symbols-outlined text-[14px] text-blue-600">person</span>
+                                          Tech: {mechanicName}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
 
                           <div className="text-right flex-shrink-0">
@@ -576,7 +610,7 @@ export default function VehicleDetailsPage() {
       {/* ASSIGN DRIVER MODAL */}
       {isAssignModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto" onClick={() => setIsAssignModalOpen(false)}>
-          <div className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-[1.5rem] shadow-2xl overflow-hidden animate-slide-up transform transition-all border border-slate-100 relative my-auto shrink-0 w-[92vw] sm:w-[480px]" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <span className="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg font-bold">person_add</span>
@@ -662,7 +696,6 @@ export default function VehicleDetailsPage() {
           </div>
         </div>
       )}
-      <div className="mt-8"><Footer /></div>
     </LayoutWrapper>
   );
 }

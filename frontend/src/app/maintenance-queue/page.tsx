@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle, MaintenanceRisk } from '@/types';
-import Footer from '@/components/Footer';
 
 export default function MaintenanceQueuePage() {
   const router = useRouter();
@@ -342,7 +341,6 @@ export default function MaintenanceQueuePage() {
           </section>
 
         </div>
-        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

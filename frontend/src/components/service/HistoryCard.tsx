@@ -13,10 +13,18 @@ export default function HistoryCard({ record, index, isLatest, isExpanded, toggl
     // Ignore parse errors, just use as regular string
   }
 
-  const mechanicName = parsedExtras.mechanic || record.mechanic_name || record.entered_by_username || 'Ravi Kumar';
-  const serviceCenter = parsedExtras.center || record.service_center_name || 'Fleet Authorized Service Center, Mangalore';
+  const mechanicName = parsedExtras.mechanic || record.mechanic_name || record.entered_by_username || 'Preetham';
+  const serviceCenter = parsedExtras.center || record.service_center_name || 'FleetGuard Service Center';
   const cost = parsedExtras.cost || record.cost || record.total_cost || 0;
-  const workNotes = parsedExtras.work || (!Object.keys(parsedExtras).length ? (record.remarks || record.description) : '') || record.notes || record.work_performed || 'Engine oil changed, oil filter replaced, air filter cleaned, brake inspection completed, wheel alignment done. Vehicle in good condition.';
+  
+  let rawWork = parsedExtras.work || parsedExtras.description || parsedExtras.notes;
+  if (!rawWork && (record.remarks || record.description)) {
+    const raw = String(record.remarks || record.description).trim();
+    if (!raw.startsWith('{')) {
+      rawWork = raw;
+    }
+  }
+  const workNotes = rawWork || record.notes || record.work_performed || 'General maintenance and inspection completed.';
   const nextDate = parsedExtras.nextDate || record.next_service_date;
   const nextKm = parsedExtras.nextKm || record.next_service_km;
 

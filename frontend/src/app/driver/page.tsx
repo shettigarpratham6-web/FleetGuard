@@ -16,30 +16,30 @@ interface CheckItem {
 const CHECKS_LIST: CheckItem[] = [
   {
     id: 'engine',
-    title: 'Engine & Battery Health',
-    subtitle: 'Engine oil dipstick level, radiator coolant & battery terminal tightness',
-    icon: 'build',
+    title: 'Powertrain & Fluid Levels',
+    subtitle: 'Check engine oil dipstick, coolant reservoir, transmission fluid & battery terminals',
+    icon: 'tune',
     priority: 'Critical'
   },
   {
     id: 'tires',
-    title: 'Tire Condition & Pressure',
-    subtitle: 'PSI pressure across all road wheels, tread depth & spare tire state',
-    icon: 'trip_origin',
+    title: 'Wheel Assemblies & Inflation',
+    subtitle: 'Inspect tire tread depth, rim lug nuts, pressure levels & spare tire security',
+    icon: 'speed',
     priority: 'Critical'
   },
   {
     id: 'brakes',
-    title: 'Brakes & Emergency System',
-    subtitle: 'Foot brake pedal firmness, air pressure buildup & parking handbrake',
-    icon: 'error',
+    title: 'Braking & Hydraulic Pressure',
+    subtitle: 'Verify foot brake resistance, air pressure buildup, hydraulic lines & parking brake',
+    icon: 'disc_full',
     priority: 'Critical'
   },
   {
     id: 'lights',
-    title: 'Lighting, Signals & Mirrors',
-    subtitle: 'High/low headlights, turn indicators, side mirrors & windshield wipers',
-    icon: 'light_mode',
+    title: 'Visibility & Electrical Controls',
+    subtitle: 'Test headlights, turn indicators, brake lights, side mirrors & windshield wipers',
+    icon: 'visibility',
     priority: 'Required'
   }
 ];
@@ -482,20 +482,20 @@ export default function DriverDashboardPage() {
                     <div className="flex gap-2 shrink-0">
                       <button 
                         onClick={() => setChecklist(p => ({ ...p, [item.id]: true }))} 
-                        className={`px-5 py-2 rounded-lg text-xs font-black border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                        className={`px-5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
                           isPassed 
-                            ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-300 hover:bg-emerald-700' 
-                            : 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-50'
+                            ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-200 shadow-sm' 
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
                         }`}
                       >
                         <span className="material-symbols-outlined text-[16px]">check_circle</span> PASS
                       </button>
                       <button 
                         onClick={() => setChecklist(p => ({ ...p, [item.id]: false }))} 
-                        className={`px-5 py-2 rounded-lg text-xs font-black border transition-all flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                        className={`px-5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
                           isFailed 
-                            ? 'bg-rose-600 text-white border-rose-600 ring-2 ring-rose-300 hover:bg-rose-700' 
-                            : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50 hover:text-rose-700'
+                            ? 'bg-rose-600 text-white border-rose-600 ring-2 ring-rose-200 shadow-sm' 
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
                         }`}
                       >
                         <span className="material-symbols-outlined text-[16px]">warning</span> FAIL
@@ -511,7 +511,7 @@ export default function DriverDashboardPage() {
                         placeholder="Describe issue (e.g. low pressure, oil leak)..."
                         value={checkNotes[item.id] || ''}
                         onChange={(e) => setCheckNotes({ ...checkNotes, [item.id]: e.target.value })}
-                        className="w-full px-3 py-1.5 bg-white border border-rose-300 rounded-lg text-xs text-rose-950 font-medium focus:outline-none focus:ring-2 focus:ring-rose-400"
+                        className="w-full px-3 py-2 bg-white border border-rose-300 rounded-xl text-xs text-rose-950 font-medium focus:outline-none focus:ring-2 focus:ring-rose-400"
                       />
                     </div>
                   )}
@@ -527,24 +527,29 @@ export default function DriverDashboardPage() {
               value={generalRemarks}
               onChange={(e) => setGeneralRemarks(e.target.value)}
               placeholder="Additional comments or remarks (optional)..."
-              className="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-medium text-slate-900 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full border border-slate-300 rounded-xl p-3 text-xs font-medium text-slate-900 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
 
           {/* Footer Submit Bar */}
           <div className="flex justify-between items-center mt-6 pt-5 border-t border-slate-100">
             {allPass ? (
-              <span className="px-5 py-2 bg-emerald-100 text-emerald-900 font-black text-sm rounded-full border border-emerald-300 shadow-sm">
+              <span className="px-4 py-2 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full border border-emerald-300 shadow-xs flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
                 Overall: PASS
               </span>
+            ) : isAllAnswered && failedCount > 0 ? (
+              <span className="px-4 py-2 bg-rose-100 text-rose-800 font-extrabold text-xs rounded-full border border-rose-300 shadow-xs flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-rose-600">warning</span>
+                Overall: FAIL ({failedCount} Issue{failedCount > 1 ? 's' : ''})
+              </span>
             ) : answeredCount > 0 ? (
-              <span className={`px-5 py-2 font-black text-sm rounded-full border shadow-sm ${
-                failedCount > 0 ? 'bg-rose-100 text-rose-900 border-rose-300' : 'bg-amber-100 text-amber-900 border-amber-300'
-              }`}>
-                Overall: {failedCount > 0 ? 'FAIL' : 'INCOMPLETE'}
+              <span className="px-4 py-2 bg-amber-50 text-amber-800 font-extrabold text-xs rounded-full border border-amber-300 shadow-xs flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-amber-600">pending</span>
+                In Progress ({answeredCount}/{totalCount})
               </span>
             ) : (
-              <span className="px-5 py-2 bg-slate-100 text-slate-700 font-extrabold text-sm rounded-full border border-slate-300">
+              <span className="px-4 py-2 bg-slate-100 text-slate-600 font-extrabold text-xs rounded-full border border-slate-200">
                 Pending Selection
               </span>
             )}
@@ -552,9 +557,21 @@ export default function DriverDashboardPage() {
             <button 
               onClick={submitChecklist}
               disabled={isBlocked || !isAllAnswered || submittingChecklist}
-              className="px-8 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm rounded-lg disabled:opacity-50 transition-colors shadow-md cursor-pointer flex items-center gap-2"
+              className={`px-6 py-2.5 rounded-xl font-extrabold text-xs transition-all shadow-sm flex items-center gap-2 border-0 ${
+                isAllAnswered && !isBlocked
+                  ? failedCount > 0
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
             >
-              {submittingChecklist ? 'Logging...' : `Log Checklist (${allPass ? 'PASS' : 'FAIL'})`}
+              {submittingChecklist ? (
+                'Logging...'
+              ) : isAllAnswered ? (
+                allPass ? 'Log Checklist (PASS)' : 'Log Checklist (FAIL)'
+              ) : (
+                'Log Checklist'
+              )}
             </button>
           </div>
 

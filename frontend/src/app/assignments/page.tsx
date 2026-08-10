@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LayoutWrapper from '@/components/LayoutWrapper';
-import Footer from '@/components/Footer';
 import { api } from '@/services/api';
 
 export default function AssignmentsPage() {
@@ -193,7 +192,7 @@ export default function AssignmentsPage() {
                   {/* Dates */}
                   <div className="text-right text-xs text-slate-500 space-y-1">
                     <p className="font-semibold text-slate-700">Assigned by: <span className="font-normal">{assignment.assigned_by_name}</span></p>
-                    <p>Start: {new Date(assignment.assignment_date).toLocaleDateString()}</p>
+                    <p>Start: {new Date(assignment.assignment_date || assignment.start_date || assignment.created_at).toLocaleDateString()}</p>
                     {assignment.return_date && <p>Return: {new Date(assignment.return_date).toLocaleDateString()}</p>}
                   </div>
 
@@ -229,7 +228,6 @@ export default function AssignmentsPage() {
             ))}
           </div>
         )}
-        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

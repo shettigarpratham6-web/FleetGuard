@@ -3,7 +3,6 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper'; // Adjust import path as needed
-import Footer from '@/components/Footer';
 export default function AboutUsPage() {
   const router = useRouter();
 
@@ -297,7 +296,6 @@ export default function AboutUsPage() {
           </section>
 
         </main>
-        <Footer />
       </div>
     </LayoutWrapper>
   );

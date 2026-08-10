@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle } from '@/types';
-import Footer from "@/components/Footer"
 export default function CreateVehiclePage() {
   const router = useRouter();
 
@@ -315,7 +314,6 @@ export default function CreateVehiclePage() {
             </button>
           </div>
         </form>
-        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

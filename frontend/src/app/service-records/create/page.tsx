@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
@@ -41,6 +41,8 @@ function SectionCard({ title, children }: { title: string; children: React.React
 
 export default function CreateServiceRecordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialVehicleId = searchParams.get('vehicleId');
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -49,7 +51,7 @@ export default function CreateServiceRecordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const [vehicleId, setVehicleId] = useState('');
+  const [vehicleId, setVehicleId] = useState(initialVehicleId || '');
   const [mechanicId, setMechanicId] = useState('');
   const [serviceDate, setServiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentMileage, setCurrentMileage] = useState('');
@@ -61,6 +63,12 @@ export default function CreateServiceRecordPage() {
     { name: 'Oil Filter (OF-192)', qty: 1, unitCost: 40.50 },
     { name: 'Synthetic Engine Oil 5W-30', qty: 4, unitCost: 36.12 },
   ]);
+
+  useEffect(() => {
+    if (initialVehicleId) {
+      setVehicleId(initialVehicleId);
+    }
+  }, [initialVehicleId]);
 
   useEffect(() => {
     if (!api.auth.isAuthenticated()) { router.push('/login'); return; }

@@ -9,6 +9,7 @@ router.post('/trigger-expiry-scan', auth, authorize(['Admin', 'Fleet Manager', '
 
 router.post('/', auth, authorize(['Admin', 'Fleet Manager', 'Driver']), notificationController.createNotification);
 router.get('/', auth, notificationController.getMyNotifications);
+router.put('/read-all', auth, notificationController.markAllAsRead);
 router.put('/:id/read', auth, notificationController.markAsRead);
 router.delete('/:id', auth, notificationController.deleteNotification);
 
