@@ -207,10 +207,10 @@ export default function CreateAssignmentPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider border border-blue-200">
-                    Fleet Operations
+                    Fleet Dispatch Control
                   </span>
                 </div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">Assign Vehicle Driver</h2>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">Assign Driver to Vehicle</h2>
               </div>
             </div>
             <button 
@@ -413,10 +413,10 @@ export default function CreateAssignmentPage() {
               <div className="bg-amber-50/80 border border-amber-300 border-l-4 border-l-amber-500 rounded-2xl p-4 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-black text-amber-900">
                   <AlertTriangle size={18} className="text-amber-600 shrink-0" /> 
-                  Non-Compliant Vehicle Intercepted
+                  Compliance Flag Intercepted
                 </div>
                 <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                  This vehicle has expired compliance certificates or is under maintenance. Standard assignment is locked.
+                  This vehicle has pending document renewals or active maintenance flags. Standard assignment is locked.
                 </p>
                 <label className="flex items-center gap-2 text-xs font-extrabold text-amber-900 cursor-pointer pt-1">
                   <input
@@ -425,12 +425,12 @@ export default function CreateAssignmentPage() {
                     onChange={(e) => setModalStage(e.target.checked ? 'OVERRIDE' : 'NONE')}
                     className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
                   />
-                  Enable Manager Override Mode
+                  Enable Supervisor Override Protocol
                 </label>
               </div>
             )}
 
-            {/* Manager Override Authorization Card with 4 New Categories */}
+            {/* Manager Override Authorization Card with 4 Unique Categories */}
             {modalStage === 'OVERRIDE' ? (
               <div className="bg-gradient-to-br from-amber-50 via-amber-50/90 to-amber-100/50 rounded-2xl p-5 border border-amber-300 shadow-sm space-y-4 text-slate-900">
                 <div className="flex items-center gap-3 border-b border-amber-200/80 pb-3">
@@ -438,21 +438,21 @@ export default function CreateAssignmentPage() {
                     <Lock size={18} />
                   </div>
                   <div>
-                    <h4 className="font-black text-amber-950 uppercase text-xs tracking-wider">Manager Override Authorization</h4>
-                    <p className="text-[11px] text-amber-800 font-semibold mt-0.5 font-sans">Executive Fleet Dispatch Authorization</p>
+                    <h4 className="font-black text-amber-950 uppercase text-xs tracking-wider">Supervisor Dispatch Override</h4>
+                    <p className="text-[11px] text-amber-800 font-semibold mt-0.5 font-sans">Authorized Manager Special Clearance Protocol</p>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-black text-amber-950 uppercase tracking-wider mb-2">
-                    Select Override Category <span className="text-red-500">*</span>
+                    Select Override Authorization Type <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { cat: 'High-Priority Fleet Dispatch', icon: '🚀' },
-                      { cat: 'Technical Safety Waiver', icon: '🛠️' },
-                      { cat: 'Emergency Backup Deployment', icon: '⚠️' },
-                      { cat: 'Senior Supervisor Override', icon: '📋' }
+                      { cat: 'Emergency Shift Coverage', icon: '🚨' },
+                      { cat: 'Route Critical Dispatch', icon: '⚡' },
+                      { cat: 'Supervisor Special Clearance', icon: '🛡️' },
+                      { cat: 'Grace Period Extension', icon: '⌛' }
                     ].map(item => (
                       <button
                         key={item.cat}
@@ -531,73 +531,83 @@ export default function CreateAssignmentPage() {
         </div>
       </div>
 
-      {/* Assignment Blocked Modal */}
+      {/* Assignment Blocked Modal - Custom Enterprise Intercept Design */}
       {modalStage === 'BLOCKED' && selectedVehicleData && (
-        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4" onClick={() => setModalStage('NONE')}>
-          <div className="w-full max-w-[520px] bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/70 backdrop-blur-xs p-4" onClick={() => setModalStage('NONE')}>
+          <div className="w-full max-w-[540px] bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden animate-fadeIn" onClick={(e) => e.stopPropagation()}>
             
-            {/* Header */}
-            <div className="flex items-center gap-4 px-6 py-4 bg-rose-50 border-b border-rose-200 relative">
-              <div className="flex items-center justify-center w-10 h-10 bg-rose-100 rounded-full shrink-0">
-                <Ban size={22} className="text-rose-600" />
-              </div>
-              <div>
-                <h2 className="text-base font-black text-rose-900">Assignment Blocked</h2>
-                <p className="text-xs text-rose-600 font-semibold">Vehicle Compliance Violation Intercepted</p>
+            {/* Header - Slate Dark Premium Theme */}
+            <div className="flex items-center justify-between px-6 py-4.5 bg-slate-900 text-white relative border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl shrink-0">
+                  <ShieldAlert size={22} />
+                </div>
+                <div>
+                  <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Safety & Regulatory Intercept
+                  </span>
+                  <h2 className="text-lg font-black text-white tracking-tight mt-0.5">Vehicle Deployment Intercepted</h2>
+                </div>
               </div>
               <button
                 onClick={() => setModalStage('NONE')}
                 aria-label="Close modal"
-                className="absolute top-4 right-4 p-1.5 rounded-xl text-rose-400 hover:bg-rose-100 hover:text-rose-700 transition-colors border-0 bg-transparent cursor-pointer"
+                className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors border-0 bg-transparent cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="px-6 py-5 flex flex-col gap-4 bg-slate-50">
+            <div className="px-6 py-6 flex flex-col gap-4 bg-slate-50">
               
-              {/* Vehicle Specs */}
-              <div className="px-4 py-3 bg-white border border-slate-200 rounded-xl space-y-1">
+              {/* Vehicle Asset Card */}
+              <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-black text-blue-700 text-sm">{selectedVehicleData.vehicle_number}</span>
-                  <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-black uppercase rounded-full border border-rose-200">
-                    {selectedVehicleData.status || 'NON-COMPLIANT'}
+                  <span className="font-mono font-black text-blue-700 text-sm px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-lg">
+                    {selectedVehicleData.vehicle_number}
+                  </span>
+                  <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wider rounded-full border border-amber-300">
+                    REGULATORY HOLD
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 font-medium">{selectedVehicleData.manufacturer} {selectedVehicleData.model} · VIN: {selectedVehicleData.registration_number || 'N/A'}</p>
+                <p className="text-xs text-slate-800 font-extrabold">{selectedVehicleData.manufacturer} {selectedVehicleData.model}</p>
+                <p className="text-[11px] font-mono text-slate-500">Reg #: {selectedVehicleData.registration_number || 'N/A'}</p>
               </div>
 
-              {/* Warning Notice Box */}
-              <div className="px-4 py-3 bg-rose-50 border border-rose-200 border-l-4 border-l-rose-500 rounded-xl text-xs text-rose-900 font-medium">
-                Standard driver assignment is <strong>blocked</strong> because this vehicle has unresolved compliance issues or is under maintenance.
+              {/* Status Intercept Box */}
+              <div className="p-4 bg-amber-50/80 border border-amber-300 border-l-4 border-l-amber-500 rounded-2xl text-xs text-amber-950 font-medium leading-relaxed">
+                <p className="font-black uppercase text-[10px] text-amber-900 tracking-wider mb-1">Dispatch Intercept Active</p>
+                Fleet safety protocols have restricted direct assignment for vehicle <strong>{selectedVehicleData.vehicle_number}</strong> due to active document or maintenance flags.
               </div>
 
-              {/* Detailed Reason */}
+              {/* Flagged Constraints Audit */}
               <div>
-                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wide mb-1.5">Detailed Reason</h3>
-                <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-700 leading-relaxed space-y-1">
+                <h3 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Flagged Compliance Audit</h3>
+                <div className="p-3.5 bg-white border border-slate-200 rounded-2xl text-xs font-mono text-slate-700 leading-relaxed space-y-1.5 shadow-xs">
                   {formatDetailedReason(overrideError).map((reason, idx) => (
-                    <div key={idx}>{reason}</div>
+                    <div key={idx} className="flex items-start gap-2">
+                      <span>{reason}</span>
+                    </div>
                   ))}
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 justify-end pt-3 border-t border-slate-200">
+              {/* Action Footer */}
+              <div className="flex gap-3 justify-end pt-3 border-t border-slate-200 mt-1">
                 <button 
                   type="button" 
                   onClick={() => setModalStage('NONE')} 
-                  className="px-4 py-2 bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 cursor-pointer"
+                  className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 text-xs font-extrabold rounded-xl hover:bg-slate-100 transition-all cursor-pointer"
                 >
-                  Cancel
+                  Abort Assignment
                 </button>
                 <button
                   type="button"
                   onClick={() => setModalStage('OVERRIDE')}
-                  className="inline-flex items-center justify-center gap-1.5 px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-xl shadow-md cursor-pointer border-0"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black rounded-xl shadow-md transition-all cursor-pointer border-0"
                 >
-                  Proceed with Override
+                  Authorize Supervisor Override
                   <ArrowRight size={15} />
                 </button>
               </div>

@@ -16,30 +16,30 @@ interface CheckItem {
 const CHECKS_LIST: CheckItem[] = [
   {
     id: 'engine',
-    title: 'Powertrain & Fluid Levels',
-    subtitle: 'Check engine oil dipstick, coolant reservoir, transmission fluid & battery terminals',
-    icon: 'tune',
+    title: 'Engine & Fluids',
+    subtitle: 'Check oil level, radiator coolant & battery terminals',
+    icon: 'vital_signs',
     priority: 'Critical'
   },
   {
     id: 'tires',
-    title: 'Wheel Assemblies & Inflation',
-    subtitle: 'Inspect tire tread depth, rim lug nuts, pressure levels & spare tire security',
-    icon: 'speed',
+    title: 'Tires & Wheels',
+    subtitle: 'Inspect tread depth, tire pressure & lug nuts',
+    icon: 'tire_repair',
     priority: 'Critical'
   },
   {
     id: 'brakes',
-    title: 'Braking & Hydraulic Pressure',
-    subtitle: 'Verify foot brake resistance, air pressure buildup, hydraulic lines & parking brake',
-    icon: 'disc_full',
+    title: 'Brake System',
+    subtitle: 'Test brake pedal response & parking brake',
+    icon: 'minor_crash',
     priority: 'Critical'
   },
   {
     id: 'lights',
-    title: 'Visibility & Electrical Controls',
-    subtitle: 'Test headlights, turn indicators, brake lights, side mirrors & windshield wipers',
-    icon: 'visibility',
+    title: 'Lights & Wipers',
+    subtitle: 'Inspect headlights, turn signals, mirrors & wipers',
+    icon: 'light_mode',
     priority: 'Required'
   }
 ];
@@ -253,9 +253,9 @@ export default function DriverDashboardPage() {
         {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-200 pb-4">
           <div>
-            <span className="text-xs font-bold text-blue-600 uppercase tracking-widest block mb-1">Driver Console</span>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Driver Duty Dashboard</h1>
-            <p className="text-slate-500 text-sm mt-1">Real-time vehicle assignment compliance & road-legal clearance</p>
+            <span className="text-xs font-bold text-blue-600 uppercase tracking-widest block mb-1">Driver Portal</span>
+            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Duty Clearance Dashboard</h1>
+            <p className="text-slate-500 text-sm mt-1">Real-time vehicle clearance & road status</p>
           </div>
           <button onClick={() => window.location.reload()} className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-lg text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer">
             <span className="material-symbols-outlined text-[18px]">refresh</span>
@@ -282,21 +282,21 @@ export default function DriverDashboardPage() {
                     ? 'bg-rose-500/25 text-rose-200 border-rose-400/30 backdrop-blur-md' 
                     : 'bg-emerald-500/25 text-emerald-200 border-emerald-400/30 backdrop-blur-md'
                 }`}>
-                  {isBlocked ? 'LEGAL RISK' : 'CLEARANCE ACTIVE'}
+                  {isBlocked ? 'DISPATCH BLOCKED' : 'ROADSIDE CLEARED'}
                 </span>
                 <h2 className="text-2xl font-black text-white tracking-tight mb-1">
-                  {isBlocked ? 'Operation Blocked / Legal Risk' : 'Vehicle Compliant / Road Legal'}
+                  {isBlocked ? 'Operation Locked / Regulatory Flag' : 'Vehicle Compliant & Authorized'}
                 </h2>
                 <p className="text-slate-200 text-xs sm:text-sm max-w-2xl font-medium leading-relaxed">
                   {isBlocked 
-                    ? `CRITICAL ALERT: Assigned vehicle ${vehicle.vehicle_number} has compliance violations or is under maintenance. Do not operate on public roads.`
-                    : `SUCCESS: Assigned vehicle ${vehicle.vehicle_number} has passed all digital compliance checks. You are cleared for duty.`}
+                    ? `NOTICE: Vehicle ${vehicle.vehicle_number} has compliance flags or pending service.`
+                    : `VERIFIED: Vehicle ${vehicle.vehicle_number} passed compliance checks. Cleared for duty.`}
                 </p>
               </div>
 
               {/* Floating Vehicle Badge */}
               <div className="hidden sm:block bg-black/35 backdrop-blur-md rounded-xl p-3.5 border border-white/20 text-right min-w-[160px] shadow-sm">
-                <p className="text-[10px] uppercase font-black text-slate-300 tracking-wider mb-0.5">Assigned Vehicle</p>
+                <p className="text-[10px] uppercase font-black text-slate-300 tracking-wider mb-0.5">Active Vehicle</p>
                 <p className="text-xl font-black text-white tracking-wider font-mono">{vehicle.vehicle_number}</p>
                 <p className="text-xs text-slate-200 font-bold">{vehicle.model}</p>
               </div>
@@ -309,41 +309,50 @@ export default function DriverDashboardPage() {
                 className="flex items-center gap-1.5 text-xs font-extrabold text-slate-200 hover:text-white transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">{showCompliance ? 'expand_less' : 'expand_more'}</span>
-                {showCompliance ? 'Hide' : 'Show'} Compliance Breakdown ({docs.length} documents checked)
+                {showCompliance ? 'Hide' : 'Show'} Compliance Records Summary ({docs.length} checked)
               </button>
               
-              {/* Compliance Cards Grid - Realistic Glass & White Cards */}
+              {/* Compliance Breakdown Table Row Format */}
               {showCompliance && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                  {docs.map(doc => {
-                    const isExp = new Date(doc.exp) < now;
-                    return (
-                      <div 
-                        key={doc.name} 
-                        className={`rounded-xl p-4 shadow-md bg-white/95 backdrop-blur-md text-slate-900 border-2 ${
-                          isExp ? 'border-rose-500' : 'border-emerald-500'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs font-black text-slate-900 mb-2">
-                          <span className={`material-symbols-outlined text-[20px] ${isExp ? 'text-rose-600' : 'text-emerald-600'}`}>
-                            {isExp ? 'warning' : 'check_circle'}
-                          </span>
-                          <span className="truncate">{doc.name}</span>
-                        </div>
-
-                        <div className="flex justify-between items-center mt-4 pt-2 border-t border-slate-100">
-                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded ${
-                            isExp ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                          }`}>
-                            {isExp ? 'Expired' : 'Valid'}
-                          </span>
-                          <span className="text-[11px] font-mono font-extrabold text-slate-700">
-                            Exp: {new Date(doc.exp).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="mt-4 overflow-hidden rounded-xl border border-white/20 bg-black/25 backdrop-blur-md shadow-inner">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-white/15 bg-black/30 text-[10px] font-black uppercase text-slate-300 tracking-wider">
+                          <th className="py-3 px-4">Document Type</th>
+                          <th className="py-3 px-4">Status</th>
+                          <th className="py-3 px-4 text-right">Expiration Date</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {docs.map(doc => {
+                          const isExp = new Date(doc.exp) < now;
+                          return (
+                            <tr key={doc.name} className="hover:bg-white/5 transition-colors">
+                              <td className="py-3.5 px-4 font-extrabold text-white flex items-center gap-2">
+                                <span className={`material-symbols-outlined text-[18px] ${isExp ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                  {isExp ? 'warning' : 'check_circle'}
+                                </span>
+                                {doc.name}
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <span className={`inline-block text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded border ${
+                                  isExp 
+                                    ? 'bg-rose-500/30 text-rose-200 border-rose-400/40' 
+                                    : 'bg-emerald-500/30 text-emerald-200 border-emerald-400/40'
+                                }`}>
+                                  {isExp ? 'Expired' : 'Valid'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-right font-mono font-extrabold text-slate-200">
+                                Exp: {new Date(doc.exp).toLocaleDateString()}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -409,12 +418,12 @@ export default function DriverDashboardPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
               <div className="flex items-center gap-2 text-blue-600 text-xs font-extrabold uppercase tracking-wider mb-1">
-                <span className="material-symbols-outlined text-[18px]">assignment_turned_in</span>
-                Pre-Trip Safety Check
+                <span className="material-symbols-outlined text-[18px]">verified</span>
+                Pre-Flight Vehicle Audit
               </div>
-              <h3 className="text-xl font-extrabold text-slate-900">Vehicle Duty Checklist</h3>
+              <h3 className="text-xl font-extrabold text-slate-900">Daily Pre-Trip Inspection</h3>
               <p className="text-xs text-slate-600 mt-0.5 font-medium">
-                Fast 4-item inspection • {answeredCount} of {totalCount} answered ({passedCount} Passed, {failedCount} Failed)
+                Mandatory 4-point safety verification • {answeredCount} of {totalCount} completed ({passedCount} Passed, {failedCount} Flagged)
               </p>
             </div>
 
@@ -423,14 +432,14 @@ export default function DriverDashboardPage() {
                 onClick={handlePassAll} 
                 className="flex items-center gap-1.5 px-4 py-2 border border-emerald-300 text-emerald-800 bg-emerald-50 rounded-full text-xs font-black hover:bg-emerald-100 transition-colors shadow-sm cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[16px]">bolt</span>
-                All Pass
+                <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                Approve All
               </button>
               <button 
                 onClick={handleReset} 
                 className="px-3.5 py-2 border border-slate-300 text-slate-700 bg-slate-100 rounded-full text-xs font-extrabold hover:bg-slate-200 transition-colors cursor-pointer"
               >
-                Reset
+                Reset All
               </button>
             </div>
           </div>
@@ -488,7 +497,7 @@ export default function DriverDashboardPage() {
                             : 'bg-white text-slate-700 border-slate-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[16px]">check_circle</span> PASS
+                        <span className="material-symbols-outlined text-[16px]">check_circle</span> VERIFIED
                       </button>
                       <button 
                         onClick={() => setChecklist(p => ({ ...p, [item.id]: false }))} 
@@ -498,7 +507,7 @@ export default function DriverDashboardPage() {
                             : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300'
                         }`}
                       >
-                        <span className="material-symbols-outlined text-[16px]">warning</span> FAIL
+                        <span className="material-symbols-outlined text-[16px]">warning</span> DEFECT
                       </button>
                     </div>
                   </div>
@@ -508,7 +517,7 @@ export default function DriverDashboardPage() {
                     <div className="pt-2 border-t border-rose-200">
                       <input
                         type="text"
-                        placeholder="Describe issue (e.g. low pressure, oil leak)..."
+                        placeholder="Describe issue (e.g. low pressure, fluid leak)..."
                         value={checkNotes[item.id] || ''}
                         onChange={(e) => setCheckNotes({ ...checkNotes, [item.id]: e.target.value })}
                         className="w-full px-3 py-2 bg-white border border-rose-300 rounded-xl text-xs text-rose-950 font-medium focus:outline-none focus:ring-2 focus:ring-rose-400"
@@ -526,7 +535,7 @@ export default function DriverDashboardPage() {
               type="text" 
               value={generalRemarks}
               onChange={(e) => setGeneralRemarks(e.target.value)}
-              placeholder="Additional comments or remarks (optional)..."
+              placeholder="Additional inspection notes or supervisor remarks (optional)..."
               className="w-full border border-slate-300 rounded-xl p-3 text-xs font-medium text-slate-900 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
           </div>
@@ -536,12 +545,12 @@ export default function DriverDashboardPage() {
             {allPass ? (
               <span className="px-4 py-2 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-full border border-emerald-300 shadow-xs flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
-                Overall: PASS
+                Audit Status: APPROVED
               </span>
             ) : isAllAnswered && failedCount > 0 ? (
               <span className="px-4 py-2 bg-rose-100 text-rose-800 font-extrabold text-xs rounded-full border border-rose-300 shadow-xs flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px] text-rose-600">warning</span>
-                Overall: FAIL ({failedCount} Issue{failedCount > 1 ? 's' : ''})
+                Audit Status: DEFECTS ({failedCount} Issue{failedCount > 1 ? 's' : ''})
               </span>
             ) : answeredCount > 0 ? (
               <span className="px-4 py-2 bg-amber-50 text-amber-800 font-extrabold text-xs rounded-full border border-amber-300 shadow-xs flex items-center gap-1.5">
@@ -568,9 +577,9 @@ export default function DriverDashboardPage() {
               {submittingChecklist ? (
                 'Logging...'
               ) : isAllAnswered ? (
-                allPass ? 'Log Checklist (PASS)' : 'Log Checklist (FAIL)'
+                allPass ? 'Submit Safety Audit (PASS)' : 'Submit Safety Audit (DEFECTS)'
               ) : (
-                'Log Checklist'
+                'Submit Safety Audit'
               )}
             </button>
           </div>

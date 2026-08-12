@@ -651,19 +651,19 @@ export default function VehicleDetailsPage() {
                   <div className="flex gap-2 text-amber-800">
                     <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">warning</span>
                     <div>
-                      <p className="font-bold text-xs uppercase">Compliance Override Required</p>
+                      <p className="font-bold text-xs uppercase">Regulatory Clearance Override Required</p>
                       <p className="text-[11px] mt-0.5">
-                        This vehicle has expired or missing compliance documents. Assigning it requires a manager override justification.
+                        This vehicle has pending document audits or maintenance flags. Assignment requires supervisor authorization reasoning.
                       </p>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black uppercase text-amber-800 mb-1">Reason for Override *</label>
+                    <label className="block text-[10px] font-black uppercase text-amber-800 mb-1">Supervisor Override Justification *</label>
                     <textarea
                       value={overrideReason}
                       onChange={(e) => setOverrideReason(e.target.value)}
                       required
-                      placeholder="Provide details on why this vehicle must be assigned despite non-compliance..."
+                      placeholder="Enter official supervisor reasoning for dispatching this vehicle..."
                       rows={3}
                       className="w-full bg-white border border-amber-300 rounded-lg p-2 text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
                     />
