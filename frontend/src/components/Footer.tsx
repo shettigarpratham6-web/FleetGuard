@@ -1,105 +1,135 @@
-import Link from "next/link";
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
 
 export default function Footer() {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className="w-full bg-[#3b4b64] text-white/90 text-sm font-sans mt-auto">
-            {/* Main Links Area */}
-            <div className="w-full px-6 py-12 md:py-16">
-                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
+        <footer className="w-full bg-slate-900 text-slate-300 font-sans border-t border-slate-800 mt-auto">
+            {/* Main Footer Container */}
+            <div className="max-w-7xl mx-auto px-6 py-12 lg:py-16">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
 
-                    {/* Column 1: Company Description */}
-                    <div className="space-y-4">
-                        <h2 className="text-base font-bold uppercase tracking-wider text-white">
-                            FleetGuard
-                        </h2>
-                        <p className="leading-relaxed text-neutral-300">
-                            Advanced Fleet Maintenance & Service Operations Manager. Optimize logistics runtime, manage assets, and streamline operational compliance effortlessly.
+                    {/* Brand Info */}
+                    <div className="lg:col-span-2 space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-blue-600/30">
+                                FG
+                            </div>
+                            <span className="text-xl font-black tracking-tight text-white">
+                                Fleet<span className="text-blue-500">Guard</span>
+                            </span>
+                        </div>
+
+                        <p className="text-xs sm:text-sm text-slate-400 font-medium leading-relaxed max-w-sm">
+                            Next-generation fleet management & AI-powered telematics platform. Streamlining vehicle tracking, pre-trip safety checklists, compliance documents, and predictive maintenance.
                         </p>
+
+                        <div className="flex items-center gap-3 text-xs text-slate-400 pt-2">
+                            <span className="flex items-center gap-1.5 bg-slate-800 border border-slate-700/60 px-3 py-1.5 rounded-lg text-emerald-400 font-semibold">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                System Operational
+                            </span>
+                            <span className="bg-slate-800 border border-slate-700/60 px-3 py-1.5 rounded-lg text-slate-300 font-semibold">
+                                v2.4.0
+                            </span>
+                        </div>
                     </div>
 
-                    {/* Column 2: Products / Features */}
-                    <div className="space-y-4">
-                        <h2 className="text-base font-bold uppercase tracking-wider text-white">
-                            Features
-                        </h2>
-                        <ul className="space-y-2.5">
+                    {/* Column 2: Platform Modules */}
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+                            Core Modules
+                        </h3>
+                        <ul className="space-y-2 text-xs font-medium text-slate-400">
                             <li>
-                                <Link href="/telematics" className="text-neutral-300 hover:text-white transition-colors">
-                                    Live Telematics
+                                <Link href="/dashboard" className="hover:text-blue-400 transition-colors">
+                                    Fleet Dashboard
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/maintenance" className="text-neutral-300 hover:text-white transition-colors">
-                                    Predictive Service
+                                <Link href="/vehicles" className="hover:text-blue-400 transition-colors">
+                                    Vehicle Assets
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/fuel-tracking" className="text-neutral-300 hover:text-white transition-colors">
-                                    Fuel Optimization
+                                <Link href="/checklist" className="hover:text-blue-400 transition-colors">
+                                    Pre-Trip Checklists
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/compliance" className="text-neutral-300 hover:text-white transition-colors">
-                                    ELD Compliance
+                                <Link href="/assignment" className="hover:text-blue-400 transition-colors">
+                                    Driver Dispatches
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/compliance" className="hover:text-blue-400 transition-colors">
+                                    Compliance Vault
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/predictive-risk" className="hover:text-blue-400 transition-colors">
+                                    AI Maintenance Risk
                                 </Link>
                             </li>
                         </ul>
                     </div>
 
-                    {/* Column 3: Useful Links */}
-                    <div className="space-y-4">
-                        <h2 className="text-base font-bold uppercase tracking-wider text-white">
-                            Useful Links
-                        </h2>
-                        <ul className="space-y-2.5">
+                    {/* Column 3: Maintenance & Logistics */}
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+                            Operations
+                        </h3>
+                        <ul className="space-y-2 text-xs font-medium text-slate-400">
                             <li>
-                                <Link href="/dashboard" className="text-neutral-300 hover:text-white transition-colors">
-                                    Operator Control
+                                <Link href="/service-records" className="hover:text-blue-400 transition-colors">
+                                    Service Records
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/partners" className="text-neutral-300 hover:text-white transition-colors">
-                                    Affiliate Networks
+                                <Link href="/maintenance-queue" className="hover:text-blue-400 transition-colors">
+                                    Maintenance Queue
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/pricing" className="text-neutral-300 hover:text-white transition-colors">
-                                    Enterprise Rates
+                                <Link href="/historical-records" className="hover:text-blue-400 transition-colors">
+                                    Historical Archives
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/help" className="text-neutral-300 hover:text-white transition-colors">
-                                    Operations Help
+                                <Link href="/driver" className="hover:text-blue-400 transition-colors">
+                                    Driver Portal
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/blog" className="hover:text-blue-400 transition-colors">
+                                    Logistics Resources
                                 </Link>
                             </li>
                         </ul>
                     </div>
 
-                    {/* Column 4: Contact Details */}
-                    <div className="space-y-4">
-                        <h2 className="text-base font-bold uppercase tracking-wider text-white">
-                            Contact
-                        </h2>
-                        <ul className="space-y-3 text-neutral-300">
-                            <li className="flex items-start gap-3">
-                                <span className="material-symbols-outlined text-[20px] shrink-0 mt-0.5 select-none">home</span>
-                                <span>New York, NY 10012, US</span>
-                            </li>
-                            <li className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-[20px] shrink-0 select-none">mail</span>
+                    {/* Column 4: Contact & Support */}
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+                            Support & Contact
+                        </h3>
+                        <ul className="space-y-2.5 text-xs text-slate-400 font-medium">
+                            <li className="flex items-center gap-2">
+                                <span className="text-blue-400">📧</span>
                                 <a href="mailto:support@fleetguard.com" className="hover:text-white transition-colors">
                                     support@fleetguard.com
                                 </a>
                             </li>
-                            <li className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-[20px] shrink-0 select-none">call</span>
-                                <span>+ 01 234 567 88</span>
+                            <li className="flex items-center gap-2">
+                                <span className="text-blue-400">📞</span>
+                                <span>+1 (800) 555-FLEET</span>
                             </li>
-                            <li className="flex items-center gap-3">
-                                <span className="material-symbols-outlined text-[20px] shrink-0 select-none">print</span>
-                                <span>+ 01 234 567 89</span>
+                            <li className="flex items-center gap-2">
+                                <span className="text-blue-400">📍</span>
+                                <span>Fleet Operations Hub, USA</span>
                             </li>
                         </ul>
                     </div>
@@ -107,34 +137,23 @@ export default function Footer() {
                 </div>
             </div>
 
-            {/* Bottom Sub-Footer Bar */}
-            <div className="w-full bg-[#323f54] py-6">
-                <div className="w-full px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-
-                    {/* Copyright text */}
-                    <div className="text-neutral-400 text-xs sm:text-sm text-center md:text-left">
-                        © {currentYear} Copyright:{" "}
-                        <Link href="/" className="font-semibold text-neutral-300 hover:text-white transition-colors">
-                            FleetGuard Logistics Enterprise
-                        </Link>
+            {/* Sub-Footer Bar */}
+            <div className="bg-slate-950 border-t border-slate-800/80 py-6 px-6">
+                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-medium">
+                    <div>
+                        © {currentYear} FleetGuard Logistics Enterprise. All rights reserved.
                     </div>
-
-                    {/* Social Network Icon Anchors */}
-                    <div className="flex items-center gap-3">
-                        <a href="#" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all" aria-label="Facebook">
-                            <i className="inline-block font-sans font-bold not-italic text-sm">f</i>
+                    <div className="flex items-center gap-6">
+                        <a href="#" className="hover:text-slate-300 transition-colors">
+                            Privacy Policy
                         </a>
-                        <a href="#" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all" aria-label="Twitter">
-                            <i className="inline-block font-sans font-bold not-italic text-sm">t</i>
+                        <a href="#" className="hover:text-slate-300 transition-colors">
+                            Terms of Service
                         </a>
-                        <a href="#" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all" aria-label="Google">
-                            <i className="inline-block font-sans font-bold not-italic text-xs">G+</i>
-                        </a>
-                        <a href="#" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all" aria-label="LinkedIn">
-                            <i className="inline-block font-sans font-bold not-italic text-xs">in</i>
+                        <a href="#" className="hover:text-slate-300 transition-colors">
+                            Security Overview
                         </a>
                     </div>
-
                 </div>
             </div>
         </footer>
