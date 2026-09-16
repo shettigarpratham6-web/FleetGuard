@@ -27,7 +27,8 @@ export default function LoginPage() {
     const target = (
       role === 'Admin' ||
       role === 'Fleet Manager' ||
-      role === 'Manager'
+      role === 'Manager' ||
+      role === 'Service Center'
     ) ? '/home' : '/driver';
 
     router.replace(target);
@@ -145,6 +146,22 @@ export default function LoginPage() {
                 >
                   <span className="w-2 h-2 rounded-full bg-blue-400"></span>
                   Demo Manager
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmail('driver@fleetguard.com'); setPassword('driver123'); }}
+                  className="py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  Demo Driver
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmail('service@fleetguard.com'); setPassword('service123'); }}
+                  className="py-2.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  Demo Tech
                 </button>
               </div>
 

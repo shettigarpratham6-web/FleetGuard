@@ -1,12 +1,31 @@
-import { User, Vehicle, ServiceRecord, MaintenanceRisk, Notification, HistoricalService } from '@/types';
+import { User, Vehicle, ServiceRecord, MaintenanceRisk, Notification, HistoricalService, Checklist, Assignment } from '@/types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api').trim().replace(/\/+$/, '');
+
+// Helper to ensure the token is purely the raw JWT string
+const sanitizeToken = (rawToken: unknown): string => {
+  if (!rawToken || typeof rawToken !== 'string') return '';
+
+  let cleaned = rawToken.trim();
+
+  // Remove wrapping double quotes (e.g. from JSON.stringify)
+  cleaned = cleaned.replace(/^"(.*)"$/, '$1').trim();
+
+  // Remove accidental extra "Bearer " if included in server response
+  cleaned = cleaned.replace(/^Bearer\s+/i, '').trim();
+
+  if (cleaned === 'undefined' || cleaned === 'null') return '';
+
+  return cleaned;
+};
 
 const getAuthHeaders = (isMultipart = false) => {
   const headers: Record<string, string> = {};
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('fleetguard_token');
-    if (token && token !== 'undefined') {
+    const rawToken = localStorage.getItem('fleetguard_token');
+    const token = sanitizeToken(rawToken);
+
+    if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
   }
@@ -16,6 +35,7 @@ const getAuthHeaders = (isMultipart = false) => {
   return headers;
 };
 
+// Replace your handleResponse function in api.ts
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let errorMessage = 'An error occurred';
@@ -25,6 +45,19 @@ async function handleResponse<T>(response: Response): Promise<T> {
     } catch {
       errorMessage = response.statusText || errorMessage;
     }
+
+    console.error(`[API Error ${response.status}] Request to ${response.url} failed:`, errorMessage);
+
+    // Don't trigger a forced browser redirect if the check was just for /auth/me
+    const isAuthMeEndpoint = response.url.includes('/auth/me');
+
+    if (response.status === 401 && typeof window !== 'undefined' && !isAuthMeEndpoint) {
+      console.warn('Authentication token was rejected by backend for:', response.url);
+      localStorage.removeItem('fleetguard_token');
+      localStorage.removeItem('fleetguard_user');
+      window.location.href = '/login';
+    }
+
     throw new Error(errorMessage);
   }
   return response.json() as Promise<T>;
@@ -43,11 +76,12 @@ export const api = {
 
         const data = await handleResponse<any>(res);
 
-        const token = data.token || data.accessToken;
+        const rawToken = data.token || data.accessToken || data.data?.token;
+        const token = sanitizeToken(rawToken);
         const user = data.user || data.data?.user || data;
 
         if (!token) {
-          throw new Error('Authentication failed: No token received from server.');
+          throw new Error('Authentication failed: No valid token received from server.');
         }
 
         if (typeof window !== 'undefined') {
@@ -66,7 +100,6 @@ export const api = {
       }
     },
 
-    // Fixed Google Sign-In method with network error handling
     googleLogin: async (credential: string) => {
       try {
         const res = await fetch(`${API_BASE_URL}/auth/google`, {
@@ -77,7 +110,8 @@ export const api = {
 
         const data = await handleResponse<any>(res);
 
-        const token = data.token || data.accessToken;
+        const rawToken = data.token || data.accessToken || data.data?.token;
+        const token = sanitizeToken(rawToken);
         const user = data.user || data.data?.user || data;
 
         if (!token) {
@@ -110,7 +144,8 @@ export const api = {
         });
         const data = await handleResponse<any>(res);
 
-        const token = data.token || data.accessToken;
+        const rawToken = data.token || data.accessToken || data.data?.token;
+        const token = sanitizeToken(rawToken);
         const user = data.user || data.data?.user || data;
 
         if (typeof window !== 'undefined') {
@@ -160,7 +195,11 @@ export const api = {
           localStorage.setItem('fleetguard_user', JSON.stringify(user));
         }
         return user;
-      } catch (error) {
+      } catch (error: any) {
+        // Do not fall back to local user if explicitly unauthenticated
+        if (error?.message?.toLowerCase().includes('authentication required')) {
+          return null;
+        }
         console.warn('Unable to verify user with backend, falling back to local session:', error);
         return api.auth.getLocalUser();
       }
@@ -192,8 +231,8 @@ export const api = {
 
     isAuthenticated: (): boolean => {
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('fleetguard_token');
-        return !!token && token !== 'undefined';
+        const token = sanitizeToken(localStorage.getItem('fleetguard_token'));
+        return !!token;
       }
       return false;
     }
@@ -378,6 +417,72 @@ export const api = {
       });
       const data = await handleResponse<{ message: string; document: any }>(res);
       return data.document;
+    },
+  },
+
+  checklists: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/checklists`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ checklists: Checklist[] }>(res);
+      return data.checklists || [];
+    },
+    getMyChecklists: async () => {
+      const res = await fetch(`${API_BASE_URL}/checklists/my-checklists`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ checklists: Checklist[] }>(res);
+      return data.checklists || [];
+    },
+    getByVehicle: async (vehicleId: string) => {
+      const res = await fetch(`${API_BASE_URL}/checklists/vehicle/${vehicleId}`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ checklists: Checklist[] }>(res);
+      return data.checklists || [];
+    },
+    create: async (checklistData: Partial<Checklist>) => {
+      const res = await fetch(`${API_BASE_URL}/checklists`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(checklistData),
+      });
+      const data = await handleResponse<{ message: string; checklist: Checklist }>(res);
+      return data.checklist;
+    },
+  },
+
+  assignments: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/assignments`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ assignments: Assignment[] }>(res);
+      return data.assignments || [];
+    },
+    create: async (assignmentData: { vehicle_id: string; driver_id: string; override_reason?: string }) => {
+      const res = await fetch(`${API_BASE_URL}/assignments`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(assignmentData),
+      });
+      const data = await handleResponse<{ message: string; assignment: Assignment }>(res);
+      return data.assignment;
+    },
+    returnVehicle: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/assignments/${id}/return`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(res);
+    },
+    cancelAssignment: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/assignments/${id}/cancel`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse(res);
     },
   },
 };

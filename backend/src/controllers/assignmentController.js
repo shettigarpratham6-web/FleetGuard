@@ -133,7 +133,7 @@ exports.getAllAssignments = async (req, res, next) => {
       queryText += ' WHERE ' + conditions.join(' AND ');
     }
 
-    queryText += ' ORDER BY a.assigned_date DESC';
+    queryText += ' ORDER BY COALESCE(a.assigned_date, a.created_at, NOW()) DESC';
 
     const result = await db.query(queryText, params);
     res.status(200).json({ assignments: result.rows });

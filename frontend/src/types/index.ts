@@ -91,3 +91,30 @@ export interface Notification {
   vehicle_number?: string;
   registration_number?: string;
 }
+
+export interface Checklist {
+  id: string;
+  driver_id: string;
+  vehicle_id: string;
+  odometer_reading: number;
+  brakes_status: 'Pass' | 'Fail' | 'Attention';
+  tires_status: 'Pass' | 'Fail' | 'Attention';
+  lights_status: 'Pass' | 'Fail' | 'Attention';
+  fluids_status: 'Pass' | 'Fail' | 'Attention';
+  overall_status: 'Passed' | 'Failed' | 'Attention Required';
+  notes?: string;
+  created_at: string;
+}
+
+export interface Assignment {
+  id: string;
+  vehicle_id: string;
+  driver_id: string;
+  assigned_by: string;
+  start_date: string;
+  end_date?: string;
+  status: 'Active' | 'Completed' | 'Cancelled';
+  override_reason?: string;
+  created_at: string;
+}
+

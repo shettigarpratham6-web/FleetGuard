@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import Footer from '@/components/Footer';
+import Footer from '@/components/footer';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { blogPosts } from '@/data/blogPosts';
 

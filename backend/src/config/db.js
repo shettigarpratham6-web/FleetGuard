@@ -44,11 +44,11 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  console.error('⚠️ Database pool background error:', err.message || err);
 });
 
 module.exports = {
   query: (text, params) => pool.query(text, params),
   pool
 };
+

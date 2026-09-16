@@ -17,6 +17,9 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const navItems = [
     { name: 'Home', icon: 'home', href: '/home' },
     { name: 'Dashboard', icon: 'dashboard', href: '/dashboard' },
+    { name: 'Checklists', icon: 'fact_check', href: '/checklist' },
+    { name: 'Assignments', icon: 'badge', href: '/assignment' },
+    { name: 'Compliance', icon: 'verified_user', href: '/compliance' },
     { name: 'Service Records', icon: 'description', href: '/service-records' },
     { name: 'Maintenance Queue', icon: 'build_circle', href: '/maintenance-queue' },
     { name: 'Predictive Risk', icon: 'analytics', href: '/predictive-risk' },

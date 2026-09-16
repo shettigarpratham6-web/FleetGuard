@@ -3,10 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import LayoutWrapper from '@/components/LayoutWrapper';
-import KPICards from '@/components/KPICards';
 import { api } from '@/services/api';
 import { Vehicle, MaintenanceRisk } from '@/types';
-import Footer from "@/components/Footer";
+import Footer from "@/components/footer";
 
 export default function HomePage() {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -33,7 +32,6 @@ export default function HomePage() {
         fetchKPIs();
     }, []);
 
-    // Sample activity data for table
     const recentActivities = [
         {
             id: 1,
@@ -89,7 +87,7 @@ export default function HomePage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10 min-h-[380px] md:min-h-[420px]">
 
-                        {/* LEFT COLUMN (55%) */}
+                        {/* LEFT COLUMN */}
                         <div className="lg:col-span-7 flex flex-col justify-center space-y-4">
                             <div>
                                 <span className="text-[11px] font-black tracking-widest uppercase bg-blue-800/80 border border-blue-400/30 px-3.5 py-1.5 rounded-full inline-block text-blue-200 shadow-xs">
@@ -139,7 +137,7 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN (45%) */}
+                        {/* RIGHT COLUMN */}
                         <div className="lg:col-span-5 relative flex items-center justify-center">
                             <div className="relative w-full h-[280px] sm:h-[320px] md:h-[360px] rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-slate-900 group">
                                 <img
@@ -181,7 +179,7 @@ export default function HomePage() {
                     </div>
                 </div>
 
-                {/* FEATURE HIGHLIGHTS (4 Cards) */}
+                {/* FEATURE HIGHLIGHTS */}
                 <div>
                     <div className="mb-4">
                         <span className="text-xs font-bold uppercase tracking-widest text-blue-600 block">Core Platform Capabilities</span>
@@ -189,336 +187,116 @@ export default function HomePage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                        {/* Card 1 */}
                         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
                             <div>
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Fleet Monitoring</p>
-                                    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <span className="material-symbols-outlined text-[20px]">map</span>
-                                    </div>
+                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                    <span className="material-symbols-outlined">directions_car</span>
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-900 mb-1">Centralized Visibility</h3>
-                                <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                    Monitor every vehicle in real time with centralized fleet visibility.
+                                <h3 className="font-bold text-slate-900 text-base mb-1">Fleet Management</h3>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    Track all vehicle details, specs, assignments, and branch locations in real time.
                                 </p>
                             </div>
-                        </div>
-
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
-                            <div>
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Maintenance Tracking</p>
-                                    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <span className="material-symbols-outlined text-[20px]">build_circle</span>
-                                    </div>
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-900 mb-1">Automated Reminders</h3>
-                                <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                    Never miss scheduled maintenance with automated reminders.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
-                            <div>
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-[11px] font-bold text-purple-600 uppercase tracking-wider">Predictive Analytics</p>
-                                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <span className="material-symbols-outlined text-[20px]">psychology</span>
-                                    </div>
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-900 mb-1">AI-Powered Insights</h3>
-                                <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                    Use AI-powered insights to identify risks before failures occur.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
-                            <div>
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Fuel & Cost</p>
-                                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <span className="material-symbols-outlined text-[20px]">local_gas_station</span>
-                                    </div>
-                                </div>
-                                <h3 className="text-lg font-bold text-slate-900 mb-1">Cost Optimization</h3>
-                                <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                                    Track operating expenses and improve fleet efficiency.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* FLEETGUARD IN ACTION SECTION */}
-                <div className="bg-white rounded-3xl p-6 sm:p-8 md:p-10 border border-slate-200/90 shadow-sm animate-fade-in">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-
-                        {/* Image Left (45%) */}
-                        <div className="lg:col-span-5 relative group">
-                            <div className="relative h-[300px] sm:h-[360px] md:h-[400px] rounded-3xl overflow-hidden shadow-xl border border-slate-200 bg-slate-900">
-                                <img
-                                    src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=800&auto=format&fit=crop&q=80"
-                                    alt="FleetGuard Enterprise Transportation Fleet"
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent"></div>
-
-                                {/* Floating Statistics Card */}
-                                <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-md p-4 rounded-2xl border border-slate-200/90 shadow-xl text-slate-900 transition-all">
-                                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
-                                        <div className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                            <span className="text-xs font-black text-slate-900 uppercase tracking-wider">Fleet Status</span>
-                                        </div>
-                                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-                                            Live Sync
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 text-center">
-                                        <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase">Availability</p>
-                                            <p className="text-xs font-black text-slate-900">96.8% Availability</p>
-                                        </div>
-                                        <div className="bg-emerald-50 p-2 rounded-xl border border-emerald-100">
-                                            <p className="text-[10px] font-bold text-emerald-700 uppercase">AI Risk</p>
-                                            <p className="text-xs font-black text-emerald-700">Optimal</p>
-                                        </div>
-                                    </div>
-                                    <div className="mt-2 text-center pt-1.5 border-t border-slate-100">
-                                        <span className="text-[11px] font-bold text-blue-600">1,284 Completed Services</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Content Right (55%) */}
-                        <div className="lg:col-span-7 space-y-6">
-                            <div>
-                                <span className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-1 block">
-                                    ENTERPRISE FLEET MANAGEMENT
-                                </span>
-                                <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-                                    Built for Modern Fleet Operations
-                                </h2>
-                                <p className="mt-3 text-sm md:text-base text-slate-600 font-medium leading-relaxed">
-                                    FleetGuard empowers logistics companies with intelligent fleet management tools designed to improve operational efficiency, reduce downtime, and simplify maintenance planning. Monitor every vehicle in real time, automate preventive maintenance schedules, analyze fleet performance, and make smarter decisions using AI-powered insights.
-                                </p>
-                            </div>
-
-                            {/* 4 Feature Bullets */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold shrink-0 mt-0.5">
-                                        ✔
-                                    </div>
-                                    <div>
-                                        <h4 className="text-xs font-extrabold text-slate-900">Real-Time Vehicle Tracking</h4>
-                                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">Monitor your fleet with live operational visibility.</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                    <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-bold shrink-0 mt-0.5">
-                                        ✔
-                                    </div>
-                                    <div>
-                                        <h4 className="text-xs font-extrabold text-slate-900">AI Predictive Maintenance</h4>
-                                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">Identify maintenance risks before failures occur.</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                    <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold shrink-0 mt-0.5">
-                                        ✔
-                                    </div>
-                                    <div>
-                                        <h4 className="text-xs font-extrabold text-slate-900">Intelligent Analytics</h4>
-                                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">Turn fleet data into actionable business insights.</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                    <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold shrink-0 mt-0.5">
-                                        ✔
-                                    </div>
-                                    <div>
-                                        <h4 className="text-xs font-extrabold text-slate-900">Enterprise Security</h4>
-                                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">Secure and reliable platform built for large organizations.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Buttons */}
-                            <div className="flex flex-wrap items-center gap-3 pt-2">
-                                <Link
-                                    href="/dashboard"
-                                    className="bg-blue-600 hover:bg-blue-700 text-white font-extrabold px-6 py-3 rounded-xl text-sm transition-all duration-200 shadow-md flex items-center gap-2 active:scale-95"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">dashboard</span>
-                                    Explore Dashboard
-                                </Link>
-                                <Link
-                                    href="/about"
-                                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl text-sm border border-slate-200 transition-all duration-200 flex items-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">info</span>
-                                    Learn More
-                                </Link>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                {/* QUICK ACCESS SECTION */}
-                <div>
-                    <div className="mb-4">
-                        <span className="text-xs font-bold uppercase tracking-widest text-blue-600 block">Fast Navigation</span>
-                        <h2 className="text-2xl font-extrabold text-slate-900">Quick Access Modules</h2>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                        <Link href="/service-records" className="block group">
-                            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 text-center">
-                                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                    <span className="material-symbols-outlined text-[24px]">receipt_long</span>
-                                </div>
-                                <h4 className="text-sm font-extrabold text-slate-900">Service Records</h4>
-                                <p className="text-[11px] text-slate-500 font-medium mt-1">View logs & invoices</p>
-                            </div>
-                        </Link>
-
-                        <Link href="/maintenance-queue" className="block group">
-                            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 text-center">
-                                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                                    <span className="material-symbols-outlined text-[24px]">engineering</span>
-                                </div>
-                                <h4 className="text-sm font-extrabold text-slate-900">Maintenance Queue</h4>
-                                <p className="text-[11px] text-slate-500 font-medium mt-1">Active repair queue</p>
-                            </div>
-                        </Link>
-
-                        <Link href="/historical-records" className="block group">
-                            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 text-center">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                    <span className="material-symbols-outlined text-[24px]">history</span>
-                                </div>
-                                <h4 className="text-sm font-extrabold text-slate-900">Historical Records</h4>
-                                <p className="text-[11px] text-slate-500 font-medium mt-1">Archive & trends</p>
-                            </div>
-                        </Link>
-
-                        <Link href="/predictive-risk" className="block group">
-                            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 text-center">
-                                <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3 group-hover:bg-rose-600 group-hover:text-white transition-colors">
-                                    <span className="material-symbols-outlined text-[24px]">insights</span>
-                                </div>
-                                <h4 className="text-sm font-extrabold text-slate-900">Predictive Risk</h4>
-                                <p className="text-[11px] text-slate-500 font-medium mt-1">AI failure alerts</p>
-                            </div>
-                        </Link>
-
-                        <Link href="/blog" className="block group">
-                            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 text-center">
-                                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                                    <span className="material-symbols-outlined text-[24px]">menu_book</span>
-                                </div>
-                                <h4 className="text-sm font-extrabold text-slate-900">Blog & Resources</h4>
-                                <p className="text-[11px] text-slate-500 font-medium mt-1">Guides & insights</p>
-                            </div>
-                        </Link>
-                    </div>
-                </div>
-
-                {/* REPLACED FLEET OVERVIEW SECTION WITH REUSABLE DASHBOARD KPI CARDS */}
-                <div>
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                        <div>
-                            <span className="text-xs font-bold uppercase tracking-widest text-blue-600">Enterprise Metrics</span>
-                            <h2 className="text-2xl font-extrabold text-slate-900 mt-0.5">Fleet Overview</h2>
-                        </div>
-                        <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-3 py-1 rounded-full mt-2 sm:mt-0 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Live Backend Sync
-                        </span>
-                    </div>
-
-                    <KPICards vehicles={vehicles} risks={risks} loading={loading} />
-                </div>
-
-
-
-                {/* WHY FLEETGUARD (3 Cards) */}
-                <div>
-                    <div className="mb-4">
-                        <span className="text-xs font-bold uppercase tracking-widest text-blue-600 block">Built for Enterprise</span>
-                        <h2 className="text-2xl font-extrabold text-slate-900">Why FleetGuard?</h2>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all">
-                            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
-                                <span className="material-symbols-outlined text-[22px]">sensors</span>
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-2">Real-Time Monitoring</h3>
-                            <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                                Gain continuous telematics visibility into every asset, route deviation, engine diagnostic fault code, and fuel consumption trend across your fleet.
-                            </p>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all">
-                            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
-                                <span className="material-symbols-outlined text-[22px]">auto_awesome</span>
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-2">Predictive Maintenance</h3>
-                            <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                                Detect component degradation early using machine learning models to schedule repairs prior to costly on-road mechanical breakdowns.
-                            </p>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
-                                <span className="material-symbols-outlined text-[22px]">security</span>
-                            </div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-2">Enterprise Security</h3>
-                            <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                                Role-based access control, encrypted telemetry logs, and compliance audit trails engineered to satisfy regulatory requirements.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* CALL TO ACTION BANNER */}
-                <div className="bg-gradient-to-r from-blue-900 via-blue-700 to-indigo-800 rounded-3xl py-12 px-6 text-white shadow-xl border border-blue-600/30 text-center relative overflow-hidden flex flex-col justify-center items-center min-h-[220px] md:min-h-[260px]">
-                    {/* Subtle Glow & Background Accent */}
-                    <div className="absolute -top-24 -left-24 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl pointer-events-none"></div>
-                    <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
-
-                    <div className="relative z-10 max-w-2xl mx-auto flex flex-col items-center">
-                        <h2 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-                            Ready to Transform Your Fleet Operations?
-                        </h2>
-
-                        <p className="mt-5 text-base md:text-lg leading-7 text-blue-100 font-medium max-w-2xl text-center">
-                            FleetGuard helps you monitor vehicles, automate maintenance, track service records, and optimize fleet performance with AI-powered insights—all from one unified platform.
-                        </p>
-
-                        <div className="mt-6">
-                            <Link
-                                href="/dashboard"
-                                className="bg-white text-blue-700 hover:bg-blue-50 font-extrabold px-8 py-3.5 rounded-xl shadow-lg shadow-blue-950/20 transition-all hover:scale-105 text-sm flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
-                            >
-                                <span className="material-symbols-outlined text-[20px]">dashboard</span>
-                                Go to Dashboard
+                            <Link href="/vehicles" className="mt-4 text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                                View Vehicles →
                             </Link>
                         </div>
+
+                        {/* Card 2 */}
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
+                            <div>
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                    <span className="material-symbols-outlined">psychology</span>
+                                </div>
+                                <h3 className="font-bold text-slate-900 text-base mb-1">Predictive AI Risks</h3>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    Proactively detect breakdown risks before failures occur using smart analytics.
+                                </p>
+                            </div>
+                            <Link href="/predictive-risk" className="mt-4 text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                                Check Risks →
+                            </Link>
+                        </div>
+
+                        {/* Card 3 */}
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
+                            <div>
+                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                    <span className="material-symbols-outlined">verified</span>
+                                </div>
+                                <h3 className="font-bold text-slate-900 text-base mb-1">Compliance Docs</h3>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    Store insurance, registrations, and regulatory compliance documents effortlessly.
+                                </p>
+                            </div>
+                            <Link href="/compliance" className="mt-4 text-xs font-bold text-emerald-600 hover:text-emerald-800 flex items-center gap-1">
+                                Manage Documents →
+                            </Link>
+                        </div>
+
+                        {/* Card 4 */}
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
+                            <div>
+                                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                                    <span className="material-symbols-outlined">fact_check</span>
+                                </div>
+                                <h3 className="font-bold text-slate-900 text-base mb-1">Inspection Checklists</h3>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    Perform routine driver pre-trip inspection logs and track service approvals.
+                                </p>
+                            </div>
+                            <Link href="/checklist" className="mt-4 text-xs font-bold text-amber-600 hover:text-amber-800 flex items-center gap-1">
+                                Start Inspection →
+                            </Link>
+                        </div>
+
+                    </div>
+                </div>
+
+                {/* RECENT ACTIVITY TABLE */}
+                <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900">Recent Service Activity</h2>
+                            <p className="text-xs text-slate-500">Latest maintenance logs and inspection updates across all branches.</p>
+                        </div>
+                        <Link href="/service-records" className="text-xs font-bold text-blue-600 hover:underline">
+                            View All Logs
+                        </Link>
                     </div>
 
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs text-slate-600">
+                            <thead className="bg-slate-50 text-slate-700 uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th className="py-3 px-4">Vehicle</th>
+                                    <th className="py-3 px-4">Activity Description</th>
+                                    <th className="py-3 px-4">Date</th>
+                                    <th className="py-3 px-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {recentActivities.map((act) => (
+                                    <tr key={act.id} className="hover:bg-slate-50/80 transition-colors">
+                                        <td className="py-3 px-4 font-semibold text-slate-900">{act.vehicle}</td>
+                                        <td className="py-3 px-4">{act.activity}</td>
+                                        <td className="py-3 px-4 text-slate-500">{act.date}</td>
+                                        <td className="py-3 px-4">
+                                            <span className={`px-2.5 py-1 rounded-full border text-[11px] font-bold ${act.statusColor}`}>
+                                                {act.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+
                 <Footer />
             </div>
-        </LayoutWrapper >
+        </LayoutWrapper>
     );
 }

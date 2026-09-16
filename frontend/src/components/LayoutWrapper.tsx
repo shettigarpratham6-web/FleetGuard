@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import Sidebar from './Sidebar';
+import React, { useState, useEffect } from 'react';
+import RoleSidebar from './RoleSidebar';
 import Navbar from './Navbar';
+import { api } from '@/services/api';
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
@@ -18,11 +19,17 @@ export default function LayoutWrapper({
   onSearchChange,
 }: LayoutWrapperProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const user = api.auth.getLocalUser();
+    setUserRole(user?.role);
+  }, []);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-transparent">
-      {/* Sidebar Navigation */}
-      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
+      {/* Role-Specific Sidebar Navigation */}
+      <RoleSidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} role={userRole} />
 
       {/* Main Panel */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
@@ -34,7 +41,7 @@ export default function LayoutWrapper({
           onSearchChange={onSearchChange}
         />
 
-        {/* Dynamic Content Canvas — with page-enter animation */}
+        {/* Dynamic Content Canvas */}
         <main
           className="flex-1 overflow-y-auto custom-scrollbar bg-background page-enter"
           role="main"

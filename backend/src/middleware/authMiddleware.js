@@ -28,4 +28,4 @@ const authMiddleware = (req, res, next) => {
 };
 
 // Exported as 'authenticateToken' so vehicleRoutes.js receives it with that exact name
-module.exports = authMiddleware;
+module.exports = authMiddleware;  

@@ -1,9 +1,17 @@
 const { pool } = require('./db');
 
 const initDb = async () => {
-  const client = await pool.connect();
+  let client;
+  try {
+    client = await pool.connect();
+  } catch (connErr) {
+    console.warn(`⚠️ Warning: Database connection failed (${connErr.message}).`);
+    console.warn(`👉 Please check your DATABASE_URL or DB_HOST settings in backend/.env`);
+    return false;
+  }
   try {
     console.log('Initializing database schema...');
+    await client.query('SET statement_timeout = 5000;').catch(() => {});
     await client.query('BEGIN');
 
     // 0. Enable pgcrypto extension
@@ -246,6 +254,7 @@ const initDb = async () => {
         driver_id UUID REFERENCES users(id),
         assigned_by UUID REFERENCES users(id),
         assigned_date TIMESTAMPTZ DEFAULT NOW(),
+        start_date TIMESTAMPTZ DEFAULT NOW(),
         return_date TIMESTAMPTZ,
         assignment_status VARCHAR(30) DEFAULT 'Active' CHECK (
           assignment_status IN (
@@ -258,6 +267,13 @@ const initDb = async () => {
         override_log_id UUID,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+    `);
+
+    // Migration support for pre-existing assignments tables missing assigned_date
+    await client.query(`
+      ALTER TABLE assignments ADD COLUMN IF NOT EXISTS assigned_date TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE assignments ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ DEFAULT NOW();
+      UPDATE assignments SET assigned_date = COALESCE(assigned_date, created_at, NOW()) WHERE assigned_date IS NULL;
     `);
 
     // 4g. Create checklists table
@@ -291,6 +307,27 @@ const initDb = async () => {
       );
     `);
 
+    // 4i. Create audit_logs table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+        action VARCHAR(100) NOT NULL,
+        entity_type VARCHAR(50),
+        entity_id UUID,
+        details JSONB DEFAULT '{}',
+        ip_address VARCHAR(45),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    // Ensure all audit_logs columns exist (migration support)
+    await client.query(`
+      ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS entity_type VARCHAR(50);
+      ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS entity_id UUID;
+      ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS details JSONB DEFAULT '{}';
+      ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45);
+    `);
+
     // 5. Create indexes
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid);
@@ -305,6 +342,9 @@ const initDb = async () => {
       CREATE INDEX IF NOT EXISTS idx_assignments_driver ON assignments(driver_id);
       CREATE INDEX IF NOT EXISTS idx_checklists_vehicle ON checklists(vehicle_id);
       CREATE INDEX IF NOT EXISTS idx_override_logs_vehicle ON override_logs(vehicle_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
     `);
 
     // 6. Create trigger and function
@@ -343,9 +383,9 @@ const initDb = async () => {
     await client.query('COMMIT');
     console.log('Database initialization completed successfully.');
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Failed to initialize database schema:', error);
-    throw error;
+    await client.query('ROLLBACK').catch(() => {});
+    console.warn('⚠️ Database schema initialization notice:', error.message);
+    return false;
   } finally {
     client.release();
   }

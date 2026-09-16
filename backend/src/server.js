@@ -20,7 +20,9 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
     try {
         if (typeof initDb === 'function') {
-            await initDb();
+            await initDb().catch((err) => {
+                console.warn('⚠️ Database schema initialization skipped:', err.message);
+            });
         }
 
         app.listen(PORT, () => {
@@ -30,8 +32,7 @@ const startServer = async () => {
             startExpiryAlertJob();
         });
     } catch (error) {
-        console.error('❌ CRITICAL: Server failed to start due to database initialization error:', error);
-        process.exit(1);
+        console.error('❌ Server startup error:', error.message);
     }
 };
 

@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
-import DriverDashboard from '@/components/dashboards/DriverDashboard';
+import ServiceCenterDashboard from '@/components/dashboards/ServiceCenterDashboard';
 import Footer from '@/components/footer';
 import { api } from '@/services/api';
 
-export default function DriverDashboardPage() {
+export default function ServicePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
@@ -22,11 +22,14 @@ export default function DriverDashboardPage() {
       return;
     }
 
-    if (user.role === 'Admin' || ['Fleet Manager', 'Manager'].includes(user.role)) {
+    if (user.role === 'Admin') {
       router.push('/dashboard');
       return;
-    } else if (user.role === 'Service Center') {
-      router.push('/service');
+    } else if (['Fleet Manager', 'Manager'].includes(user.role)) {
+      router.push('/dashboard');
+      return;
+    } else if (user.role === 'Driver') {
+      router.push('/driver');
       return;
     }
 
@@ -37,8 +40,8 @@ export default function DriverDashboardPage() {
     return (
       <LayoutWrapper>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 bg-slate-50">
-          <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-          <p className="font-semibold text-sm text-slate-600">Loading Driver Portal...</p>
+          <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin" />
+          <p className="font-semibold text-sm text-slate-600">Loading Service Center Portal...</p>
         </div>
       </LayoutWrapper>
     );
@@ -47,8 +50,8 @@ export default function DriverDashboardPage() {
   return (
     <LayoutWrapper>
       <div className="bg-slate-50 min-h-screen">
-        <DriverDashboard />
-        <div className="max-w-5xl mx-auto px-6 pb-8">
+        <ServiceCenterDashboard />
+        <div className="max-w-7xl mx-auto px-6 pb-8">
           <Footer />
         </div>
       </div>
