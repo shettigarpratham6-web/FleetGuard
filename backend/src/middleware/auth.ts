@@ -2,13 +2,15 @@ const admin = require('../config/firebaseAdmin');
 const db = require('../config/db');
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
+import { Request,Response,NextFunction } from "express";
+
 
 /**
  * Authentication Middleware
  * Verifies custom JWT or Firebase ID Token passed in Authorization header (Bearer <token>)
  * Attaches decoded user data and synced PostgreSQL user record to req.user
  */
-const auth = async (req, res, next) => {
+const auth = async (req : Request, res: Response, next : NextFunction) => {
   try {
     const authHeader = req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -75,6 +77,7 @@ const auth = async (req, res, next) => {
       } else {
         // User is verified by Firebase but not yet synced in PostgreSQL
         req.user = {
+          id:"",
           firebase_uid: decodedToken.uid,
           email: decodedToken.email,
           full_name: decodedToken.name || (decodedToken.email ? decodedToken.email.split('@')[0] : 'User'),
@@ -85,11 +88,20 @@ const auth = async (req, res, next) => {
       }
       return next();
     } catch (firebaseErr) {
-      console.error('Firebase Auth Error:', firebaseErr.message);
+  if (firebaseErr instanceof Error) {
+    console.error('Firebase Auth Error:', firebaseErr.message);
+  } else {
+    console.error('Firebase Auth Error:', firebaseErr);
+  }
       return res.status(401).json({ error: 'Invalid or expired authentication token.' });
     }
   } catch (error) {
-    console.error('Auth Middleware Error:', error.message);
+    if(error instanceof Error ){
+       console.error('Auth Middleware Error:', error.message);
+    }else{
+      console.error("Auth Middleware Error: ",error);
+    }
+   
     return res.status(401).json({ error: 'Invalid or expired authentication token.' });
   }
 };
@@ -98,14 +110,15 @@ const auth = async (req, res, next) => {
  * Authorization Middleware
  * Checks if req.user has one of the allowed roles
  */
-const authorize = (roles = []) => {
-  return (req, res, next) => {
+const authorize = (roles : string[] = []) => {
+  return (req : Request, res : Response, next:NextFunction) => {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required.' });
     }
     
-    if (roles.length && !roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Access forbidden. Insufficient permissions.' });
+    if (roles.length && !roles.includes(req.user.role || '')) {
+      return res.status(403).json(
+        { error: 'Access forbidden. Insufficient permissions.' });
     }
 
     next();

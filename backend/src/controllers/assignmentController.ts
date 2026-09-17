@@ -1,6 +1,7 @@
 const db = require('../config/db');
+import {Request,Response, NextFunction} from 'express';
 
-exports.createAssignment = async (req, res, next) => {
+exports.createAssignment = async (req :Request, res :Response, next:NextFunction) => {
   try {
     const { vehicle_id, driver_id, return_date, override_used, override_log_id } = req.body;
     const assigned_by = req.user.id;
@@ -98,7 +99,7 @@ exports.createAssignment = async (req, res, next) => {
   }
 };
 
-exports.getAllAssignments = async (req, res, next) => {
+exports.getAllAssignments = async (req :Request, res :Response, next:NextFunction) => {
   try {
     const { status, vehicle_id, driver_id } = req.query;
     let queryText = `
@@ -142,7 +143,7 @@ exports.getAllAssignments = async (req, res, next) => {
   }
 };
 
-exports.getAssignmentById = async (req, res, next) => {
+exports.getAssignmentById = async (req :Request, res :Response, next:NextFunction) => {
   try {
     const { id } = req.params;
     const queryText = `
@@ -168,7 +169,7 @@ exports.getAssignmentById = async (req, res, next) => {
   }
 };
 
-exports.returnVehicle = async (req, res, next) => {
+exports.returnVehicle = async (req :Request, res :Response, next:NextFunction)=> {
   try {
     const { id } = req.params;
 
@@ -207,7 +208,7 @@ exports.returnVehicle = async (req, res, next) => {
   }
 };
 
-exports.cancelAssignment = async (req, res, next) => {
+exports.cancelAssignment =  async (req :Request, res :Response, next:NextFunction)=> {
   try {
     const { id } = req.params;
 
