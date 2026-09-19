@@ -1,6 +1,31 @@
-const db = require('../config/db');
+import type { Request, Response, NextFunction } from 'express';
+import db from '../config/db';
 
-exports.getAuditLogs = async (req, res, next) => {
+interface GetAuditLogsQuery {
+  action?: string;
+  entity_type?: string;
+  limit?: string;
+  offset?: string;
+}
+
+interface EntityParams {
+  entityType: string;
+  entityId: string;
+}
+
+interface UserParams {
+  userId: string;
+}
+
+/**
+ * GET /api/audit
+ * Fetch all audit logs with optional filtering and pagination.
+ */
+export const getAuditLogs = async (
+  req: Request<{}, {}, {}, GetAuditLogsQuery>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { action, entity_type, limit, offset } = req.query;
     let queryText = `
@@ -8,8 +33,8 @@ exports.getAuditLogs = async (req, res, next) => {
       FROM audit_logs al
       LEFT JOIN users u ON al.user_id = u.id
     `;
-    const params = [];
-    const conditions = [];
+    const params: (string | number)[] = [];
+    const conditions: string[] = [];
 
     if (action) {
       params.push(action);
@@ -48,7 +73,11 @@ exports.getAuditLogs = async (req, res, next) => {
  * GET /api/audit/entity/:entityType/:entityId
  * Fetch audit logs for a specific entity (e.g. vehicle, user, assignment).
  */
-exports.getAuditLogsByEntity = async (req, res, next) => {
+export const getAuditLogsByEntity = async (
+  req: Request<EntityParams>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { entityType, entityId } = req.params;
 
@@ -70,7 +99,11 @@ exports.getAuditLogsByEntity = async (req, res, next) => {
  * GET /api/audit/user/:userId
  * Fetch audit logs for a specific user.
  */
-exports.getAuditLogsByUser = async (req, res, next) => {
+export const getAuditLogsByUser = async (
+  req: Request<UserParams>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
   try {
     const { userId } = req.params;
 
