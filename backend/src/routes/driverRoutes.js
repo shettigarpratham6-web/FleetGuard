@@ -25,4 +25,12 @@ router.put(
     driverController.changePassword
 );
 
+// Fleet Manager / Admin approves or rejects driver
+router.put(
+    "/:id/status",
+    auth,
+    authorize(["Admin", "Fleet Manager"]),
+    driverController.updateStatus
+);
+
 module.exports = router;

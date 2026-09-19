@@ -40,8 +40,25 @@ export default function Navbar({
     const loadNotifications = async () => {
       if (api.auth.isAuthenticated()) {
         try {
+          await api.triggerExpiryScan().catch(() => {});
           const list = await api.notifications.getMyNotifications();
-          setNotifications(list);
+          
+          const getUrgencyScore = (item: any) => {
+            const title = item.title || '';
+            if (title.toUpperCase().startsWith('OVERDUE')) return 0;
+            const match = title.match(/in (\d+) Days/i);
+            if (match) return parseInt(match[1], 10);
+            return 999;
+          };
+
+          const sorted = [...(list || [])].sort((a, b) => {
+            const scoreA = getUrgencyScore(a);
+            const scoreB = getUrgencyScore(b);
+            if (scoreA !== scoreB) return scoreA - scoreB;
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          });
+
+          setNotifications(sorted);
         } catch (err) {
           console.error('Error fetching notifications:', err);
         }
@@ -112,6 +129,17 @@ export default function Navbar({
     return { icon: 'notifications', color: 'text-blue-500' };
   };
 
+  const displayName = user?.full_name || user?.username || user?.email || 'User';
+
+  const getDashboardInfo = () => {
+    const role = user?.role;
+    if (role === 'Driver') return { href: '/driver', label: 'Dashboard' };
+    if (role === 'Service Center' || (role as string) === 'Mechanic') return { href: '/mechanic', label: 'Dashboard' };
+    return { href: '/dashboard', label: 'Dashboard' };
+  };
+
+  const dashboard = getDashboardInfo();
+
   return (
     <header className="flex justify-between items-center px-6 py-3 w-full z-40 bg-white/90 border-b border-slate-200 sticky top-0 flex-shrink-0 backdrop-blur-md shadow-sm">
       {/* Mobile Toggle & Brand */}
@@ -144,7 +172,7 @@ export default function Navbar({
             </span>
             {unreadNotifications.length > 0 && (
               <span
-                className="absolute top-1 right-1 min-w-[16px] h-[16px] bg-rose-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center px-0.5"
+                className="absolute top-1 right-1 min-w-[16px] h-[16px] bg-rose-500 text-white text-[10px] font-bold rounded-full border-2 border-white flex items-center justify-center px-0.5 animate-pulse"
                 aria-hidden="true"
               >
                 {unreadNotifications.length > 9 ? '9+' : unreadNotifications.length}
@@ -237,6 +265,18 @@ export default function Navbar({
                   </div>
                 )}
               </div>
+
+              {/* View All Notifications Link */}
+              <div className="p-3 border-t border-slate-100 bg-slate-50 text-center">
+                <Link
+                  href="/notifications"
+                  onClick={() => setDropdownOpen(false)}
+                  className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
+                >
+                  View All Notifications
+                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </Link>
+              </div>
             </div>
           )}
         </div>
@@ -253,21 +293,29 @@ export default function Navbar({
 
           {/* Settings Dropdown Menu */}
           {isSettingsOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              {/* Home Route at the Beginning */}
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
               <Link
-                href="/"
+                href={dashboard.href}
                 onClick={() => setIsSettingsOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
-                <span className="material-symbols-outlined text-lg text-slate-500">home</span>
-                Home
+                <span className="material-symbols-outlined text-lg text-blue-600">dashboard</span>
+                {dashboard.label}
+              </Link>
+
+              <Link
+                href="/settings"
+                onClick={() => setIsSettingsOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg text-slate-500">settings</span>
+                System Settings
               </Link>
 
               <Link
                 href="/profile"
                 onClick={() => setIsSettingsOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <span className="material-symbols-outlined text-lg text-slate-500">person</span>
                 Profile
@@ -277,7 +325,7 @@ export default function Navbar({
 
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left"
               >
                 <span className="material-symbols-outlined text-lg text-rose-600">logout</span>
                 Sign Out
@@ -292,25 +340,76 @@ export default function Navbar({
             <button
               onClick={() => setProfileOpen(!profileOpen)}
               className="pl-3 border-l border-slate-200 flex items-center gap-2.5 group cursor-pointer border-0 bg-transparent"
+              title={displayName}
             >
               <div className="w-8 h-8 rounded-full bg-slate-100 overflow-hidden ring-2 ring-slate-200 group-hover:ring-blue-600 transition">
                 <img
                   src={
                     user.profile_picture ||
                     `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      user.full_name
+                      displayName
                     )}&background=091426&color=fff&size=64`
                   }
-                  alt={user.full_name}
+                  alt={displayName}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      user.full_name
+                      displayName
                     )}&background=091426&color=fff&size=64`;
                   }}
                 />
               </div>
             </button>
+
+            {/* Profile Dropdown Menu */}
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+                  <p className="text-sm font-bold text-slate-900 truncate">{displayName}</p>
+                  <p className="text-xs text-slate-500 font-mono truncate">{user.email}</p>
+                  <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
+                    {user.role || 'User'}
+                  </span>
+                </div>
+
+                <Link
+                  href={dashboard.href}
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-lg text-blue-600">dashboard</span>
+                  {dashboard.label}
+                </Link>
+
+                <Link
+                  href="/profile"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-lg text-slate-500">account_circle</span>
+                  My Profile
+                </Link>
+
+                <Link
+                  href="/settings"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-lg text-slate-500">settings</span>
+                  System Settings
+                </Link>
+
+                <div className="border-t border-slate-100 my-1"></div>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left"
+                >
+                  <span className="material-symbols-outlined text-lg text-rose-600">logout</span>
+                  Sign Out
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

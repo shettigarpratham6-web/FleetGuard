@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle, MaintenanceRisk } from '@/types';
-import Footer from '@/components/footer';
 
 export default function MaintenanceQueuePage() {
   const router = useRouter();
@@ -19,6 +18,11 @@ export default function MaintenanceQueuePage() {
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
       router.push('/login');
+      return;
+    }
+    const currentUser = api.auth.getLocalUser();
+    if (currentUser && currentUser.role === 'Driver') {
+      router.push('/driver');
       return;
     }
 
@@ -337,7 +341,6 @@ export default function MaintenanceQueuePage() {
           </section>
 
         </div>
-        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

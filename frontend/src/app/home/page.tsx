@@ -6,7 +6,6 @@ import LayoutWrapper from '@/components/LayoutWrapper';
 import KPICards from '@/components/KPICards';
 import { api } from '@/services/api';
 import { Vehicle, MaintenanceRisk } from '@/types';
-import Footer from "@/components/Footer";
 
 export default function HomePage() {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -517,7 +516,6 @@ export default function HomePage() {
                     </div>
 
                 </div>
-                <Footer />
             </div>
         </LayoutWrapper >
     );

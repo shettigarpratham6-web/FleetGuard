@@ -39,6 +39,8 @@ export default function Home() {
         user.role === 'Manager'
       ) {
         router.replace('/dashboard');
+      } else if (user.role === 'Service Center') {
+        router.replace('/mechanic');
       } else {
         router.replace('/driver');
       }

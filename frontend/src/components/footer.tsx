@@ -4,9 +4,9 @@ export default function Footer() {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className="w-full bg-[#3b4b64] text-white/90 text-sm font-sans">
+        <footer className="w-full bg-[#3b4b64] text-white/90 text-sm font-sans mt-auto">
             {/* Main Links Area */}
-            <div className="mx-auto max-w-7xl px-6 py-12 md:py-16">
+            <div className="w-full px-6 py-12 md:py-16">
                 <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
 
                     {/* Column 1: Company Description */}
@@ -14,7 +14,7 @@ export default function Footer() {
                         <h2 className="text-base font-bold uppercase tracking-wider text-white">
                             FleetGuard
                         </h2>
-                        <p className="leading-relaxed text-neutral-300 max-w-xs">
+                        <p className="leading-relaxed text-neutral-300">
                             Advanced Fleet Maintenance & Service Operations Manager. Optimize logistics runtime, manage assets, and streamline operational compliance effortlessly.
                         </p>
                     </div>
@@ -77,7 +77,7 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    {/* Column 4: Contact Details (Using Material Symbols from your Layout) */}
+                    {/* Column 4: Contact Details */}
                     <div className="space-y-4">
                         <h2 className="text-base font-bold uppercase tracking-wider text-white">
                             Contact
@@ -109,7 +109,7 @@ export default function Footer() {
 
             {/* Bottom Sub-Footer Bar */}
             <div className="w-full bg-[#323f54] py-6">
-                <div className="mx-auto max-w-7xl px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="w-full px-6 flex flex-col md:flex-row items-center justify-between gap-4">
 
                     {/* Copyright text */}
                     <div className="text-neutral-400 text-xs sm:text-sm text-center md:text-left">

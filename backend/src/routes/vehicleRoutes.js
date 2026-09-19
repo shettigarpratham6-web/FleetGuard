@@ -14,7 +14,10 @@ router.get('/:id', auth, vehicleController.getVehicleById);
 // 4. Update a vehicle by ID (Only Admins and Fleet Managers)
 router.put('/:id', auth, authorize(['Admin', 'Fleet Manager']), vehicleController.updateVehicle);
 
-// 5. Delete a vehicle by ID (Only Admins)
-router.delete('/:id', auth, authorize(['Admin']), vehicleController.deleteVehicle);
+// 4.5 Update vehicle status (Accessible by Service Center as well)
+router.patch('/:id/status', auth, vehicleController.updateVehicleStatus);
+
+// 5. Delete a vehicle by ID
+router.delete('/:id', auth, authorize(['Admin', 'Fleet Manager', 'Manager']), vehicleController.deleteVehicle);
 
 module.exports = router;

@@ -6,7 +6,7 @@ const getAuthHeaders = (isMultipart = false) => {
   const headers: Record<string, string> = {};
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('fleetguard_token');
-    if (token && token !== 'undefined') {
+    if (token && token !== 'undefined' && token !== 'null') {
       headers['Authorization'] = `Bearer ${token}`;
     }
   }
@@ -18,6 +18,10 @@ const getAuthHeaders = (isMultipart = false) => {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('fleetguard_token');
+      localStorage.removeItem('fleetguard_user');
+    }
     let errorMessage = 'An error occurred';
     try {
       const errorData = await response.json();
@@ -166,8 +170,11 @@ export const api = {
       }
     },
 
-    getUsers: async (role?: string) => {
-      const url = role ? `${API_BASE_URL}/auth/users?role=${role}` : `${API_BASE_URL}/auth/users`;
+    getUsers: async (role?: string, status?: string) => {
+      const params = new URLSearchParams();
+      if (role) params.append('role', role);
+      if (status) params.append('status', status);
+      const url = `${API_BASE_URL}/auth/users${params.toString() ? '?' + params.toString() : ''}`;
       const res = await fetch(url, {
         method: 'GET',
         headers: getAuthHeaders(),
@@ -193,7 +200,7 @@ export const api = {
     isAuthenticated: (): boolean => {
       if (typeof window !== 'undefined') {
         const token = localStorage.getItem('fleetguard_token');
-        return !!token && token !== 'undefined';
+        return !!token && token !== 'undefined' && token !== 'null';
       }
       return false;
     }
@@ -227,6 +234,24 @@ export const api = {
       });
       const data = await handleResponse<{ message: string; vehicle: Vehicle }>(res);
       return data.vehicle;
+    },
+
+    update: async (id: string, vehicleData: Partial<Vehicle>) => {
+      const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(vehicleData),
+      });
+      const data = await handleResponse<{ message: string; vehicle: Vehicle }>(res);
+      return data.vehicle;
+    },
+
+    delete: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse<{ message: string }>(res);
     }
   },
 
@@ -281,27 +306,24 @@ export const api = {
       });
       const data = await handleResponse<{ message: string; record: ServiceRecord }>(res);
       return data.record;
-    }
-  },
-
-  // Risks API
-  risks: {
-    getAll: async () => {
-      const res = await fetch(`${API_BASE_URL}/maintenance-risks`, {
-        method: 'GET',
-        headers: getAuthHeaders(),
-      });
-      const data = await handleResponse<{ risks: MaintenanceRisk[] }>(res);
-      return data.risks;
     },
 
-    getByVehicle: async (vehicleId: string) => {
-      const res = await fetch(`${API_BASE_URL}/maintenance-risks/vehicle/${vehicleId}`, {
-        method: 'GET',
+    update: async (id: string, recordData: Partial<ServiceRecord>) => {
+      const res = await fetch(`${API_BASE_URL}/services/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(recordData),
+      });
+      const data = await handleResponse<{ message: string; record: ServiceRecord }>(res);
+      return data.record;
+    },
+
+    delete: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/services/${id}`, {
+        method: 'DELETE',
         headers: getAuthHeaders(),
       });
-      const data = await handleResponse<{ risks: MaintenanceRisk[] }>(res);
-      return data.risks;
+      return handleResponse<{ message: string }>(res);
     }
   },
 
@@ -327,6 +349,13 @@ export const api = {
       });
       return await handleResponse<{ message: string; notification: Notification }>(res);
     },
+    markAllAsRead: async () => {
+      const res = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      });
+      return await handleResponse<{ message: string; count: number }>(res);
+    },
     create: async (notificationData: { user_id: string; vehicle_id?: string; title: string; message: string; notification_type?: string }) => {
       const res = await fetch(`${API_BASE_URL}/notifications`, {
         method: 'POST',
@@ -335,6 +364,28 @@ export const api = {
       });
       const data = await handleResponse<{ message: string; notification: Notification }>(res);
       return data.notification;
+    },
+    getSettings: async () => {
+      const res = await fetch(`${API_BASE_URL}/notifications/settings`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ settings: { lead_days: number[]; enable_email_alerts: boolean; enable_in_app_alerts: boolean } }>(res);
+      return data.settings;
+    },
+    updateSettings: async (settings: { lead_days: number[]; enable_email_alerts?: boolean; enable_in_app_alerts?: boolean }) => {
+      const res = await fetch(`${API_BASE_URL}/notifications/settings`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(settings),
+      });
+      return handleResponse<{ message: string; settings: any }>(res);
+    },
+    triggerExpiryScan: async () => {
+      const res = await fetch(`${API_BASE_URL}/notifications/trigger-expiry-scan`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse<{ message: string; details: any }>(res);
     }
   },
 
@@ -379,5 +430,198 @@ export const api = {
       const data = await handleResponse<{ message: string; document: any }>(res);
       return data.document;
     },
+    getVehicleStatus: async (vehicleId: string) => {
+      const res = await fetch(`${API_BASE_URL}/compliance/vehicle/${vehicleId}/status`, {
+        headers: getAuthHeaders(),
+      });
+      return handleResponse<{
+        vehicle_id: string;
+        overall_status: 'Compliant' | 'Non-Compliant';
+        expired_documents?: any[];
+        missing_documents?: string[];
+        documents?: any[];
+      }>(res);
+    },
+    delete: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/compliance/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse<{ message: string; document: any }>(res);
+    },
   },
+
+  assignments: {
+    getAll: async (params?: { status?: string; vehicle_id?: string; driver_id?: string }) => {
+      let url = `${API_BASE_URL}/assignments`;
+      if (params) {
+        const query = new URLSearchParams(params as any).toString();
+        url += `?${query}`;
+      }
+      const res = await fetch(url, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ assignments: any[] }>(res);
+      return data.assignments;
+    },
+    create: async (assignmentData: {
+      vehicle_id: string;
+      driver_id: string;
+      return_date?: string;
+      override_used?: boolean;
+      override_log_id?: string;
+    }) => {
+      const res = await fetch(`${API_BASE_URL}/assignments`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(assignmentData),
+      });
+      return handleResponse<{ message: string; assignment: any }>(res);
+    },
+    returnVehicle: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/assignments/${id}/return`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse<{ message: string; assignment: any }>(res);
+    },
+    cancelAssignment: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/assignments/${id}/cancel`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+      });
+      return handleResponse<{ message: string; assignment: any }>(res);
+    }
+  },
+
+  overrideLogs: {
+    create: async (overrideData: { vehicle_id: string; reason: string; approval_status?: string }) => {
+      const res = await fetch(`${API_BASE_URL}/override-logs`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(overrideData),
+      });
+      return handleResponse<{ success: boolean; message: string; overrideLog: any }>(res);
+    },
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/override-logs`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ success: boolean; overrideLogs: any[] }>(res);
+      return data.overrideLogs;
+    }
+  },
+
+  checklists: {
+    create: async (checklistData: {
+      vehicle_id: string;
+      tyres_ok: boolean;
+      brakes_ok: boolean;
+      lights_ok: boolean;
+      horn_ok: boolean;
+      mirrors_ok: boolean;
+      remarks?: string;
+      status?: string;
+    }) => {
+      const res = await fetch(`${API_BASE_URL}/checklists`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(checklistData),
+      });
+      return handleResponse<{ success: boolean; message: string; checklist: any }>(res);
+    },
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/checklists`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ checklists: any[] }>(res);
+      return data.checklists;
+    },
+    getMyChecklists: async () => {
+      const res = await fetch(`${API_BASE_URL}/checklists/my`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ checklists: any[] }>(res);
+      return data.checklists;
+    },
+    getByVehicle: async (vehicleId: string) => {
+      const res = await fetch(`${API_BASE_URL}/checklists/vehicle/${vehicleId}`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ checklists: any[] }>(res);
+      return data.checklists;
+    }
+  },
+
+  driver: {
+    updateStatus: async (id: string, status: 'Active' | 'Rejected') => {
+      const res = await fetch(`${API_BASE_URL}/drivers/${id}/status`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status }),
+      });
+      return handleResponse<{ message: string; driver: any }>(res);
+    }
+  },
+
+  serviceQueue: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/maintenance/service-queue`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ success?: boolean; data?: any[]; queue?: any[] } | any[]>(res);
+      if (Array.isArray(data)) return data;
+      return (data as any)?.data || (data as any)?.queue || [];
+    }
+  },
+
+  risks: {
+    getAll: async (riskLevel?: string) => {
+      let url = `${API_BASE_URL}/maintenance-risks`;
+      if (riskLevel) url += `?risk_level=${riskLevel}`;
+      const res = await fetch(url, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ risks: any[] }>(res);
+      return data.risks || [];
+    },
+    getByVehicle: async (vehicleId: string) => {
+      const res = await fetch(`${API_BASE_URL}/maintenance-risks/${vehicleId}`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await handleResponse<{ risk: any }>(res);
+      return data.risk;
+    },
+    recalculate: async (vehicle_id?: string) => {
+      const res = await fetch(`${API_BASE_URL}/maintenance-risks/recalculate`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ vehicle_id }),
+      });
+      return handleResponse<any>(res);
+    }
+  },
+
+  triggerExpiryScan: async () => {
+    const res = await fetch(`${API_BASE_URL}/notifications/trigger-expiry-scan`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<any>(res);
+  },
+  getSettings: async () => {
+    const res = await fetch(`${API_BASE_URL}/notifications/settings`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleResponse<{ settings: any }>(res);
+    return data.settings;
+  },
+  updateSettings: async (settings: any) => {
+    const res = await fetch(`${API_BASE_URL}/notifications/settings`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(settings),
+    });
+    return handleResponse<any>(res);
+  }
 };

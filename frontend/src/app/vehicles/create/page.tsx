@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle } from '@/types';
-import Footer from "@/components/footer"
 export default function CreateVehiclePage() {
   const router = useRouter();
 
@@ -34,7 +33,7 @@ export default function CreateVehiclePage() {
       return;
     }
     const currentUser = api.auth.getLocalUser();
-    if (!currentUser || !['Admin', 'Fleet Manager'].includes(currentUser.role)) {
+    if (!currentUser || !['Admin', 'Fleet Manager', 'Manager'].includes(currentUser.role)) {
       router.push('/dashboard');
       return;
     }
@@ -315,7 +314,6 @@ export default function CreateVehiclePage() {
             </button>
           </div>
         </form>
-        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );

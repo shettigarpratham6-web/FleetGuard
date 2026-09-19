@@ -3,8 +3,9 @@ import {Request,Response, NextFunction} from 'express';
 
 exports.createAssignment = async (req :Request, res :Response, next:NextFunction) => {
   try {
-    const { vehicle_id, driver_id, return_date, override_used, override_log_id } = req.body;
+    const { vehicle_id, driver_id, start_date, assignment_date, return_date, override_used, override_log_id } = req.body;
     const assigned_by = req.user.id;
+    const effectiveStartDate = start_date || assignment_date || new Date().toISOString();
 
     if (!vehicle_id || !driver_id) {
       return res.status(400).json({ error: 'Vehicle ID and Driver ID are required.' });
@@ -17,10 +18,13 @@ exports.createAssignment = async (req :Request, res :Response, next:NextFunction
     }
     const vehicle = vehicleRes.rows[0];
 
-    // Check if driver exists and has Driver role
-    const driverRes = await db.query("SELECT id, role FROM users WHERE id = $1 AND role = 'Driver'", [driver_id]);
+    // Check if driver exists and has Driver role, and is Active
+    const driverRes = await db.query("SELECT id, role, status FROM users WHERE id = $1 AND role = 'Driver'", [driver_id]);
     if (driverRes.rows.length === 0) {
       return res.status(400).json({ error: 'Invalid Driver. User must be registered as a Driver.' });
+    }
+    if (driverRes.rows[0].status !== 'Active') {
+      return res.status(400).json({ error: 'Driver is not approved or is inactive. Only Active drivers can be assigned.' });
     }
 
     // Check if driver already has an active vehicle assignment
@@ -29,14 +33,63 @@ exports.createAssignment = async (req :Request, res :Response, next:NextFunction
       [driver_id]
     );
     if (activeDriverRes.rows.length > 0) {
-      return res.status(400).json({ error: 'Driver already has an active vehicle assignment.' });
+      return res.status(400).json({ error: 'This driver already has a vehicle assigned.' });
     }
 
-    // If vehicle is not available, check for override
-    if (vehicle.status !== 'Available') {
+    // Check vehicle compliance status
+    const docQuery = `
+      SELECT cd.document_type, cd.expiry_date, (cd.expiry_date < CURRENT_DATE) AS is_expired
+      FROM compliance_documents cd
+      WHERE cd.vehicle_id = $1
+    `;
+    const docRes = await db.query(docQuery, [vehicle_id]);
+    const documents = docRes.rows;
+
+    const mandatoryTypes = ['Insurance', 'PUC', 'Fitness Certificate'];
+    const latestDocs: Record<string, typeof documents[number]> = {};
+    for (const doc of documents) {
+      if (!latestDocs[doc.document_type] || new Date(doc.expiry_date) > new Date(latestDocs[doc.document_type].expiry_date)) {
+        latestDocs[doc.document_type] = doc;
+      }
+    }
+
+    const expiredDocs = [];
+    const missingDocs = [];
+    for (const type of mandatoryTypes) {
+      const doc = latestDocs[type];
+      if (!doc) {
+        missingDocs.push(type);
+      } else if (doc.is_expired) {
+        expiredDocs.push(type);
+      }
+    }
+
+    const isNonCompliant = expiredDocs.length > 0 || missingDocs.length > 0;
+    const isNotAvailable = vehicle.status !== 'Available';
+    
+    // Check maintenance risk
+    const riskRes = await db.query("SELECT risk_level FROM maintenance_risks WHERE vehicle_id = $1", [vehicle_id]);
+    const riskLevel = riskRes.rows.length > 0 ? riskRes.rows[0].risk_level : 'Low';
+    const isServiceOverdue = riskLevel === 'High';
+
+    if (isNotAvailable || isNonCompliant || isServiceOverdue) {
+      let blockReason = '';
+      if (isNotAvailable) {
+        blockReason = `Vehicle is currently ${vehicle.status}.`;
+      }
+      if (isNonCompliant) {
+        const details = [];
+        if (missingDocs.length > 0) details.push(`missing: ${missingDocs.join(', ')}`);
+        if (expiredDocs.length > 0) details.push(`expired: ${expiredDocs.join(', ')}`);
+        blockReason = (blockReason ? blockReason + ' ' : '') + `Vehicle is non-compliant (${details.join('; ')}).`;
+      }
+      if (isServiceOverdue) {
+        blockReason = (blockReason ? blockReason + ' ' : '') + `Vehicle service is overdue (High Risk).`;
+      }
+
       if (!override_used || !override_log_id) {
         return res.status(400).json({ 
-          error: `Vehicle is currently ${vehicle.status}. An approved manager override is required to assign this vehicle.` 
+          error: `${blockReason} An approved manager override is required to assign this vehicle.` 
         });
       }
 
@@ -64,24 +117,36 @@ exports.createAssignment = async (req :Request, res :Response, next:NextFunction
       }
     }
 
-    // Close any existing active assignments for this vehicle
-    await db.query(
-      "UPDATE assignments SET assignment_status = 'Completed', return_date = NOW() WHERE vehicle_id = $1 AND assignment_status = 'Active'",
+    // Check if vehicle is already assigned
+    const activeVehicleRes = await db.query(
+      "SELECT id FROM assignments WHERE vehicle_id = $1 AND assignment_status = 'Active'",
       [vehicle_id]
     );
+    if (activeVehicleRes.rows.length > 0) {
+      return res.status(400).json({ error: 'This vehicle is already assigned to a driver.' });
+    }
+
+    // Ensure assignment_date & start_date columns exist in PostgreSQL database
+    try {
+      await db.query("ALTER TABLE assignments ADD COLUMN IF NOT EXISTS assignment_date TIMESTAMPTZ DEFAULT NOW()");
+      await db.query("ALTER TABLE assignments ADD COLUMN IF NOT EXISTS start_date TIMESTAMPTZ DEFAULT NOW()");
+    } catch (e) {
+      console.warn("Could not alter assignments table:", e instanceof Error ? e.message : e);
+    }
 
     // Insert assignment
     const insertQuery = `
       INSERT INTO assignments (
-        vehicle_id, driver_id, assigned_by, return_date, override_used, override_log_id, assignment_status
+        vehicle_id, driver_id, assigned_by, assignment_date, start_date, return_date, override_used, override_log_id, assignment_status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, 'Active')
+      VALUES ($1, $2, $3, $4, $4, $5, $6, $7, 'Active')
       RETURNING *
     `;
     const assignmentResult = await db.query(insertQuery, [
       vehicle_id,
       driver_id,
       assigned_by,
+      effectiveStartDate,
       return_date || null,
       override_used || false,
       override_log_id || null
@@ -134,7 +199,7 @@ exports.getAllAssignments = async (req :Request, res :Response, next:NextFunctio
       queryText += ' WHERE ' + conditions.join(' AND ');
     }
 
-    queryText += ' ORDER BY a.assigned_date DESC';
+    queryText += ' ORDER BY a.created_at DESC';
 
     const result = await db.query(queryText, params);
     res.status(200).json({ assignments: result.rows });

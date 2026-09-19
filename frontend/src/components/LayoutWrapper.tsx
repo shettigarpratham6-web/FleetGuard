@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import Footer from './Footer';
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
@@ -36,10 +37,13 @@ export default function LayoutWrapper({
 
         {/* Dynamic Content Canvas — with page-enter animation */}
         <main
-          className="flex-1 overflow-y-auto custom-scrollbar bg-background page-enter"
+          className="flex-1 overflow-y-auto custom-scrollbar bg-background page-enter flex flex-col min-h-0"
           role="main"
         >
-          {children}
+          <div className="flex-1 w-full">
+            {children}
+          </div>
+          <Footer />
         </main>
       </div>
     </div>

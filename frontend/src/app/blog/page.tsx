@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import Footer from '@/components/Footer';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { blogPosts } from '@/data/blogPosts';
 
@@ -134,7 +133,6 @@ export default function BlogListingPage() {
                         </div>
                     </div>
                 </section>
-                <Footer />
             </div>
         </LayoutWrapper>
     );

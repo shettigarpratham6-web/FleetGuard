@@ -4,7 +4,7 @@ const historicalServiceController = require('../controllers/historicalServiceCon
 const { auth, authorize } = require('../middleware/auth');
 
 // Historical service routes
-router.post('/', auth, authorize(['Admin', 'Fleet Manager']), historicalServiceController.createHistoricalService);
+router.post('/', auth, authorize(['Admin', 'Fleet Manager', 'Service Center']), historicalServiceController.createHistoricalService);
 router.get('/', auth, historicalServiceController.getAllHistoricalServices);
 router.get('/vehicle/:vehicleId', auth, historicalServiceController.getHistoricalServicesByVehicle);
 router.delete('/:id', auth, authorize(['Admin']), historicalServiceController.deleteHistoricalService);

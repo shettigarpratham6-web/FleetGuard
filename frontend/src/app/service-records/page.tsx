@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import LayoutWrapper from '@/components/LayoutWrapper';
 import { api } from '@/services/api';
 import { Vehicle, ServiceRecord, User } from '@/types';
-import Footer from '@/components/footer';
 
 export default function ServiceRecordsPage() {
   const router = useRouter();
@@ -24,6 +23,11 @@ export default function ServiceRecordsPage() {
   useEffect(() => {
     if (!api.auth.isAuthenticated()) {
       router.push('/login');
+      return;
+    }
+    const currentUser = api.auth.getLocalUser();
+    if (currentUser && currentUser.role === 'Driver') {
+      router.push('/driver');
       return;
     }
 
@@ -294,16 +298,38 @@ export default function ServiceRecordsPage() {
                           <Link href={`/service-records/${record.id}`} className="hover:underline">
                             <span className="font-semibold text-[13px] text-on-surface block">{record.service_type}</span>
                           </Link>
-                          {record.description && (
-                            <span className="text-[11px] text-on-surface-variant truncate max-w-[180px] block" title={record.description}>
-                              {record.description}
-                            </span>
-                          )}
+                          {(() => {
+                            let displayDesc = record.description || '';
+                            if (displayDesc.trim().startsWith('{')) {
+                              try {
+                                const parsed = JSON.parse(displayDesc);
+                                displayDesc = parsed.work || parsed.description || parsed.notes || '';
+                              } catch (e) {}
+                            }
+                            return displayDesc ? (
+                              <span className="text-[11px] text-on-surface-variant truncate max-w-[180px] block" title={displayDesc}>
+                                {displayDesc}
+                              </span>
+                            ) : null;
+                          })()}
                         </td>
                         {/* Mechanic */}
                         <td className="py-3.5 px-4">
-                          <span className="text-[13px] text-on-surface block">{mechanic?.full_name || '—'}</span>
-                          <span className="text-[11px] text-on-surface-variant capitalize">{mechanic?.role}</span>
+                          {(() => {
+                            let mName = mechanic?.full_name || '';
+                            if (!mName && record.description?.trim().startsWith('{')) {
+                              try {
+                                const parsed = JSON.parse(record.description);
+                                mName = parsed.mechanic || '';
+                              } catch (e) {}
+                            }
+                            return (
+                              <>
+                                <span className="text-[13px] text-on-surface block font-medium">{mName || 'Preetham'}</span>
+                                <span className="text-[11px] text-on-surface-variant capitalize">{mechanic?.role || 'Service Specialist'}</span>
+                              </>
+                            );
+                          })()}
                         </td>
                         {/* Cost */}
                         <td className="py-3.5 px-4 font-mono font-bold text-[13px] text-on-surface text-right whitespace-nowrap">
@@ -387,7 +413,6 @@ export default function ServiceRecordsPage() {
             </div>
           </div>
         </div>
-        <div><Footer /></div>
       </div>
     </LayoutWrapper>
   );
