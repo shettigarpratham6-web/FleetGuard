@@ -39,7 +39,7 @@ export const validateUUID = (paramName: string) => (
   next: NextFunction
 ): void | Response => {
   const value = req.params?.[paramName];
-  if (!value || !UUID_REGEX.test(value)) {
+  if (!value || typeof value !== 'string' || !UUID_REGEX.test(value)) {
     return res.status(400).json({
       error: `Invalid ${paramName} format. Must be a valid UUID.`
     });
