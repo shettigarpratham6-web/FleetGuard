@@ -1,6 +1,11 @@
 const db = require('../config/db');
+import { Request, Response, NextFunction } from 'express';
 
-exports.createChecklist = async (req, res, next) => {
+exports.createChecklist = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const {
       vehicle_id,
@@ -19,7 +24,7 @@ exports.createChecklist = async (req, res, next) => {
     if (!vehicle_id) {
       return res.status(400).json({
         success: false,
-        error: "Vehicle ID is required."
+        error: 'Vehicle ID is required.'
       });
     }
 
@@ -33,7 +38,7 @@ exports.createChecklist = async (req, res, next) => {
     };
 
     for (const [field, value] of Object.entries(checklistFields)) {
-      if (typeof value !== "boolean") {
+      if (typeof value !== 'boolean') {
         return res.status(400).json({
           success: false,
           error: `${field} must be either true or false.`
@@ -43,14 +48,14 @@ exports.createChecklist = async (req, res, next) => {
 
     // Check whether vehicle exists
     const vehicleCheck = await db.query(
-      "SELECT id FROM vehicles WHERE id = $1",
+      'SELECT id FROM vehicles WHERE id = $1',
       [vehicle_id]
     );
 
     if (vehicleCheck.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        error: "Vehicle not found."
+        error: 'Vehicle not found.'
       });
     }
 
@@ -67,7 +72,8 @@ exports.createChecklist = async (req, res, next) => {
     if (existingChecklist.rows.length > 0) {
       return res.status(409).json({
         success: false,
-        error: "You have already submitted today's pre-trip checklist for this vehicle."
+        error:
+          "You have already submitted today's pre-trip checklist for this vehicle."
       });
     }
 
@@ -97,23 +103,26 @@ exports.createChecklist = async (req, res, next) => {
       horn_ok,
       mirrors_ok,
       remarks || null,
-      status || "Completed"
+      status || 'Completed'
     ];
 
     const result = await db.query(query, values);
 
     return res.status(201).json({
       success: true,
-      message: "Driver pre-trip checklist submitted successfully.",
+      message: 'Driver pre-trip checklist submitted successfully.',
       checklist: result.rows[0]
     });
-
   } catch (error) {
     next(error);
   }
 };
 
-exports.getAllChecklists = async (req, res, next) => {
+exports.getAllChecklists = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const queryText = `
       SELECT c.*, 
@@ -124,16 +133,25 @@ exports.getAllChecklists = async (req, res, next) => {
       JOIN users u ON c.driver_id = u.id
       ORDER BY c.checklist_date DESC, c.id DESC
     `;
+
     const result = await db.query(queryText);
-    res.status(200).json({ checklists: result.rows });
+
+    res.status(200).json({
+      checklists: result.rows
+    });
   } catch (error) {
     next(error);
   }
 };
 
-exports.getMyChecklists = async (req, res, next) => {
+exports.getMyChecklists = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const driver_id = req.user.id;
+
     const queryText = `
       SELECT c.*, 
              v.vehicle_number, v.registration_number
@@ -142,16 +160,25 @@ exports.getMyChecklists = async (req, res, next) => {
       WHERE c.driver_id = $1
       ORDER BY c.checklist_date DESC, c.id DESC
     `;
+
     const result = await db.query(queryText, [driver_id]);
-    res.status(200).json({ checklists: result.rows });
+
+    res.status(200).json({
+      checklists: result.rows
+    });
   } catch (error) {
     next(error);
   }
 };
 
-exports.getChecklistsByVehicle = async (req, res, next) => {
+exports.getChecklistsByVehicle = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { vehicleId } = req.params;
+
     const queryText = `
       SELECT c.*, 
              u.full_name as driver_name, u.email as driver_email
@@ -160,16 +187,25 @@ exports.getChecklistsByVehicle = async (req, res, next) => {
       WHERE c.vehicle_id = $1
       ORDER BY c.checklist_date DESC, c.id DESC
     `;
+
     const result = await db.query(queryText, [vehicleId]);
-    res.status(200).json({ checklists: result.rows });
+
+    res.status(200).json({
+      checklists: result.rows
+    });
   } catch (error) {
     next(error);
   }
 };
 
-exports.getChecklistById = async (req, res, next) => {
+exports.getChecklistById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id } = req.params;
+
     const queryText = `
       SELECT c.*, 
              v.vehicle_number, v.registration_number,
@@ -179,13 +215,18 @@ exports.getChecklistById = async (req, res, next) => {
       JOIN users u ON c.driver_id = u.id
       WHERE c.id = $1
     `;
+
     const result = await db.query(queryText, [id]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Checklist not found.' });
+      return res.status(404).json({
+        error: 'Checklist not found.'
+      });
     }
 
-    res.status(200).json({ checklist: result.rows[0] });
+    res.status(200).json({
+      checklist: result.rows[0]
+    });
   } catch (error) {
     next(error);
   }

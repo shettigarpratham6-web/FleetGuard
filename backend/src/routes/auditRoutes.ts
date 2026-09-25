@@ -4,7 +4,7 @@ const { auth, authorize } = require('../middleware/auth');
 const db = require('../config/db');
 
 // GET all audit logs (Admin only, read-only trail)
-router.get('/', auth, authorize(['Admin']), async (req, res, next) => {
+router.get('/', auth, authorize(['Admin']), async (req :any, res : any , next : any) => {
   try {
     const result = await db.query(`
       SELECT al.*, u.email AS user_email, u.full_name AS user_name

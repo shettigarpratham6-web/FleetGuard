@@ -48,7 +48,7 @@ app.use("/api/drivers", driverRoutes);
 
 
 // Base route status check
-app.get('/', (req, res) => {
+app.get('/', (req : any, res :any)  => {
   res.json({
     message: 'Welcome to the FleetGuard API',
     status: 'online',
@@ -57,12 +57,12 @@ app.get('/', (req, res) => {
 });
 
 // Handle undefined routes (404)
-app.use((req, res, next) => {
+app.use((req :any, res :any, next:any) => {
   res.status(404).json({ error: `Endpoint not found: ${req.method} ${req.originalUrl}` });
 });
 
 // Global central error handler middleware
-app.use((err, req, res, next) => {
+app.use((err :any, req :any, res :any, next :any) => {
   console.error('API Error:', err);
 
   // PostgreSQL connection errors

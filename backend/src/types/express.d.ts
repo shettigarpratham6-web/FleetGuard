@@ -16,6 +16,8 @@ declare global {
       firebaseUser: {
         uid: string;
         email?: string;
+        name?: string;
+        picture?: string;
       };
     }
   }

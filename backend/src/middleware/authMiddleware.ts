@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 
 // Renamed inner function to 'authMiddleware' so it doesn't clash
-const authMiddleware = (req, res, next) => {
+const authMiddleware = (req :any, res:any, next:any) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
