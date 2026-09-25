@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 
 export interface AuthenticatedRequest extends Request {
   user?: any;
+  file?: any;
 }
 
 /**

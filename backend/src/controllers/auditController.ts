@@ -120,3 +120,9 @@ export const getAuditLogsByUser = async (
     next(error);
   }
 };
+
+export default {
+  getAuditLogs,
+  getAuditLogsByEntity,
+  getAuditLogsByUser
+};

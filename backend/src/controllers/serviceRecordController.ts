@@ -497,3 +497,12 @@ export const deleteServiceRecord = async (
     return next(error);
   }
 };
+
+export default {
+  createServiceRecord,
+  getAllServiceRecords,
+  getServiceRecordById,
+  updateServiceRecord,
+  getVehicleServiceHistory,
+  deleteServiceRecord
+};

@@ -1,1 +1,2 @@
-require('./tester.test.js');
+require('ts-node/register');
+require('./tester.test.ts');

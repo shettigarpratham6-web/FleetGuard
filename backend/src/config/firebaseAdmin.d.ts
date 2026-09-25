@@ -1,4 +1,3 @@
-import * as admin from 'firebase-admin';
-
-declare const firebaseAdmin: typeof admin;
+import admin from 'firebase-admin';
+export declare const firebaseAdmin: typeof admin;
 export default firebaseAdmin;
