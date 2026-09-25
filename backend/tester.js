@@ -1,0 +1,1 @@
+require('./tester.test.js');
